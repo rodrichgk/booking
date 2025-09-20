@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/routing';
 import { Star, MapPin, Clock, Heart, Phone, Globe } from 'lucide-react';
 
 // Mock data - in a real app, this would come from your database
@@ -117,6 +118,9 @@ const barbershops = [
 ];
 
 export function BarbershopGrid() {
+  const t = useTranslations('barbershop');
+  const tCommon = useTranslations('common');
+  
   const [sortBy, setSortBy] = useState('featured');
   const [viewMode, setViewMode] = useState('grid');
 
@@ -141,9 +145,9 @@ export function BarbershopGrid() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-            {barbershops.length} Barbershops Found
+            {barbershops.length} Salons Trouvés
           </h2>
-          <p className="text-gray-600">Showing results near you</p>
+          <p className="text-gray-600">Affichage des résultats près de chez vous</p>
         </div>
         
         <div className="flex items-center space-x-4 mt-4 sm:mt-0">
@@ -152,11 +156,11 @@ export function BarbershopGrid() {
             onChange={(e) => setSortBy(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
-            <option value="featured">Featured</option>
-            <option value="rating">Highest Rated</option>
-            <option value="distance">Nearest</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
+            <option value="featured">En Vedette</option>
+            <option value="rating">Mieux Notés</option>
+            <option value="distance">Plus Proches</option>
+            <option value="price-low">Prix: Croissant</option>
+            <option value="price-high">Prix: Décroissant</option>
           </select>
         </div>
       </div>
@@ -178,7 +182,7 @@ export function BarbershopGrid() {
               {shop.featured && (
                 <div className="absolute top-4 left-4">
                   <span className="bg-accent-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    Featured
+                    En Vedette
                   </span>
                 </div>
               )}
@@ -189,7 +193,7 @@ export function BarbershopGrid() {
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-red-100 text-red-800'
                 }`}>
-                  {shop.openNow ? 'Open Now' : 'Closed'}
+                  {shop.openNow ? 'Ouvert' : 'Fermé'}
                 </span>
               </div>
             </div>
@@ -219,7 +223,7 @@ export function BarbershopGrid() {
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                   <div className="flex items-center space-x-1">
                     <Clock className="w-4 h-4" />
-                    <span>Next: {shop.nextAvailable}</span>
+                    <span>Prochain: {shop.nextAvailable}</span>
                   </div>
                 </div>
               </div>
@@ -236,7 +240,7 @@ export function BarbershopGrid() {
                   ))}
                   {shop.specialties.length > 3 && (
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                      +{shop.specialties.length - 3} more
+                      +{shop.specialties.length - 3} autres
                     </span>
                   )}
                 </div>
@@ -258,13 +262,13 @@ export function BarbershopGrid() {
                   href={`/barbershops/${shop.id}`}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 text-center py-2 px-4 rounded-lg font-medium transition-colors"
                 >
-                  View Details
+                  {t('viewDetails')}
                 </Link>
                 <Link
                   href={`/barbershops/${shop.id}/book`}
                   className="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-center py-2 px-4 rounded-lg font-medium transition-colors"
                 >
-                  Book Now
+                  {t('bookNow')}
                 </Link>
               </div>
             </div>
@@ -275,7 +279,7 @@ export function BarbershopGrid() {
       {/* Load More */}
       <div className="text-center mt-12">
         <button className="bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200">
-          Load More Barbershops
+          Charger Plus de Salons
         </button>
       </div>
     </div>

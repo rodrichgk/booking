@@ -1,48 +1,52 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Search, Calendar, Scissors, Star } from 'lucide-react';
 
-const steps = [
+const getSteps = (t: any) => [
   {
     id: 1,
-    title: 'Find Your Perfect Match',
-    description: 'Search for barbershops specializing in your hair type and preferred services in your area.',
+    title: 'Trouvez Votre Match Parfait',
+    description: 'Recherchez des salons spécialisés dans votre type de cheveux et services préférés dans votre région.',
     icon: Search,
     color: 'bg-blue-500',
   },
   {
     id: 2,
-    title: 'Book Your Appointment',
-    description: 'Choose your preferred date, time, and barber. View real availability and book instantly.',
+    title: 'Réservez Votre Rendez-vous',
+    description: 'Choisissez votre date, heure et coiffeur préférés. Consultez la disponibilité réelle et réservez instantanément.',
     icon: Calendar,
     color: 'bg-green-500',
   },
   {
     id: 3,
-    title: 'Get Your Perfect Cut',
-    description: 'Arrive at your appointment and enjoy professional service from verified expert barbers.',
+    title: 'Obtenez Votre Coupe Parfaite',
+    description: 'Arrivez à votre rendez-vous et profitez d\'un service professionnel de coiffeurs experts vérifiés.',
     icon: Scissors,
     color: 'bg-purple-500',
   },
   {
     id: 4,
-    title: 'Share Your Experience',
-    description: 'Rate your experience and help other customers find the best barbershops in the community.',
+    title: 'Partagez Votre Expérience',
+    description: 'Évaluez votre expérience et aidez d\'autres clients à trouver les meilleurs salons de la communauté.',
     icon: Star,
     color: 'bg-yellow-500',
   },
 ];
 
 export function HowItWorks() {
+  const t = useTranslations('howItWorks');
+  const steps = getSteps(t);
+  
   return (
     <section className="py-16 bg-gradient-to-br from-gray-50 to-primary-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
-            How It Works
+            Comment Ça Marche
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Getting your perfect haircut has never been easier. Follow these simple steps to book with confidence.
+            Obtenir votre coupe parfaite n'a jamais été aussi facile. Suivez ces étapes simples pour réserver en toute confiance.
           </p>
         </div>
 
@@ -58,7 +62,7 @@ export function HowItWorks() {
                   
                   <div className="mb-4">
                     <div className="text-sm font-semibold text-primary-600 mb-2">
-                      Step {step.id}
+                      Étape {step.id}
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-3">
                       {step.title}
@@ -86,17 +90,17 @@ export function HowItWorks() {
         <div className="text-center mt-12">
           <div className="bg-white rounded-2xl p-8 shadow-sm max-w-2xl mx-auto">
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-              Ready to Get Started?
+              Prêt à Commencer ?
             </h3>
             <p className="text-gray-600 mb-6">
-              Join thousands of satisfied customers who trust AfroBook for their hair care needs.
+              Rejoignez des milliers de clients satisfaits qui font confiance à AfroBook pour leurs besoins capillaires.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200">
-                Find Barbershops
+                Trouver des Salons
               </button>
               <button className="bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-3 px-8 rounded-lg transition-colors duration-200">
-                Learn More
+                En Savoir Plus
               </button>
             </div>
           </div>

@@ -74,8 +74,10 @@ const config: Config = {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Poppins', 'system-ui', 'sans-serif'],
+        sans: ['Nunito', 'Rubik', 'system-ui', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Nunito', 'sans-serif'],
+        script: ['Manrope', 'Inter', 'sans-serif'],
+        body: ['Nunito', 'Rubik', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

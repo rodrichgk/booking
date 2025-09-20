@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Scissors, Sparkles, Palette, Zap } from 'lucide-react';
 
 const services = [
@@ -47,15 +48,18 @@ const services = [
 ];
 
 export function PopularServices() {
+  const t = useTranslations('services');
+  const tCommon = useTranslations('common');
+  
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
-            Popular Services
+            Services Populaires
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            From everyday maintenance to special occasion styling, find the perfect service for your hair
+            De l'entretien quotidien aux coiffures d'occasion spéciale, trouvez le service parfait pour vos cheveux
           </p>
         </div>
 
@@ -74,7 +78,7 @@ export function PopularServices() {
                     {service.popular && (
                       <div className="absolute top-4 left-4">
                         <span className="bg-accent-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                          Popular
+                          Populaire
                         </span>
                       </div>
                     )}
@@ -104,7 +108,7 @@ export function PopularServices() {
                       href={`/services/${service.id}`}
                       className="w-full bg-gray-50 hover:bg-primary-50 text-gray-900 hover:text-primary-700 text-center py-2 px-4 rounded-lg font-medium transition-all duration-200 block"
                     >
-                      Book Service
+                      Réserver
                     </Link>
                   </div>
                 </div>
@@ -118,7 +122,7 @@ export function PopularServices() {
             href="/services"
             className="inline-flex items-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
           >
-            <span>View All Services</span>
+            <span>Voir Tous les Services</span>
           </Link>
         </div>
       </div>
