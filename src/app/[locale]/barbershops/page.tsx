@@ -1,5 +1,10 @@
 'use client';
 
+// Force dynamic rendering to avoid SSG issues with client components
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 0;
+
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/routing';

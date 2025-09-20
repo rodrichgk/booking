@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/routing';
 import { useTranslations } from 'next-intl';
 import { Star, MapPin, Clock, Heart } from 'lucide-react';
 
