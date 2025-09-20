@@ -1,69 +1,49 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { signIn, getSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-interface SignUpFormData {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  phone: string;
-  role: 'customer' | 'barber';
-}
-
-export default function SignUpPage() {
+export default function SignInPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<SignUpFormData>({
-    name: '',
+  const searchParams = useSearchParams();
+  const t = useTranslations('auth');
+  const tErrors = useTranslations('errors');
+  
+  const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: '',
-    phone: '',
-    role: 'customer',
   });
-  const [errors, setErrors] = useState<Partial<SignUpFormData>>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const message = searchParams.get('message');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
-    if (errors[name as keyof SignUpFormData]) {
+    if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<SignUpFormData> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
-    }
+    const newErrors: { email?: string; password?: string } = {};
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('invalidEmail');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('invalidEmail');
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.password = t('passwordRequired');
     }
 
     setErrors(newErrors);
@@ -81,49 +61,32 @@ export default function SignUpPage() {
     setApiError('');
 
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-          phone: formData.phone.trim() || undefined,
-          role: formData.role,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Something went wrong');
-      }
-
-      // Auto sign in after successful registration
-      const signInResult = await signIn('credentials', {
+      const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
         redirect: false,
       });
 
-      if (signInResult?.error) {
-        // Registration successful but auto-login failed
-        router.push('/auth/signin?message=Registration successful. Please sign in.');
+      if (result?.error) {
+        setApiError(t('invalidCredentials'));
       } else {
-        // Both registration and login successful
-        router.push('/');
+        // Get the updated session to check user role
+        const session = await getSession();
+        
+        // Redirect based on user role or to home
+        const callbackUrl = searchParams.get('callbackUrl') || '/';
+        router.push(callbackUrl);
       }
     } catch (error) {
-      setApiError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      setApiError(tErrors('somethingWentWrong'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignUp = () => {
-    signIn('google', { callbackUrl: '/' });
+  const handleGoogleSignIn = () => {
+    const callbackUrl = searchParams.get('callbackUrl') || '/';
+    signIn('google', { callbackUrl });
   };
 
   return (
@@ -136,14 +99,20 @@ export default function SignUpPage() {
             </svg>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
+            {t('welcomeBack')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Join our community of natural hair specialists
+            {t('signInToAccount')}
           </p>
         </div>
 
         <div className="bg-white py-8 px-6 shadow-xl rounded-lg">
+          {message && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-600">{message}</p>
+            </div>
+          )}
+
           {apiError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{apiError}</p>
@@ -152,72 +121,34 @@ export default function SignUpPage() {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <Input
-              label="Full Name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              error={errors.name}
-              placeholder="Enter your full name"
-              required
-            />
-
-            <Input
-              label="Email Address"
+              label={t('email')}
               name="email"
               type="email"
               value={formData.email}
               onChange={handleInputChange}
               error={errors.email}
-              placeholder="Enter your email"
+              placeholder={t('email')}
               required
             />
 
             <Input
-              label="Phone Number (Optional)"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleInputChange}
-              placeholder="Enter your phone number"
-            />
-
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Account Type
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
-              >
-                <option value="customer">Customer</option>
-                <option value="barber">Barber/Hair Specialist</option>
-              </select>
-            </div>
-
-            <Input
-              label="Password"
+              label={t('password')}
               name="password"
               type="password"
               value={formData.password}
               onChange={handleInputChange}
               error={errors.password}
-              placeholder="Create a password"
-              helperText="Must be at least 8 characters"
+              placeholder={t('password')}
               required
             />
 
-            <Input
-              label="Confirm Password"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              error={errors.confirmPassword}
-              placeholder="Confirm your password"
-              required
-            />
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <Link href="/auth/forgot-password" className="font-medium text-amber-600 hover:text-amber-500">
+                  {t('forgotPassword')}
+                </Link>
+              </div>
+            </div>
 
             <Button
               type="submit"
@@ -225,7 +156,7 @@ export default function SignUpPage() {
               loading={isLoading}
               disabled={isLoading}
             >
-              Create Account
+              {t('signIn')}
             </Button>
           </form>
 
@@ -235,7 +166,7 @@ export default function SignUpPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2 bg-white text-gray-500">{t('orContinueWith')}</span>
               </div>
             </div>
 
@@ -244,7 +175,7 @@ export default function SignUpPage() {
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={handleGoogleSignUp}
+                onClick={handleGoogleSignIn}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
@@ -264,16 +195,16 @@ export default function SignUpPage() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Sign up with Google
+                {t('signInWithGoogle')}
               </Button>
             </div>
           </div>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link href="/auth/signin" className="font-medium text-amber-600 hover:text-amber-500">
-                Sign in
+              {t('dontHaveAccount')}{' '}
+              <Link href="/auth/signup" className="font-medium text-amber-600 hover:text-amber-500">
+                {t('signUp')}
               </Link>
             </p>
           </div>

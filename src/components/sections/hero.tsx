@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Search, MapPin, Calendar, Star } from 'lucide-react';
 
 export function Hero() {
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
+  const t = useTranslations('hero');
 
   return (
     <section className="relative bg-gradient-to-br from-primary-50 via-white to-accent-50 pt-16 pb-24">
@@ -15,15 +17,11 @@ export function Hero() {
           {/* Left Content */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-gray-900 leading-tight">
-                Book Your Perfect
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-accent-600">
-                  Afro Hair Experience
-                </span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold text-gray-900 leading-tight">
+                {t('title')}
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed">
-                Discover expert barbershops specializing in natural hair, protective styles, and authentic black hair care. 
-                Book with confidence at verified shops in your area.
+              <p className="text-xl text-gray-600 leading-relaxed font-body">
+                {t('subtitle')}
               </p>
             </div>
 
@@ -34,20 +32,20 @@ export function Hero() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Service or barbershop name"
+                    placeholder={t('searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-body"
                   />
                 </div>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="City or zip code"
+                    placeholder="Ville ou code postal"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-body"
                   />
                 </div>
               </div>
@@ -56,23 +54,23 @@ export function Hero() {
                 className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
               >
                 <Search className="w-5 h-5" />
-                <span>Find Barbershops</span>
+                <span className="font-body">{t('findSalons')}</span>
               </Link>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600">500+</div>
-                <div className="text-sm text-gray-600">Verified Shops</div>
+                <div className="text-3xl font-bold text-primary-600 font-sans">500+</div>
+                <div className="text-sm text-gray-600 font-body">Salons Vérifiés</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600">10K+</div>
-                <div className="text-sm text-gray-600">Happy Clients</div>
+                <div className="text-3xl font-bold text-primary-600 font-sans">10K+</div>
+                <div className="text-sm text-gray-600 font-body">Clients Satisfaits</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600">4.8★</div>
-                <div className="text-sm text-gray-600">Average Rating</div>
+                <div className="text-3xl font-bold text-primary-600 font-sans">4.8★</div>
+                <div className="text-sm text-gray-600 font-body">Note Moyenne</div>
               </div>
             </div>
           </div>
@@ -81,7 +79,7 @@ export function Hero() {
           <div className="relative">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1622286346003-c8b4e2c6f0d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                src="https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
                 alt="Professional barber working on natural hair"
                 className="w-full h-[500px] object-cover"
               />
@@ -95,8 +93,8 @@ export function Hero() {
                   <Calendar className="w-6 h-6 text-primary-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">Easy Booking</div>
-                  <div className="text-sm text-gray-600">24/7 Online</div>
+                  <div className="font-semibold text-gray-900 font-body">Réservation Facile</div>
+                  <div className="text-sm text-gray-600 font-body">24h/24 En Ligne</div>
                 </div>
               </div>
             </div>
@@ -107,8 +105,8 @@ export function Hero() {
                   <Star className="w-6 h-6 text-accent-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">Top Rated</div>
-                  <div className="text-sm text-gray-600">Expert Barbers</div>
+                  <div className="font-semibold text-gray-900 font-body">Très Bien Noté</div>
+                  <div className="text-sm text-gray-600 font-body">Coiffeurs Experts</div>
                 </div>
               </div>
             </div>

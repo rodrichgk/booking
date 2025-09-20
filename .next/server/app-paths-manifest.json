@@ -1,6 +1,8 @@
 {
-  "/not-found": "app/not-found.js",
-  "/page": "app/page.js",
-  "/barbershops/page": "app/barbershops/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
+  "/[locale]/barbershops/page": "app/[locale]/barbershops/page.js",
+  "/[locale]/page": "app/[locale]/page.js",
+  "/[locale]/services/page": "app/[locale]/services/page.js",
+  "/[locale]/about/page": "app/[locale]/about/page.js",
+  "/[locale]/barbershops/[id]/page": "app/[locale]/barbershops/[id]/page.js",
+  "/[locale]/barbershops/[id]/booking/page": "app/[locale]/barbershops/[id]/booking/page.js"
 }

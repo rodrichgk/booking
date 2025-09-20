@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Star, MapPin, Clock, Heart } from 'lucide-react';
 
 const featuredShops = [
@@ -40,15 +41,18 @@ const featuredShops = [
 ];
 
 export function FeaturedBarbershops() {
+  const t = useTranslations('barbershop');
+  const tCommon = useTranslations('common');
+  
   return (
     <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
-            Featured Barbershops
+            Salons en Vedette
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Discover top-rated barbershops in your area, specializing in afro and natural hair care
+            Découvrez les meilleurs salons de votre région, spécialisés dans les soins capillaires afro et naturels
           </p>
         </div>
 
@@ -70,7 +74,7 @@ export function FeaturedBarbershops() {
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {shop.openNow ? 'Open Now' : 'Closed'}
+                    {shop.openNow ? 'Ouvert' : 'Fermé'}
                   </span>
                 </div>
               </div>
@@ -107,7 +111,7 @@ export function FeaturedBarbershops() {
                     ))}
                     {shop.specialties.length > 2 && (
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                        +{shop.specialties.length - 2} more
+                        +{shop.specialties.length - 2} autres
                       </span>
                     )}
                   </div>
@@ -118,13 +122,13 @@ export function FeaturedBarbershops() {
                     href={`/barbershops/${shop.id}`}
                     className="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-center py-2 px-4 rounded-lg font-medium transition-colors"
                   >
-                    View Details
+                    {t('viewDetails')}
                   </Link>
                   <Link
                     href={`/barbershops/${shop.id}/book`}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 text-center py-2 px-4 rounded-lg font-medium transition-colors"
                   >
-                    Book Now
+                    {t('bookNow')}
                   </Link>
                 </div>
               </div>
@@ -137,7 +141,7 @@ export function FeaturedBarbershops() {
             href="/barbershops"
             className="inline-flex items-center space-x-2 bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200"
           >
-            <span>View All Barbershops</span>
+            <span>Voir Tous les Salons</span>
           </Link>
         </div>
       </div>
