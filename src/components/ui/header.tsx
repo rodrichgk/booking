@@ -9,7 +9,9 @@ import { LanguageSwitcher } from './language-switcher';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data: session, status } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data;
+  const status = sessionResult?.status || 'loading';
   const t = useTranslations('navigation');
   const tAuth = useTranslations('auth');
   const tProfile = useTranslations('profile');

@@ -1,8 +1,13 @@
+// Force dynamic rendering to avoid SSG issues with client components
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 0;
+
 import { useTranslations } from 'next-intl';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { Heart, Users, Award, Scissors, Star, CheckCircle } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/routing';
 
 const teamMembers = [
   {

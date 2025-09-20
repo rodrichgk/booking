@@ -1,46 +1,127 @@
 {
   "pages": {
+    "/_not-found": [
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/app/_not-found-a94a9e23ce5dbec2.js"
+    ],
     "/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/layout.css",
-      "static/chunks/app/layout.js"
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/css/1beb4d5d6f5c8a30.css",
+      "static/chunks/app/layout-1c6344eb25218d37.js"
+    ],
+    "/page": [
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/app/page-83aba23901e55958.js"
+    ],
+    "/[locale]/auth/signin/page": [
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/749-b58f332cc03d9179.js",
+      "static/chunks/985-acbdb5e72baae543.js",
+      "static/chunks/app/[locale]/auth/signin/page-b1cfeda95b5795cd.js"
     ],
     "/[locale]/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/[locale]/layout.css",
-      "static/chunks/app/[locale]/layout.js"
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/749-b58f332cc03d9179.js",
+      "static/css/88e7a9251406561f.css",
+      "static/chunks/app/[locale]/layout-d8f2ad634bcd6e1b.js"
     ],
-    "/[locale]/barbershops/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/barbershops/page.js"
+    "/[locale]/auth/signup/page": [
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/749-b58f332cc03d9179.js",
+      "static/chunks/985-acbdb5e72baae543.js",
+      "static/chunks/app/[locale]/auth/signup/page-8668500c6844fec8.js"
     ],
     "/[locale]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/page.js"
-    ],
-    "/[locale]/services/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/services/page.js"
-    ],
-    "/[locale]/about/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/about/page.js"
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/749-b58f332cc03d9179.js",
+      "static/chunks/985-acbdb5e72baae543.js",
+      "static/chunks/543-8985848d7595c09c.js",
+      "static/chunks/277-9f88daf4f44dcef9.js",
+      "static/chunks/app/[locale]/page-7bc4d4b8d63ce595.js"
     ],
     "/[locale]/barbershops/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/barbershops/[id]/page.js"
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/543-8985848d7595c09c.js",
+      "static/chunks/app/[locale]/barbershops/[id]/page-691dbc6a55b6c8c8.js"
     ],
     "/[locale]/barbershops/[id]/booking/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/barbershops/[id]/booking/page.js"
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/293-2e48b7d1bc6d62c7.js",
+      "static/chunks/app/[locale]/barbershops/[id]/booking/page-2e146bc92c0d86e1.js"
+    ],
+    "/[locale]/services/page": [
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/749-b58f332cc03d9179.js",
+      "static/chunks/985-acbdb5e72baae543.js",
+      "static/chunks/543-8985848d7595c09c.js",
+      "static/chunks/277-9f88daf4f44dcef9.js",
+      "static/chunks/app/[locale]/services/page-8f387dcd7fa91093.js"
+    ],
+    "/[locale]/about/page": [
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/749-b58f332cc03d9179.js",
+      "static/chunks/985-acbdb5e72baae543.js",
+      "static/chunks/543-8985848d7595c09c.js",
+      "static/chunks/277-9f88daf4f44dcef9.js",
+      "static/chunks/app/[locale]/about/page-057fcded0cb0a8e2.js"
+    ],
+    "/[locale]/barbershops/page": [
+      "static/chunks/webpack-b31e09bfb1b57c33.js",
+      "static/chunks/fd9d1056-5b90fca37ce76e03.js",
+      "static/chunks/938-74ac834ed9d7ecb2.js",
+      "static/chunks/main-app-eaf6c4d1a6305b5a.js",
+      "static/chunks/975-610714510504b6a0.js",
+      "static/chunks/116-72d594274ee19b45.js",
+      "static/chunks/177-063df77d7ca76707.js",
+      "static/chunks/app/[locale]/barbershops/page-cee1fe5354fade96.js"
     ]
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/routing';
 import { Button } from './button';
 
 const languages = [
@@ -15,10 +15,8 @@ export function LanguageSwitcher() {
   const pathname = usePathname();
 
   const switchLanguage = (newLocale: string) => {
-    // Remove the current locale from the pathname
-    const pathWithoutLocale = pathname.replace(`/${locale}`, '');
-    // Navigate to the new locale
-    router.push(`/${newLocale}${pathWithoutLocale}`);
+    // Use the locale-aware router to navigate
+    router.push(pathname, { locale: newLocale });
   };
 
   const currentLanguage = languages.find(lang => lang.code === locale);
