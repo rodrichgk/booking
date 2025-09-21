@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { Link } from '@/routing';
 import { Star, MapPin, Clock, Phone, Calendar, Heart, Share2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 // Demo data - will be replaced with database calls later
 const demoShops = {
@@ -84,6 +86,8 @@ export default function BarbershopDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Header />
+      
       {/* Hero Section */}
       <div className="relative h-96 bg-gray-900">
         <img
@@ -237,6 +241,8 @@ export default function BarbershopDetailsPage() {
           </div>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }

@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Link } from '@/routing';
 
 interface SignUpFormData {
   name: string;
@@ -132,21 +132,38 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 bg-amber-600 rounded-full flex items-center justify-center">
-            <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+      {/* Simple Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center">
+              <span className="font-sans font-bold text-2xl text-gray-900 tracking-[0.3em] uppercase">
+                ORPHELIA
+              </span>
+            </Link>
+            <Link href="/" className="text-gray-700 hover:text-primary-600 font-medium transition-colors font-body">
+              Retour à l'accueil
+            </Link>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {t('createAccountTitle')}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {t('joinCommunity')}
-          </p>
         </div>
+      </div>
+
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <div className="mx-auto h-12 w-12 bg-amber-600 rounded-full flex items-center justify-center">
+              <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              {t('createAccountTitle')}
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              {t('joinCommunity')}
+            </p>
+          </div>
 
         <div className="bg-white py-8 px-6 shadow-xl rounded-lg">
           {apiError && (
@@ -282,6 +299,7 @@ export default function SignUpPage() {
               </Link>
             </p>
           </div>
+        </div>
         </div>
       </div>
     </div>
