@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { Search, MapPin, Star, Clock, Filter } from 'lucide-react';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 // Demo data - will be replaced with database calls later
 const demoBarbershops = [
@@ -91,7 +93,9 @@ export default function BarbershopsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      <Header />
+      
+      {/* Page Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-sans font-bold text-gray-900 mb-2">
@@ -283,6 +287,8 @@ export default function BarbershopsPage() {
           </div>
         )}
       </div>
+      
+      <Footer />
     </div>
   );
 }

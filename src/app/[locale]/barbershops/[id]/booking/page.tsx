@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Link } from '@/routing';
 import { Calendar, Clock, User, ArrowLeft, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 // Demo data - will be replaced with database calls later
 const demoShops = {
@@ -134,7 +136,9 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      <Header />
+      
+      {/* Page Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center space-x-4">
@@ -459,6 +463,8 @@ export default function BookingPage() {
           )}
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }
