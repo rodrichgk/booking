@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,7 +23,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
     }
 
-    const { userId } = await params;
+    const { id } = await params;
     const { role } = await request.json();
 
     if (!role || !['dev', 'admin', 'barber', 'customer'].includes(role)) {
@@ -31,14 +31,14 @@ export async function PUT(
     }
 
     // Prevent dev from changing their own role (safety measure)
-    if (userId === session.user.id && role !== 'dev') {
+    if (id === session.user.id && role !== 'dev') {
       return NextResponse.json({ error: 'Cannot change your own dev role' }, { status: 400 });
     }
 
     await db
       .update(users)
       .set({ role, updatedAt: new Date() })
-      .where(eq(users.id, userId));
+      .where(eq(users.id, id));
 
     return NextResponse.json({ success: true, role });
   } catch (error) {
