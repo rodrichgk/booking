@@ -8,8 +8,27 @@ const withNextIntl = createNextIntlPlugin(
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['images.unsplash.com', 'via.placeholder.com'],
-  }
+    domains: [
+      'images.unsplash.com',
+      'via.placeholder.com',
+      'lh3.googleusercontent.com',
+      'utfs.io', // UploadThing
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.vercel.app',
+      },
+      {
+        protocol: 'https',
+        hostname: 'uploadthing.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.uploadthing.com',
+      },
+    ],
+  },
 };
 
 module.exports = withNextIntl(nextConfig);

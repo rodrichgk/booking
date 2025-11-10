@@ -2,17 +2,46 @@ import { pgTable, text, timestamp, integer, boolean, decimal, uuid, varchar, jso
 import { relations } from 'drizzle-orm';
 
 // Users table
-export const users = pgTable('users', {
+export const users = pgTable('user', {
   id: uuid('id').defaultRandom().primaryKey(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   password: varchar('password', { length: 255 }), // For credentials login
   phone: varchar('phone', { length: 20 }),
   image: text('image'),
-  role: varchar('role', { length: 20 }).notNull().default('customer'), // customer, barber, admin
+  role: varchar('role', { length: 20 }).notNull().default('customer'), // customer, barber, admin, dev
   emailVerified: timestamp('emailVerified'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// NextAuth adapter tables
+export const accounts = pgTable('account', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: varchar('type', { length: 255 }).notNull(),
+  provider: varchar('provider', { length: 255 }).notNull(),
+  providerAccountId: varchar('providerAccountId', { length: 255 }).notNull(),
+  refresh_token: text('refresh_token'),
+  access_token: text('access_token'),
+  expires_at: integer('expires_at'),
+  token_type: varchar('token_type', { length: 255 }),
+  scope: varchar('scope', { length: 255 }),
+  id_token: text('id_token'),
+  session_state: varchar('session_state', { length: 255 }),
+});
+
+export const sessions = pgTable('session', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  sessionToken: varchar('sessionToken', { length: 255 }).notNull().unique(),
+  userId: uuid('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  expires: timestamp('expires').notNull(),
+});
+
+export const verificationTokens = pgTable('verificationToken', {
+  identifier: varchar('identifier', { length: 255 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expires: timestamp('expires').notNull(),
 });
 
 // Barbershops table
@@ -45,16 +74,14 @@ export const barbers = pgTable('barbers', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id).notNull(),
   barbershopId: uuid('barbershop_id').references(() => barbershops.id).notNull(),
+  profileImage: text('profile_image'),
+  galleryImages: jsonb('gallery_images').$type<string[]>().default([]),
+  youtubeLinks: jsonb('youtube_links').$type<string[]>().default([]),
   bio: text('bio'),
-  experience: integer('experience'), // years of experience
-  specialties: jsonb('specialties').$type<string[]>().default([]),
-  images: jsonb('images').$type<string[]>().default([]),
-  rating: decimal('rating', { precision: 3, scale: 2 }).default('0'),
-  reviewCount: integer('review_count').default(0),
+  specialties: jsonb('specialties').$type<string[]>(),
+  experience: integer('experience'),
+  rating: decimal('rating', { precision: 3, scale: 2 }),
   isActive: boolean('is_active').default(true),
-  workingHours: jsonb('working_hours').$type<{
-    [key: string]: { start: string; end: string; available: boolean };
-  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -67,10 +94,8 @@ export const services = pgTable('services', {
   description: text('description'),
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
   duration: integer('duration').notNull(), // in minutes
-  category: varchar('category', { length: 100 }).notNull(), // haircut, styling, treatment, etc.
-  hairTypes: jsonb('hair_types').$type<string[]>().default([]), // afro, curly, coily, etc.
-  isActive: boolean('is_active').default(true),
-  images: jsonb('images').$type<string[]>().default([]),
+  category: varchar('category', { length: 255 }),
+  isActive: boolean('is_active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -78,16 +103,19 @@ export const services = pgTable('services', {
 // Bookings table
 export const bookings = pgTable('bookings', {
   id: uuid('id').defaultRandom().primaryKey(),
-  customerId: uuid('customer_id').references(() => users.id).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
   barbershopId: uuid('barbershop_id').references(() => barbershops.id).notNull(),
-  barberId: uuid('barber_id').references(() => barbers.id),
+  barberId: uuid('barber_id').references(() => barbers.id).notNull(),
   serviceId: uuid('service_id').references(() => services.id).notNull(),
-  appointmentDate: timestamp('appointment_date').notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, confirmed, completed, cancelled
-  totalPrice: decimal('total_price', { precision: 10, scale: 2 }).notNull(),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  status: varchar('status', { length: 255 }),
   notes: text('notes'),
-  paymentStatus: varchar('payment_status', { length: 20 }).default('pending'), // pending, paid, refunded
-  paymentIntentId: varchar('payment_intent_id', { length: 255 }),
+  totalPrice: decimal('total_price', { precision: 10, scale: 2 }).notNull(),
+  // Customer contact info (for guests without accounts)
+  customerName: varchar('customer_name', { length: 255 }),
+  customerEmail: varchar('customer_email', { length: 255 }),
+  customerPhone: varchar('customer_phone', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -147,8 +175,8 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
 }));
 
 export const bookingsRelations = relations(bookings, ({ one }) => ({
-  customer: one(users, {
-    fields: [bookings.customerId],
+  user: one(users, {
+    fields: [bookings.userId],
     references: [users.id],
   }),
   barbershop: one(barbershops, {

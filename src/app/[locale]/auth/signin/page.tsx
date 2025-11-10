@@ -16,9 +16,11 @@ export default function SignInPage() {
   
   const [formData, setFormData] = useState({
     email: '',
+    phone: '',
     password: '',
   });
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loginType, setLoginType] = useState<'email' | 'phone'>('email');
+  const [errors, setErrors] = useState<{ email?: string; phone?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -34,12 +36,20 @@ export default function SignInPage() {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: { email?: string; password?: string } = {};
+    const newErrors: { email?: string; phone?: string; password?: string } = {};
 
-    if (!formData.email.trim()) {
-      newErrors.email = t('invalidEmail');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = t('invalidEmail');
+    if (loginType === 'email') {
+      if (!formData.email.trim()) {
+        newErrors.email = t('invalidEmail');
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = t('invalidEmail');
+      }
+    } else {
+      if (!formData.phone.trim()) {
+        newErrors.phone = t('phoneRequired');
+      } else if (!/^[+]?[\d\s\-\(\)]+$/.test(formData.phone)) {
+        newErrors.phone = t('invalidPhone');
+      }
     }
 
     if (!formData.password) {
@@ -62,7 +72,8 @@ export default function SignInPage() {
 
     try {
       const result = await signIn('credentials', {
-        email: formData.email,
+        email: loginType === 'email' ? formData.email : undefined,
+        phone: loginType === 'phone' ? formData.phone : undefined,
         password: formData.password,
         redirect: false,
       });
@@ -137,16 +148,56 @@ export default function SignInPage() {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <Input
-              label={t('email')}
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-              placeholder={t('email')}
-              required
-            />
+            <div className="space-y-4">
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setLoginType('email')}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                    loginType === 'email'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {t('email')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('phone')}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                    loginType === 'phone'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {t('phone')}
+                </button>
+              </div>
+
+              {loginType === 'email' ? (
+                <Input
+                  label={t('email')}
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  error={errors.email}
+                  placeholder={t('email')}
+                  required
+                />
+              ) : (
+                <Input
+                  label={t('phone')}
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  error={errors.phone}
+                  placeholder={t('phone')}
+                  required
+                />
+              )}
+            </div>
 
             <Input
               label={t('password')}

@@ -16,6 +16,75 @@ export function Header() {
   const tAuth = useTranslations('auth');
   const tProfile = useTranslations('profile');
 
+  const userRole = session?.user?.role;
+  const isAdmin = userRole === 'admin' || userRole === 'dev';
+  const isBarber = userRole === 'barber';
+  const isCustomer = userRole === 'customer';
+
+  const getNavItems = () => {
+    const baseItems = [
+      { href: '/barbershops', label: t('barbershops') },
+      { href: '/barbers', label: t('barbers') },
+      { href: '/services', label: t('services') },
+    ];
+
+    if (isAdmin) {
+      return [
+        ...baseItems,
+        { href: '/admin/users', label: 'Users' },
+        { href: '/admin/barbershops', label: 'Barbershops' },
+        { href: '/admin/analytics', label: 'Analytics' },
+      ];
+    }
+
+    if (isBarber) {
+      return [
+        ...baseItems,
+        { href: '/barber/dashboard', label: t('dashboard') },
+        { href: '/barber/schedule', label: 'Schedule' },
+        { href: '/barber/services', label: 'My Services' },
+      ];
+    }
+
+    return [
+      ...baseItems,
+      { href: '/about', label: 'À propos' },
+    ];
+  };
+
+  const getAccountMenuItems = () => {
+    const baseItems = [
+      { href: '/profile', label: tProfile('myProfile') },
+    ];
+
+    if (isAdmin) {
+      return [
+        ...baseItems,
+        { href: '/my-space', label: t('mySpace') },
+        { href: '/admin/users', label: 'Admin Panel' },
+      ];
+    }
+
+    if (isBarber) {
+      return [
+        ...baseItems,
+        { href: '/barber/dashboard', label: 'Barber Dashboard' },
+        { href: '/barber/profile', label: 'Barber Profile' },
+        { href: '/barber/schedule', label: 'My Schedule' },
+      ];
+    }
+
+    return [
+      ...baseItems,
+      { href: '/my-space', label: t('mySpace') },
+      { href: '/bookings', label: tProfile('myBookings') },
+      { href: '/favorites', label: 'My Favorites' },
+    ];
+  };
+
+  const navItems = getNavItems();
+  const accountMenuItems = getAccountMenuItems();
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,15 +98,15 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/barbershops" className="text-gray-700 hover:text-primary-600 font-medium transition-colors font-body">
-              {t('barbershops')}
-            </Link>
-            <Link href="/services" className="text-gray-700 hover:text-primary-600 font-medium transition-colors font-body">
-              {t('services')}
-            </Link>
-            <Link href="/about" className="text-gray-700 hover:text-primary-600 font-medium transition-colors font-body">
-              À propos
-            </Link>
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-gray-700 hover:text-primary-600 font-medium transition-colors font-body"
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
 
           {/* Desktop Auth & Actions */}
@@ -64,12 +133,15 @@ export function Header() {
                     <span className="text-sm font-medium text-gray-700 font-body">{session.user.name}</span>
                   </button>
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      {tProfile('myProfile')}
-                    </Link>
-                    <Link href="/bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      {tProfile('myBookings')}
-                    </Link>
+                    {accountMenuItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
                     <button
                       onClick={() => signOut()}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -105,23 +177,26 @@ export function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-100">
             <nav className="flex flex-col space-y-4">
-              <Link href="/barbershops" className="text-gray-700 hover:text-primary-600 font-medium">
-                {t('barbershops')}
-              </Link>
-              <Link href="/services" className="text-gray-700 hover:text-primary-600 font-medium">
-                {t('services')}
-              </Link>
-              <Link href="/about" className="text-gray-700 hover:text-primary-600 font-medium">
-                À propos
-              </Link>
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="text-gray-700 hover:text-primary-600 font-medium"
+                >
+                  {item.label}
+                </Link>
+              ))}
               {session ? (
                 <>
-                  <Link href="/profile" className="text-gray-700 hover:text-primary-600 font-medium">
-                    {tProfile('myProfile')}
-                  </Link>
-                  <Link href="/bookings" className="text-gray-700 hover:text-primary-600 font-medium">
-                    {tProfile('myBookings')}
-                  </Link>
+                  {accountMenuItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="text-gray-700 hover:text-primary-600 font-medium"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                   <button
                     onClick={() => signOut()}
                     className="text-left text-gray-700 hover:text-primary-600 font-medium"

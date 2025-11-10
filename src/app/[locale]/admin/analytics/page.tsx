@@ -1,0 +1,165 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+import { db } from '@/lib/db';
+import { users, barbershops, bookings, reviews, barbers } from '@/lib/db/schema';
+import { sql, desc, and, gte, lte, eq } from 'drizzle-orm';
+import { BarChart3, TrendingUp, Users, Store, Calendar, DollarSign, Star, Activity } from 'lucide-react';
+import { AnalyticsClient } from './client';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'admin' });
+  
+  return {
+    title: t('systemAnalytics'),
+    description: t('systemAnalyticsDesc'),
+  };
+}
+
+export default async function SystemAnalyticsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    redirect(`/${locale}/auth/signin`);
+  }
+
+  const userRole = (session.user as any).role;
+  if (!['dev', 'admin'].includes(userRole)) {
+    redirect(`/${locale}/profile`);
+  }
+
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+  const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // User analytics
+  const totalUsers = await db.select({ count: sql<number>`count(*)` }).from(users);
+  const newUsersLastMonth = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(gte(users.createdAt, lastMonth));
+  const newUsersLastWeek = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(gte(users.createdAt, lastWeek));
+
+  // Barbershop analytics
+  const totalBarbershops = await db.select({ count: sql<number>`count(*)` }).from(barbershops);
+  const activeBarbershops = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(barbershops)
+    .where(eq(barbershops.isActive, true));
+  const newBarbershopsLastMonth = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(barbershops)
+    .where(gte(barbershops.createdAt, lastMonth));
+
+  // Booking analytics
+  const totalBookings = await db.select({ count: sql<number>`count(*)` }).from(bookings);
+  const bookingsLastMonth = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(bookings)
+    .where(gte(bookings.createdAt, lastMonth));
+  const bookingsLastWeek = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(bookings)
+    .where(gte(bookings.createdAt, lastWeek));
+  const bookingsToday = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(bookings)
+    .where(gte(bookings.createdAt, yesterday));
+
+  // Revenue analytics (based on active barbershops * €29.9)
+  const monthlyRevenue = (activeBarbershops[0]?.count || 0) * 29.9;
+  const yearlyRevenue = monthlyRevenue * 12;
+
+  // Review analytics
+  const totalReviews = await db.select({ count: sql<number>`count(*)` }).from(reviews);
+  const avgRating = await db
+    .select({ avg: sql<number>`AVG(${reviews.rating})` })
+    .from(reviews);
+
+  // Growth metrics
+  const userGrowthRate = newUsersLastMonth[0]?.count || 0;
+  const barbershopGrowthRate = newBarbershopsLastMonth[0]?.count || 0;
+  const bookingGrowthRate = bookingsLastMonth[0]?.count || 0;
+
+  // Top performing barbershops
+  const topBarbershops = await db
+    .select({
+      id: barbershops.id,
+      name: barbershops.name,
+      city: barbershops.city,
+      rating: sql<string>`COALESCE(${barbershops.rating}, '0')`.as('rating'),
+      reviewCount: sql<number>`COALESCE(${barbershops.reviewCount}, 0)`.as('review_count'),
+      bookingCount: sql<number>`COUNT(${bookings.id})`.as('booking_count'),
+    })
+    .from(barbershops)
+    .leftJoin(bookings, eq(barbershops.id, bookings.barbershopId))
+    .groupBy(barbershops.id)
+    .orderBy(desc(sql`booking_count`))
+    .limit(10);
+
+  // Recent activity - get recent items from each table separately
+  const recentUsers = await db
+    .select({
+      type: sql<string>`'user'`.as('type'),
+      name: users.name,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .orderBy(desc(users.createdAt))
+    .limit(7);
+
+  const recentBarbershops = await db
+    .select({
+      type: sql<string>`'barbershop'`.as('type'),
+      name: barbershops.name,
+      createdAt: barbershops.createdAt,
+    })
+    .from(barbershops)
+    .orderBy(desc(barbershops.createdAt))
+    .limit(7);
+
+  const recentBookings = await db
+    .select({
+      type: sql<string>`'booking'`.as('type'),
+      name: sql<string>`'Booking #' || SUBSTRING(${bookings.id}::text, 1, 8)`.as('name'),
+      createdAt: bookings.createdAt,
+    })
+    .from(bookings)
+    .orderBy(desc(bookings.createdAt))
+    .limit(6);
+
+  // Combine and sort all activities
+  const recentActivity = [...recentUsers, ...recentBarbershops, ...recentBookings]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 20);
+
+  const t = await getTranslations({ locale, namespace: 'admin' });
+  
+  const overviewStats = [
+    { label: t('totalUsers'), value: totalUsers[0]?.count.toLocaleString() || '0', icon: 'Users', color: 'blue', change: `+${newUsersLastMonth[0]?.count || 0} ${t('thisMonth')}` },
+    { label: t('totalBarbershops'), value: totalBarbershops[0]?.count.toLocaleString() || '0', icon: 'Store', color: 'green', change: `+${newBarbershopsLastMonth[0]?.count || 0} ${t('thisMonth')}` },
+    { label: t('totalBookings'), value: totalBookings[0]?.count.toLocaleString() || '0', icon: 'Calendar', color: 'purple', change: `+${bookingsLastMonth[0]?.count || 0} ${t('thisMonth')}` },
+    { label: t('monthlyRevenue'), value: `€${monthlyRevenue.toFixed(0)}`, icon: 'DollarSign', color: 'yellow', change: `€${yearlyRevenue.toFixed(0)}/${t('perYear')}` },
+    { label: t('avgRating'), value: (avgRating[0]?.avg || 0).toFixed(1), icon: 'Star', color: 'orange', change: `${totalReviews[0]?.count || 0} ${t('reviews')}` },
+    { label: t('activeBarbershops'), value: activeBarbershops[0]?.count.toLocaleString() || '0', icon: 'Activity', color: 'emerald', change: `${Math.round((activeBarbershops[0]?.count || 0) / (totalBarbershops[0]?.count || 1) * 100)}% ${t('active')}` },
+  ];
+
+  return (
+    <div className="min-h-screen bg-white">
+      <AnalyticsClient 
+        overviewStats={overviewStats as any}
+        topBarbershops={topBarbershops as any}
+        recentActivity={recentActivity as any}
+        locale={locale}
+        currentUserRole={userRole}
+      />
+    </div>
+  );
+}
