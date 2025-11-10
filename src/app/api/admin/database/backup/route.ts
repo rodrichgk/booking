@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get database connection details from environment
-    const dbUrl = process.env.POSTGRES_URL;
+    const dbUrl = process.env.booking_POSTGRES_URL || process.env.POSTGRES_URL;
     if (!dbUrl) {
       return NextResponse.json({ error: 'Database URL not configured' }, { status: 500 });
     }
