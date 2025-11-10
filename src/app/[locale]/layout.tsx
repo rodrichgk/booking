@@ -23,11 +23,13 @@ export function generateStaticParams() {
 
 export default async function LocaleLayout({
   children,
-  params: { locale }
+  params
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
+  
   // Validate that the incoming `locale` parameter is valid
   if (!locales.includes(locale as any)) notFound();
 
@@ -37,7 +39,13 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className={`${inter.variable} ${poppins.variable}`}>
-      <body className="font-sans antialiased">
+      {/* 
+        suppressHydrationWarning is added to prevent hydration mismatch errors
+        caused by browser extensions (like CookieZ) that add attributes to the body tag.
+        This is safe as we're only suppressing warnings for the body tag where external
+        attributes might be added beyond our control.
+      */}
+      <body className="font-sans antialiased" suppressHydrationWarning={true}>
         <Providers>
           <NextIntlClientProvider messages={messages}>
             {children}

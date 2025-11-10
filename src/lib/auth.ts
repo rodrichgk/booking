@@ -18,17 +18,28 @@ export const authOptions: NextAuthOptions = {
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
+        phone: { label: 'Phone', type: 'tel' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials, req) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.password) {
+          return null;
+        }
+
+        // Allow login with either email or phone
+        const identifier = credentials.email || credentials.phone;
+        if (!identifier) {
           return null;
         }
 
         const user = await db
           .select()
           .from(users)
-          .where(eq(users.email, credentials.email))
+          .where(
+            credentials.email 
+              ? eq(users.email, credentials.email)
+              : eq(users.phone, credentials.phone!)
+          )
           .limit(1);
 
         if (!user.length) {
@@ -56,11 +67,27 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      // On sign in or when explicitly requested, fetch user data from database
       if (user) {
         token.role = user.role;
+      } else if (token.sub) {
+        // Fetch fresh user data from database to get latest role
+        const dbUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, token.sub))
+          .limit(1);
+        
+        if (dbUser.length > 0) {
+          token.role = dbUser[0].role;
+        }
       }
       return token;
     },
@@ -74,5 +101,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
+    error: '/auth/signin',
   },
+  debug: process.env.NODE_ENV === 'development',
 };
