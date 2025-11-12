@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Store, Save, ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -69,9 +70,6 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Barbershops
           </Link>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Barbershops
-        </Link>
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">

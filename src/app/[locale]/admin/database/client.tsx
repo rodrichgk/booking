@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { 
-  Database, Download, Upload, RefreshCw, AlertCircle, CheckCircle, Clock 
+  Database, Download, Upload, RefreshCw, AlertCircle, CheckCircle, Clock,
+  AlertTriangle, HardDrive, Play, RotateCcw, Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/ui/header';

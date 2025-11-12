@@ -280,13 +280,19 @@ export function BarbersClient({ barbers, locale }: BarbersClientProps) {
                   )}
                 </div>
 
-                {/* View Details */}
-                <div className="mt-4">
+                {/* View Profile & Book */}
+                <div className="mt-4 flex gap-2">
                   <Link
-                    href={`/barbershops/${barber.barbershopId}`}
-                    className="text-primary-600 font-semibold text-sm hover:text-primary-700 inline-flex items-center"
+                    href={`/barbers/${barber.id}`}
+                    className="flex-1 text-center bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-primary-700 transition-colors"
                   >
-                    Voir le salon →
+                    View Profile
+                  </Link>
+                  <Link
+                    href={`/barbers/${barber.id}/booking`}
+                    className="flex-1 text-center border-2 border-primary-600 text-primary-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-primary-50 transition-colors"
+                  >
+                    Book Now
                   </Link>
                 </div>
               </div>
