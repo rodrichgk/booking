@@ -134,21 +134,32 @@ export function BarbershopManagementClient({
   };
 
   const handleStatusToggle = async (barbershopId: string, currentStatus: boolean) => {
+    const action = currentStatus ? 'deactivate' : 'activate';
+    const confirmMsg = currentStatus
+      ? 'Are you sure you want to deactivate this barbershop? It will be hidden from customers.'
+      : 'Activate this barbershop?';
+    
+    if (!confirm(confirmMsg)) return;
+    
     setLoading(true);
     try {
-      const response = await fetch(`/${locale}/api/admin/barbershops/${barbershopId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !currentStatus })
+      const response = await fetch(`/api/barbershops/${barbershopId}/toggle-status`, {
+        method: 'POST',
       });
+
+      const data = await response.json();
 
       if (response.ok) {
         setBarbershops(barbershops.map(b => 
-          b.id === barbershopId ? { ...b, isActive: !currentStatus } : b
+          b.id === barbershopId ? { ...b, isActive: data.isActive } : b
         ));
+        alert(data.message);
+      } else {
+        alert(data.error || 'Failed to update status');
       }
     } catch (error) {
       console.error('Failed to update barbershop status:', error);
+      alert('An error occurred');
     } finally {
       setLoading(false);
     }
@@ -339,32 +350,26 @@ export function BarbershopManagementClient({
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-col space-y-2">
                         <Link
-                          href={`/${locale}/admin/barbershops/${barbershop.id}`}
-                          className="text-primary-600 hover:text-primary-900"
+                          href={`/${locale}/my-space/${barbershop.id}`}
+                          className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-medium transition-colors text-center"
                         >
-                          <Eye className="w-4 h-4" />
+                          Manage Shop
                         </Link>
-                        <button className="text-primary-600 hover:text-primary-900">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        {barbershop.subscriptionStatus === 'expired' && (
+                        <div className="flex items-center space-x-2 justify-center">
                           <button
-                            onClick={() => handleSubscriptionRenewal(barbershop.id)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Renew Subscription"
+                            onClick={() => handleStatusToggle(barbershop.id, barbershop.isActive)}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              barbershop.isActive 
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                            title={barbershop.isActive ? 'Deactivate' : 'Activate'}
                           >
-                            <CreditCard className="w-4 h-4" />
+                            {barbershop.isActive ? '● Deactivate' : '● Activate'}
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleStatusToggle(barbershop.id, barbershop.isActive)}
-                          className={`${barbershop.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
-                          title={barbershop.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {barbershop.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                        </button>
+                        </div>
                       </div>
                     </td>
                   </tr>

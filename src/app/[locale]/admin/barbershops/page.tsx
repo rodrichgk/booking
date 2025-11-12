@@ -27,8 +27,11 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
   }
 
   const userRole = (session.user as any).role;
-  if (!['dev', 'admin'].includes(userRole)) {
-    redirect(`/${locale}/profile`);
+  
+  // STRICT: Only dev and admin can access this page
+  // Shop owners, barbers, and customers should use /my-space instead
+  if (userRole !== 'dev' && userRole !== 'admin') {
+    redirect(`/${locale}/my-space`);
   }
 
   // Fetch real barbershop data with owner info
