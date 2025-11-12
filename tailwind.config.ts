@@ -74,10 +74,10 @@ const config: Config = {
         }
       },
       fontFamily: {
-        sans: ['Nunito', 'Rubik', 'system-ui', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'Nunito', 'sans-serif'],
-        script: ['Manrope', 'Inter', 'sans-serif'],
-        body: ['Nunito', 'Rubik', 'sans-serif'],
+        sans: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-montserrat)', 'sans-serif'],
+        heading: ['var(--font-montserrat)', 'sans-serif'],
+        body: ['var(--font-dm-sans)', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

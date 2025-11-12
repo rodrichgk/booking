@@ -1,8 +1,11 @@
 'use client';
 
-import { Store, MapPin, Phone, Mail, Globe, AlertCircle, CheckCircle, XCircle, ArrowRight, Settings, User, Image as ImageIcon, Video } from 'lucide-react';
+import { Store, MapPin, Phone, Mail, Globe, AlertCircle, CheckCircle, XCircle, ArrowRight, Settings, User, Image as ImageIcon, Video, Calendar, Clock, Heart, Star, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
+import Image from 'next/image';
 
 interface Barbershop {
   id: string;
@@ -32,9 +35,24 @@ interface BarberProfile {
   rating: string | null;
 }
 
+interface Booking {
+  id: string;
+  barbershopId: string;
+  barbershopName: string | null;
+  barbershopCity: string | null;
+  barbershopImage: string[] | null;
+  barberName: string | null;
+  serviceName: string | null;
+  startTime: Date;
+  endTime: Date;
+  status: string | null;
+  totalPrice: string;
+}
+
 interface MySpaceClientProps {
   barbershops: Barbershop[];
   barberProfile?: BarberProfile | null;
+  bookings?: Booking[];
   locale: string;
   userRole: string;
   userName: string;
@@ -43,6 +61,7 @@ interface MySpaceClientProps {
 export function MySpaceClient({ 
   barbershops, 
   barberProfile,
+  bookings = [],
   locale, 
   userRole,
   userName 
@@ -55,47 +74,240 @@ export function MySpaceClient({
   const isShopOwner = barbershops.length > 0;
   const isCustomer = !isBarber && !isShopOwner;
 
-  // Customer view - show bookings and favorites
+  // Customer view - show bookings and stats
   if (isCustomer) {
+    const now = new Date();
+    const upcomingBookings = bookings.filter(b => new Date(b.startTime) >= now && b.status !== 'cancelled');
+    const completedBookings = bookings.filter(b => b.status === 'completed');
+    const cancelledBookings = bookings.filter(b => b.status === 'cancelled');
+    
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center mb-8">
-            <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('welcome')}, {userName}!</h2>
-            <p className="text-gray-600 mb-2">
-              Your personal space for managing bookings and preferences.
-            </p>
+      <>
+        <Header />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+          {/* Hero Section */}
+          <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-4xl font-display font-bold mb-2">👋 {t('welcome')}, {userName}!</h1>
+                  <p className="text-primary-100 text-lg">Gérez vos réservations et découvrez de nouveaux salons</p>
+                </div>
+                <Sparkles className="w-16 h-16 text-primary-200 hidden md:block" />
+              </div>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link
-              href={`/${locale}/barbershops`}
-              className="p-6 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
-            >
-              <Store className="w-8 h-8 text-primary-600 mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Find Barbershops</h3>
-              <p className="text-sm text-gray-600">Discover salons near you</p>
-            </Link>
-            
-            <Link
-              href={`/${locale}/profile`}
-              className="p-6 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Settings className="w-8 h-8 text-gray-600 mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Profile Settings</h3>
-              <p className="text-sm text-gray-600">Manage your account</p>
-            </Link>
+
+          {/* Stats Cards */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Réservations à venir</p>
+                    <p className="text-4xl font-bold text-gray-900 mt-2">{upcomingBookings.length}</p>
+                  </div>
+                  <div className="p-4 bg-blue-100 rounded-full">
+                    <Calendar className="w-8 h-8 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Rendez-vous réalisés</p>
+                    <p className="text-4xl font-bold text-gray-900 mt-2">{completedBookings.length}</p>
+                  </div>
+                  <div className="p-4 bg-green-100 rounded-full">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-purple-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Réservations</p>
+                    <p className="text-4xl font-bold text-gray-900 mt-2">{bookings.length}</p>
+                  </div>
+                  <div className="p-4 bg-purple-100 rounded-full">
+                    <Star className="w-8 h-8 text-purple-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+              {/* Upcoming Bookings */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                  <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
+                    <h2 className="text-2xl font-display font-bold text-gray-900">Prochains Rendez-vous</h2>
+                  </div>
+                  <div className="p-6">
+                    {upcomingBookings.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 mb-4">Aucune réservation à venir</p>
+                        <Link
+                          href={`/${locale}/barbershops`}
+                          className="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"
+                        >
+                          <Store className="w-4 h-4 mr-2" />
+                          Réserver maintenant
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {upcomingBookings.slice(0, 3).map((booking) => (
+                          <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-300 hover:shadow-md transition-all">
+                            <div className="flex items-start gap-4">
+                              {booking.barbershopImage && booking.barbershopImage[0] ? (
+                                <Image
+                                  src={booking.barbershopImage[0]}
+                                  alt={booking.barbershopName || 'Barbershop'}
+                                  width={80}
+                                  height={80}
+                                  className="rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                                  <Store className="w-8 h-8 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <h3 className="font-bold text-gray-900 text-lg">{booking.barbershopName}</h3>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  <MapPin className="w-4 h-4 inline mr-1" />
+                                  {booking.barbershopCity}
+                                </p>
+                                <div className="flex flex-wrap gap-3 text-sm">
+                                  <span className="text-gray-700">
+                                    <Calendar className="w-4 h-4 inline mr-1" />
+                                    {new Date(booking.startTime).toLocaleDateString('fr-FR')}
+                                  </span>
+                                  <span className="text-gray-700">
+                                    <Clock className="w-4 h-4 inline mr-1" />
+                                    {new Date(booking.startTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  <span className="font-semibold text-primary-600">{booking.totalPrice}€</span>
+                                </div>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {booking.serviceName} • {booking.barberName}
+                                </p>
+                              </div>
+                              <Link
+                                href={`/${locale}/barbershops/${booking.barbershopId}`}
+                                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
+                              >
+                                Voir
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Recent History */}
+                {completedBookings.length > 0 && (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-8">
+                    <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-white">
+                      <h2 className="text-2xl font-display font-bold text-gray-900">Historique Récent</h2>
+                    </div>
+                    <div className="p-6">
+                      <div className="space-y-3">
+                        {completedBookings.slice(0, 3).map((booking) => (
+                          <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div>
+                              <p className="font-semibold text-gray-900">{booking.barbershopName}</p>
+                              <p className="text-sm text-gray-600">
+                                {new Date(booking.startTime).toLocaleDateString('fr-FR')} • {booking.serviceName}
+                              </p>
+                            </div>
+                            <span className="text-green-600 font-semibold flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Terminé
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                  <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
+                    <h2 className="text-xl font-display font-bold text-gray-900">Actions Rapides</h2>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <Link
+                      href={`/${locale}/barbershops`}
+                      className="block p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all group"
+                    >
+                      <div className="flex items-center">
+                        <div className="p-3 bg-primary-100 rounded-lg mr-4 group-hover:bg-primary-200 transition-colors">
+                          <Store className="w-6 h-6 text-primary-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Trouver un Salon</h3>
+                          <p className="text-sm text-gray-600">Découvrez les meilleurs salons</p>
+                        </div>
+                      </div>
+                    </Link>
+
+                    <Link
+                      href={`/${locale}/barbers`}
+                      className="block p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all group"
+                    >
+                      <div className="flex items-center">
+                        <div className="p-3 bg-purple-100 rounded-lg mr-4 group-hover:bg-purple-200 transition-colors">
+                          <User className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Coiffeurs Pro</h3>
+                          <p className="text-sm text-gray-600">Trouvez votre coiffeur idéal</p>
+                        </div>
+                      </div>
+                    </Link>
+
+                    <Link
+                      href={`/${locale}/profile`}
+                      className="block p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all group"
+                    >
+                      <div className="flex items-center">
+                        <div className="p-3 bg-gray-100 rounded-lg mr-4 group-hover:bg-gray-200 transition-colors">
+                          <Settings className="w-6 h-6 text-gray-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Mon Profil</h3>
+                          <p className="text-sm text-gray-600">Gérez votre compte</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
   // Barber view - show profile and shop
   if (isBarber && !isShopOwner) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -162,6 +374,8 @@ export function MySpaceClient({
           </div>
         </div>
       </div>
+      <Footer />
+      </>
     );
   }
 
@@ -173,7 +387,9 @@ export function MySpaceClient({
   // No barbershops found for shop owner
   if (barbershops.length === 0 && !isBarber) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
           <div className="text-center mb-8">
             <Store className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -225,12 +441,16 @@ export function MySpaceClient({
           </div>
         </div>
       </div>
+      <Footer />
+      </>
     );
   }
 
   // Shop owner with barbershops
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -401,5 +621,7 @@ export function MySpaceClient({
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 }

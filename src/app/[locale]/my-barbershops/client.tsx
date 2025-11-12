@@ -2,6 +2,8 @@
 
 import { Store, MapPin, Phone, Mail, Globe, AlertCircle, CheckCircle, XCircle, ArrowRight, Settings } from 'lucide-react';
 import Link from 'next/link';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 interface Barbershop {
   id: string;
@@ -34,7 +36,9 @@ export function MyBarbershopClient({
   // No barbershops found
   if (barbershops.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
           <div className="text-center mb-8">
             <Store className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -86,6 +90,8 @@ export function MyBarbershopClient({
           </div>
         </div>
       </div>
+      <Footer />
+      </>
     );
   }
 
@@ -94,7 +100,9 @@ export function MyBarbershopClient({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -265,5 +273,7 @@ export function MyBarbershopClient({
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 }

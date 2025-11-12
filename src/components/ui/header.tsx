@@ -91,7 +91,7 @@ export function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="font-sans font-bold text-2xl text-gray-900 tracking-[0.3em] uppercase">
+            <span className="font-display font-bold text-3xl text-gray-900 tracking-[0.15em] uppercase">
               ORPHELIA
             </span>
           </Link>
@@ -102,7 +102,7 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-gray-700 hover:text-primary-600 font-medium transition-colors font-body"
+                className="text-gray-700 hover:text-primary-600 font-semibold transition-colors font-display uppercase text-sm tracking-wide"
               >
                 {item.label}
               </Link>
@@ -130,21 +130,21 @@ export function Header() {
                         <User className="w-4 h-4 text-white" />
                       </div>
                     )}
-                    <span className="text-sm font-medium text-gray-700 font-body">{session.user.name}</span>
+                    <span className="text-xs font-semibold text-gray-700 font-display uppercase tracking-wide">{session.user.name}</span>
                   </button>
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     {accountMenuItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        className="block px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-display uppercase tracking-wide"
                       >
                         {item.label}
                       </Link>
                     ))}
                     <button
                       onClick={() => signOut()}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="block w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-display uppercase tracking-wide"
                     >
                       {tAuth('signOut')}
                     </button>
@@ -154,10 +154,10 @@ export function Header() {
             ) : (
               <div className="flex items-center space-x-3">
                 <LanguageSwitcher />
-                <Link href="/auth/signin" className="text-gray-700 hover:text-primary-600 font-medium transition-colors font-body">
+                <Link href="/auth/signin" className="text-gray-700 hover:text-primary-600 font-semibold transition-colors font-display uppercase text-xs tracking-wide">
                   {tAuth('signIn')}
                 </Link>
-                <Link href="/auth/signup" className="btn-primary">
+                <Link href="/auth/signup" className="btn-primary font-display uppercase text-xs tracking-wide">
                   {tAuth('signUp')}
                 </Link>
               </div>
@@ -181,7 +181,7 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="text-gray-700 hover:text-primary-600 font-medium"
+                  className="text-gray-700 hover:text-primary-600 font-semibold font-display uppercase text-sm tracking-wide"
                 >
                   {item.label}
                 </Link>
@@ -192,24 +192,24 @@ export function Header() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="text-gray-700 hover:text-primary-600 font-medium"
+                      className="text-gray-700 hover:text-primary-600 font-semibold font-display uppercase text-xs tracking-wide"
                     >
                       {item.label}
                     </Link>
                   ))}
                   <button
                     onClick={() => signOut()}
-                    className="text-left text-gray-700 hover:text-primary-600 font-medium"
+                    className="text-left text-gray-700 hover:text-primary-600 font-semibold font-display uppercase text-xs tracking-wide"
                   >
                     {tAuth('signOut')}
                   </button>
                 </>
               ) : (
                 <>
-                  <Link href="/auth/signin" className="text-gray-700 hover:text-primary-600 font-medium">
+                  <Link href="/auth/signin" className="text-gray-700 hover:text-primary-600 font-semibold font-display uppercase text-xs tracking-wide">
                     {tAuth('signIn')}
                   </Link>
-                  <Link href="/auth/signup" className="btn-primary inline-block text-center">
+                  <Link href="/auth/signup" className="btn-primary inline-block text-center font-display uppercase text-xs tracking-wide">
                     {tAuth('signUp')}
                   </Link>
                 </>
