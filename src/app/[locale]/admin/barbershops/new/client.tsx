@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Store, ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Store, Save, ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 interface AddBarbershopClientProps {
   locale: string;
@@ -55,13 +57,18 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
-        <Link
-          href={`/${locale}/admin/barbershops`}
-          className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-6"
-        >
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button */}
+          <Link
+            href={`/${locale}/admin/barbershops`}
+            className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Barbershops
+          </Link>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Barbershops
         </Link>
@@ -227,5 +234,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 }

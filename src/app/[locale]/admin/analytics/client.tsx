@@ -7,6 +7,8 @@ import {
   Star, Activity, ArrowUp, ArrowDown, Eye, Filter, Download
 } from 'lucide-react';
 import Link from 'next/link';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 interface Stat {
   label: string;
@@ -100,7 +102,9 @@ export function AnalyticsClient({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -262,5 +266,7 @@ export function AnalyticsClient({
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 }
