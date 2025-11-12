@@ -74,6 +74,12 @@ export function ManageBarbershopClient({
 }: ManageBarbershopClientProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'settings'>('overview');
   const [isAddingBarber, setIsAddingBarber] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [shopActive, setShopActive] = useState(shop.isActive);
+  const [serviceStatuses, setServiceStatuses] = useState<Record<string, boolean>>(
+    services.reduce((acc, s) => ({ ...acc, [s.id]: s.isActive ?? true }), {})
+  );
 
   // Calculate stats
   const totalBarbers = barbers.length;
@@ -93,6 +99,91 @@ export function ManageBarbershopClient({
            bookingDate <= lastDayOfMonth &&
            booking.status !== 'cancelled';
   }).length;
+
+  const handleToggleShopStatus = async () => {
+    if (isToggling) return;
+    
+    const confirmMsg = shopActive 
+      ? 'Êtes-vous sûr de vouloir désactiver ce salon ? Il ne sera plus visible sur la plateforme.'
+      : 'Voulez-vous activer ce salon ?';
+    
+    if (!confirm(confirmMsg)) return;
+    
+    setIsToggling(true);
+    try {
+      const res = await fetch(`/api/barbershops/${shop.id}/toggle-status`, {
+        method: 'POST',
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setShopActive(data.isActive);
+        alert(data.message);
+        window.location.reload();
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error toggling shop status:', error);
+      alert('Une erreur est survenue');
+    } finally {
+      setIsToggling(false);
+    }
+  };
+  
+  const handleDeleteShop = async () => {
+    const confirmMsg = 'ATTENTION: Cette action est irréversible. Êtes-vous sûr de vouloir supprimer ce salon ?\n\nTapez "SUPPRIMER" pour confirmer.';
+    const userInput = prompt(confirmMsg);
+    
+    if (userInput !== 'SUPPRIMER') {
+      if (userInput !== null) {
+        alert('Suppression annulée');
+      }
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/barbershops/${shop.id}/delete`, {
+        method: 'DELETE',
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert(data.message);
+        window.location.href = `/${locale}/my-space`;
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error deleting shop:', error);
+      alert('Une erreur est survenue');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  const handleToggleServiceStatus = async (serviceId: string) => {
+    try {
+      const res = await fetch(`/api/services/${serviceId}/toggle-status`, {
+        method: 'POST',
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setServiceStatuses(prev => ({ ...prev, [serviceId]: data.isActive }));
+        alert(data.message);
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error toggling service status:', error);
+      alert('Une erreur est survenue');
+    }
+  };
 
   const tabs = [
     { id: 'overview' as const, label: 'Vue d\'ensemble', icon: TrendingUp },
@@ -130,6 +221,11 @@ export function ManageBarbershopClient({
             </div>
             
             <div className="flex items-center space-x-3">
+              <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
+                shopActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {shopActive ? '● Actif' : '● Inactif'}
+              </div>
               <div className={`px-4 py-2 rounded-lg font-semibold text-sm ${
                 subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' :
                 subscriptionStatus === 'expired' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
@@ -469,10 +565,12 @@ export function ManageBarbershopClient({
                               <button className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                                 <Edit2 className="w-4 h-4" />
                               </button>
-                              <button className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                service.isActive ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}>
-                                {service.isActive ? 'Désactiver' : 'Activer'}
+                              <button 
+                                onClick={() => handleToggleServiceStatus(service.id)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                  serviceStatuses[service.id] ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}>
+                                {serviceStatuses[service.id] ? 'Désactiver' : 'Activer'}
                               </button>
                             </div>
                           </div>
@@ -503,6 +601,21 @@ export function ManageBarbershopClient({
               <h2 className="text-2xl font-bold text-gray-900">Paramètres</h2>
               <p className="text-gray-600 mt-1">Gérez les paramètres de votre salon</p>
             </div>
+
+            {/* Inactive shop warning */}
+            {!shopActive && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-orange-900">Salon désactivé</p>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Votre salon n'est actuellement pas visible sur la plateforme. Les clients ne peuvent pas voir votre salon ni réserver de rendez-vous. Activez-le dans la zone de danger ci-dessous pour le rendre visible.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Shop Images Section */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -576,14 +689,22 @@ export function ManageBarbershopClient({
               <h3 className="font-semibold text-red-900 mb-4">Zone de Danger</h3>
               <div className="space-y-4">
                 <div>
-                  <button className="w-full px-4 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded-lg font-medium transition-colors">
-                    Désactiver le Salon
+                  <button 
+                    onClick={handleToggleShopStatus}
+                    disabled={isToggling}
+                    className="w-full px-4 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isToggling ? 'Traitement...' : shopActive ? 'Désactiver le Salon' : 'Activer le Salon'}
                   </button>
-                  <p className="text-sm text-gray-600 mt-2">Votre salon ne sera plus visible sur la plateforme</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {shopActive ? 'Votre salon ne sera plus visible sur la plateforme' : 'Rendre votre salon visible sur la plateforme'}
+                  </p>
                 </div>
                 <div>
-                  <button className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
-                    Supprimer le Salon
+                  <button 
+                    onClick={handleDeleteShop}
+                    disabled={isDeleting}
+                    className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isDeleting ? 'Suppression...' : 'Supprimer le Salon'}
                   </button>
                   <p className="text-sm text-gray-600 mt-2">Cette action est irréversible</p>
                 </div>

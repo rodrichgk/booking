@@ -30,12 +30,10 @@ export default async function AddBarbershopPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <html lang={locale}>
-      <body>
-        <Header />
-        <AddBarbershopClient locale={locale} userRole={userRole} />
-        <Footer />
-      </body>
-    </html>
+    <>
+      <Header />
+      <AddBarbershopClient locale={locale} userRole={userRole} />
+      <Footer />
+    </>
   );
 }

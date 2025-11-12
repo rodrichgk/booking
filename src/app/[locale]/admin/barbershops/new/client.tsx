@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Store, Save, ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { Header } from '@/components/ui/header';
-import { Footer } from '@/components/ui/footer';
 
 interface AddBarbershopClientProps {
   locale: string;
@@ -58,9 +56,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
   };
 
   return (
-    <>
-      <Header />
-      <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Back Button */}
           <Link
@@ -232,7 +228,5 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
         </div>
       </div>
     </div>
-    <Footer />
-    </>
   );
 }
