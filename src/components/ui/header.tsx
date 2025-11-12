@@ -54,15 +54,12 @@ export function Header() {
 
   const getAccountMenuItems = () => {
     const baseItems = [
-      { href: '/profile', label: tProfile('myProfile') },
+      { href: '/my-space', label: t('mySpace') },
     ];
 
+    // Admin/Dev users access admin features from My Space dashboard
     if (isAdmin) {
-      return [
-        ...baseItems,
-        { href: '/my-space', label: t('mySpace') },
-        { href: '/admin/users', label: 'Admin Panel' },
-      ];
+      return baseItems;
     }
 
     if (isBarber) {
@@ -74,12 +71,7 @@ export function Header() {
       ];
     }
 
-    return [
-      ...baseItems,
-      { href: '/my-space', label: t('mySpace') },
-      { href: '/bookings', label: tProfile('myBookings') },
-      { href: '/favorites', label: 'My Favorites' },
-    ];
+    return baseItems;
   };
 
   const navItems = getNavItems();

@@ -2,9 +2,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp } from 'lucide-react';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 import { db } from '@/lib/db';
 import { barbershops, users, barbers, bookings, services } from '@/lib/db';
-import { eq, sql, and, gte, desc } from 'drizzle-orm';
+import { eq, sql, and, gte, desc, lt } from 'drizzle-orm';
 import { MySpaceClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -25,11 +30,79 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     redirect(`/${locale}/auth/signin`);
   }
 
-  const userRole = (session.user as any).role;
+  const { user } = session;
+  const userRole = (user as any).role || 'customer';
   const userEmail = session.user.email;
 
-  // Check if user is a barber
-  const barberProfile = await db
+  // DEBUG: Log session data to see what's happening
+  console.log('🔍 DEBUG - Session User:', {
+    email: userEmail,
+    role: (user as any).role,
+    userRole: userRole,
+    fullUser: user
+  });
+
+  // Define today for use across different role checks
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Initialize stats object (only fetch if user is admin or dev)
+  let stats = {
+    totalUsers: 0,
+    totalBarbershops: 0,
+    totalBarbers: 0,
+    bookingsToday: 0,
+    totalBookings: 0,
+    activeBarbershops: 0,
+    monthlyRevenue: '0.00',
+    avgRating: '0.0',
+  };
+
+  // ONLY fetch admin/dev statistics if user has admin or dev role
+  if (userRole === 'admin' || userRole === 'dev') {
+    // Fetch real statistics for admin/dev ONLY
+    const totalUsers = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
+    const totalBarbershops = await db.select({ count: sql<number>`COUNT(*)` }).from(barbershops);
+    const totalBarbers = await db.select({ count: sql<number>`COUNT(*)` }).from(barbers).where(sql`user_id != '00000000-0000-0000-0000-000000000000'`);
+    
+    // Bookings today
+    const bookingsToday = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(bookings)
+      .where(gte(bookings.startTime, today));
+
+    // Total bookings
+    const totalBookings = await db.select({ count: sql<number>`COUNT(*)` }).from(bookings);
+
+    // Active barbershops
+    const activeBarbershops = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(barbershops)
+      .where(eq(barbershops.isActive, true));
+
+    // Calculate monthly revenue (active shops * €29.90)
+    const monthlyRevenue = (parseInt(String(activeBarbershops[0]?.count || 0)) * 29.9).toFixed(2);
+
+    // Average rating
+    const avgRatingResult = await db
+      .select({ avg: sql<number>`AVG(CAST(${barbershops.rating} AS DECIMAL))` })
+      .from(barbershops)
+      .where(sql`${barbershops.rating} IS NOT NULL`);
+
+    stats = {
+      totalUsers: parseInt(String(totalUsers[0]?.count || 0)),
+      totalBarbershops: parseInt(String(totalBarbershops[0]?.count || 0)),
+      totalBarbers: parseInt(String(totalBarbers[0]?.count || 0)),
+      bookingsToday: parseInt(String(bookingsToday[0]?.count || 0)),
+      totalBookings: parseInt(String(totalBookings[0]?.count || 0)),
+      activeBarbershops: parseInt(String(activeBarbershops[0]?.count || 0)),
+      monthlyRevenue,
+      avgRating: parseFloat(String(avgRatingResult[0]?.avg || 0)).toFixed(1),
+    };
+  }
+
+  // Check if user is a barber - ONLY fetch if user actually has barber role
+  const barberProfile = (userRole === 'barber' || userRole === 'admin' || userRole === 'dev') ? await db
     .select({
       id: barbers.id,
       barbershopId: barbers.barbershopId,
@@ -44,10 +117,10 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     .from(barbers)
     .leftJoin(users, eq(barbers.userId, users.id))
     .where(eq(users.email, userEmail || ''))
-    .limit(1);
+    .limit(1) : [];
 
-  // Check if user owns barbershops
-  const userBarbershops = await db
+  // Check if user owns barbershops - ONLY fetch for shop owners, admins, devs
+  const userBarbershops = (userRole === 'admin' || userRole === 'dev' || userRole === 'barber') ? await db
     .select({
       id: barbershops.id,
       name: barbershops.name,
@@ -71,48 +144,399 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     })
     .from(barbershops)
     .leftJoin(users, eq(barbershops.ownerId, users.id))
-    .where(eq(users.email, userEmail || ''));
+    .where(eq(users.email, userEmail || '')) : [];
 
-  // Fetch customer bookings (upcoming and recent)
-  const customerUser = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, userEmail || ''))
-    .limit(1);
+  // Fetch customer bookings ONLY if user is a customer
+  let userBookings: any[] = [];
+  
+  if (userRole === 'customer') {
+    const customerUser = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, userEmail || ''))
+      .limit(1);
 
-  const userBookings = customerUser.length > 0 ? await db
-    .select({
-      id: bookings.id,
-      barbershopId: bookings.barbershopId,
-      barbershopName: barbershops.name,
-      barbershopCity: barbershops.city,
-      barbershopImage: barbershops.images,
-      barberName: sql<string>`${users.name}`.as('barber_name'),
-      serviceName: services.name,
-      startTime: bookings.startTime,
-      endTime: bookings.endTime,
-      status: bookings.status,
-      totalPrice: bookings.totalPrice,
-    })
-    .from(bookings)
-    .leftJoin(barbershops, eq(bookings.barbershopId, barbershops.id))
-    .leftJoin(barbers, eq(bookings.barberId, barbers.id))
-    .leftJoin(users, eq(barbers.userId, users.id))
-    .leftJoin(services, eq(bookings.serviceId, services.id))
-    .where(eq(bookings.userId, customerUser[0].id))
-    .orderBy(desc(bookings.startTime))
-    .limit(10) : [];
+    userBookings = customerUser.length > 0 ? await db
+      .select({
+        id: bookings.id,
+        barbershopId: bookings.barbershopId,
+        barbershopName: barbershops.name,
+        barbershopCity: barbershops.city,
+        barbershopImage: barbershops.images,
+        barberName: sql<string>`${users.name}`.as('barber_name'),
+        serviceName: services.name,
+        startTime: bookings.startTime,
+        endTime: bookings.endTime,
+        status: bookings.status,
+        totalPrice: bookings.totalPrice,
+      })
+      .from(bookings)
+      .leftJoin(barbershops, eq(bookings.barbershopId, barbershops.id))
+      .leftJoin(barbers, eq(bookings.barberId, barbers.id))
+      .leftJoin(users, eq(barbers.userId, users.id))
+      .leftJoin(services, eq(bookings.serviceId, services.id))
+      .where(eq(bookings.userId, customerUser[0].id))
+      .orderBy(desc(bookings.startTime))
+      .limit(10) : [];
+  }
+
+  // Fetch barber bookings ONLY if user is a barber
+  let barberBookingsToday = 0;
+  let barberBookingsWeek = 0;
+  let barberMonthlyEarnings = 0;
+  let barberRating = 0;
+
+  if (userRole === 'barber' && barberProfile.length > 0) {
+    const barberId = barberProfile[0].id;
+    
+    // Today's bookings
+    const todayBookings = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(bookings)
+      .where(and(
+        eq(bookings.barberId, barberId),
+        gte(bookings.startTime, today),
+        lt(bookings.startTime, new Date(today.getTime() + 24 * 60 * 60 * 1000))
+      ));
+    
+    barberBookingsToday = parseInt(String(todayBookings[0]?.count || 0));
+
+    // This week's bookings
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    
+    const weekBookings = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(bookings)
+      .where(and(
+        eq(bookings.barberId, barberId),
+        gte(bookings.startTime, weekStart)
+      ));
+    
+    barberBookingsWeek = parseInt(String(weekBookings[0]?.count || 0));
+
+    // Monthly earnings
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    const monthEarnings = await db
+      .select({ total: sql<number>`SUM(CAST(${bookings.totalPrice} AS DECIMAL))` })
+      .from(bookings)
+      .where(and(
+        eq(bookings.barberId, barberId),
+        gte(bookings.startTime, monthStart),
+        eq(bookings.status, 'completed')
+      ));
+    
+    barberMonthlyEarnings = parseFloat(String(monthEarnings[0]?.total || 0));
+    barberRating = parseFloat(String(barberProfile[0].rating || 0));
+  }
+
+  const barberStats = {
+    bookingsToday: barberBookingsToday,
+    bookingsWeek: barberBookingsWeek,
+    monthlyEarnings: barberMonthlyEarnings.toFixed(2),
+    rating: barberRating.toFixed(1),
+  };
 
   return (
     <div className="min-h-screen bg-white">
-      <MySpaceClient 
-        barbershops={userBarbershops as any}
-        barberProfile={barberProfile[0] as any}
-        bookings={userBookings as any}
-        locale={locale}
-        userRole={userRole}
-        userName={session.user.name || ''}
-      />
+      <Header />
+      
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* User Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                {user.image ? (
+                  <Image
+                    src={user.image}
+                    alt={user.name || ''}
+                    width={80}
+                    height={80}
+                    className="rounded-full border-4 border-primary-100"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center border-4 border-primary-100">
+                    <span className="text-3xl font-bold text-white">
+                      {user.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
+                  <p className="text-gray-600 mt-1">{user.email}</p>
+                  <span className="inline-flex items-center px-3 py-1 mt-2 rounded-full text-sm font-medium bg-primary-100 text-primary-800 capitalize">
+                    {userRole === 'dev' && <Shield className="w-4 h-4 mr-1" />}
+                    {userRole}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {userRole === 'dev' && <DevDashboard locale={locale} stats={stats} />}
+          {userRole === 'admin' && <AdminDashboard locale={locale} stats={stats} />}
+          {userRole === 'barber' && <BarberDashboard locale={locale} stats={barberStats} />}
+          {userRole === 'customer' && (
+            <MySpaceClient 
+              barbershops={userBarbershops as any}
+              barberProfile={barberProfile[0] as any}
+              bookings={userBookings as any}
+              locale={locale}
+              userRole={userRole}
+              userName={session.user.name || ''}
+            />
+          )}
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+}
+
+// Dev Dashboard - Full system access
+interface DashboardStats {
+  totalUsers: number;
+  totalBarbershops: number;
+  totalBarbers: number;
+  bookingsToday: number;
+  totalBookings: number;
+  activeBarbershops: number;
+  monthlyRevenue: string;
+  avgRating: string;
+}
+
+function DevDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
+  const stats = [
+    { label: 'Total Users', value: realStats.totalUsers.toString(), icon: Users, color: 'blue' },
+    { label: 'Barbershops', value: realStats.totalBarbershops.toString(), icon: Store, color: 'green' },
+    { label: 'Bookings Today', value: realStats.bookingsToday.toString(), icon: Calendar, color: 'purple' },
+    { label: 'Revenue', value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
+  ];
+
+  const sections = [
+    {
+      title: 'User Management',
+      description: 'Manage all users, roles, and permissions',
+      icon: Users,
+      color: 'blue',
+      link: `/${locale}/admin/users`,
+    },
+    {
+      title: 'Barbershop Management',
+      description: 'Manage barbershops and €29.9/month subscriptions',
+      icon: Store,
+      color: 'green',
+      link: `/${locale}/admin/barbershops`,
+    },
+    {
+      title: 'System Analytics',
+      description: 'View system-wide analytics and reports',
+      icon: BarChart3,
+      color: 'purple',
+      link: `/${locale}/admin/analytics`,
+    },
+    {
+      title: 'Database Management',
+      description: 'Database backups and maintenance',
+      icon: Database,
+      color: 'orange',
+      link: `/${locale}/admin/database`,
+    },
+    {
+      title: 'Settings',
+      description: 'System configuration and settings',
+      icon: Settings,
+      color: 'gray',
+      link: `/${locale}/admin/settings`,
+    },
+    {
+      title: 'Security',
+      description: 'Security logs and access control',
+      icon: Shield,
+      color: 'red',
+      link: `/${locale}/admin/security`,
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => (
+          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+              </div>
+              <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
+                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Admin Sections */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">System Administration</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sections.map((section) => (
+            <Link
+              key={section.title}
+              href={section.link}
+              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="p-3 bg-primary-50 rounded-lg group-hover:bg-primary-100 transition-colors">
+                  <section.icon className="w-6 h-6 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{section.title}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{section.description}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Admin/Owner Dashboard - Business management
+function AdminDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
+  const stats = [
+    { label: 'Total Bookings', value: realStats.totalBookings.toString(), icon: Calendar, color: 'blue' },
+    { label: 'Active Barbers', value: realStats.totalBarbers.toString(), icon: Scissors, color: 'green' },
+    { label: 'Monthly Revenue', value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
+    { label: 'Avg Rating', value: realStats.avgRating, icon: Star, color: 'purple' },
+  ];
+
+  const sections = [
+    { title: 'My Space', icon: Store, link: `/${locale}/my-space`, desc: 'Manage your space and profile' },
+    { title: 'Staff Management', icon: Users, link: `/${locale}/admin/staff`, desc: 'Manage barbers and staff' },
+    { title: 'Bookings', icon: Calendar, link: `/${locale}/admin/bookings`, desc: 'View and manage all bookings' },
+    { title: 'Analytics', icon: BarChart3, link: `/${locale}/admin/analytics`, desc: 'Business analytics and insights' },
+    { title: 'Services & Pricing', icon: DollarSign, link: `/${locale}/admin/services`, desc: 'Manage services and pricing' },
+    { title: 'Settings', icon: Settings, link: `/${locale}/admin/settings`, desc: 'Business settings and preferences' },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => (
+          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+              </div>
+              <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
+                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Business Management</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sections.map((section) => (
+            <Link
+              key={section.title}
+              href={section.link}
+              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="p-3 bg-primary-50 rounded-lg group-hover:bg-primary-100 transition-colors">
+                  <section.icon className="w-6 h-6 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{section.title}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{section.desc}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Barber Dashboard
+interface BarberStats {
+  bookingsToday: number;
+  bookingsWeek: number;
+  monthlyEarnings: string;
+  rating: string;
+}
+
+function BarberDashboard({ locale, stats: realStats }: { locale: string; stats: BarberStats }) {
+  const stats = [
+    { label: 'Today\'s Bookings', value: realStats.bookingsToday.toString(), icon: Calendar, color: 'blue' },
+    { label: 'This Week', value: realStats.bookingsWeek.toString(), icon: Clock, color: 'green' },
+    { label: 'Earnings (Month)', value: `€${realStats.monthlyEarnings}`, icon: DollarSign, color: 'yellow' },
+    { label: 'Rating', value: realStats.rating, icon: Star, color: 'purple' },
+  ];
+
+  const sections = [
+    { title: 'My Schedule', icon: Calendar, href: `/${locale}/barber/schedule`, desc: 'View and manage your schedule' },
+    { title: 'Bookings', icon: Clock, href: `/${locale}/barber/bookings`, desc: 'Today\'s and upcoming appointments' },
+    { title: 'Earnings', icon: DollarSign, href: `/${locale}/barber/earnings`, desc: 'Track your earnings and tips' },
+    { title: 'Reviews', icon: Star, href: `/${locale}/barber/reviews`, desc: 'View customer reviews and ratings' },
+    { title: 'My Profile', icon: Users, href: `/${locale}/barber/profile`, desc: 'Manage your professional profile' },
+    { title: 'Settings', icon: Settings, href: `/${locale}/barber/settings`, desc: 'Availability and preferences' },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => (
+          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+              </div>
+              <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
+                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Professional Dashboard</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sections.map((section) => (
+            <Link
+              key={section.title}
+              href={section.href}
+              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="p-3 bg-primary-50 rounded-lg group-hover:bg-primary-100 transition-colors">
+                  <section.icon className="w-6 h-6 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{section.title}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{section.desc}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

@@ -73,12 +73,9 @@ export const authOptions: NextAuthOptions = {
     maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
-      // On sign in or when explicitly requested, fetch user data from database
-      if (user) {
-        token.role = user.role;
-      } else if (token.sub) {
-        // Fetch fresh user data from database to get latest role
+    async jwt({ token, user, trigger, account }) {
+      // Always fetch fresh role from database on every request
+      if (token.sub) {
         const dbUser = await db
           .select()
           .from(users)
@@ -87,14 +84,33 @@ export const authOptions: NextAuthOptions = {
         
         if (dbUser.length > 0) {
           token.role = dbUser[0].role;
+          token.email = dbUser[0].email;
+          token.name = dbUser[0].name;
+          console.log('🔑 JWT Callback - Fresh role from DB:', {
+            email: dbUser[0].email,
+            role: dbUser[0].role
+          });
         }
       }
+      
+      // Also handle initial sign in
+      if (user) {
+        token.role = user.role;
+      }
+      
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.sub!;
         session.user.role = token.role as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        
+        console.log('📋 Session Callback - Role set to:', {
+          email: session.user.email,
+          role: session.user.role
+        });
       }
       return session;
     },

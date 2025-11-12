@@ -75,8 +75,8 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
     new Date(b.createdAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   ).length;
   const avgRating = allBarbershops.reduce((acc, b) => acc + (parseFloat(b.rating as string) || 0), 0) / totalBarbershops || 0;
-  // Get accurate barber count (excluding guest placeholder)
-  const totalBarbers = allBarbershops.reduce((acc, b) => acc + (parseInt(String(b.barberCount)) || 0), 0) - 1; // -1 to exclude guest placeholder
+  // Get accurate barber count
+  const totalBarbers = Math.max(0, allBarbershops.reduce((acc, b) => acc + (parseInt(String(b.barberCount)) || 0), 0));
   const monthlyRevenue = activeBarbershops * 29.9;
 
   const stats = [

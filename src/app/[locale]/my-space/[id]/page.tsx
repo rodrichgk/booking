@@ -19,8 +19,9 @@ export default async function ManageBarbershopPage({
   }
 
   const userEmail = session.user.email;
+  const userRole = (session.user as any).role || 'customer';
 
-  // Fetch the barbershop and verify ownership
+  // Fetch the barbershop and verify ownership or admin/dev access
   const [shop] = await db
     .select({
       id: barbershops.id,
@@ -38,17 +39,28 @@ export default async function ManageBarbershopPage({
       createdAt: barbershops.createdAt,
     })
     .from(barbershops)
-    .innerJoin(users, eq(barbershops.ownerId, users.id))
-    .where(
-      and(
-        eq(barbershops.id, id),
-        eq(users.email, userEmail as string)
-      )
-    )
+    .where(eq(barbershops.id, id))
     .limit(1);
 
   if (!shop) {
     notFound();
+  }
+
+  // Verify ownership OR admin/dev access
+  if (userRole !== 'admin' && userRole !== 'dev') {
+    if (!shop.ownerId) {
+      notFound(); // No owner assigned
+    }
+
+    const [owner] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, shop.ownerId))
+      .limit(1);
+
+    if (!owner || owner.email !== userEmail) {
+      notFound(); // User doesn't own this barbershop
+    }
   }
 
   // Fetch barbers for this barbershop

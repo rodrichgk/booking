@@ -3,8 +3,6 @@
 import { Store, MapPin, Phone, Mail, Globe, AlertCircle, CheckCircle, XCircle, ArrowRight, Settings, User, Image as ImageIcon, Video, Calendar, Clock, Heart, Star, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Header } from '@/components/ui/header';
-import { Footer } from '@/components/ui/footer';
 import Image from 'next/image';
 
 interface Barbershop {
@@ -82,9 +80,7 @@ export function MySpaceClient({
     const cancelledBookings = bookings.filter(b => b.status === 'cancelled');
     
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
           {/* Hero Section */}
           <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -276,38 +272,19 @@ export function MySpaceClient({
                         </div>
                       </div>
                     </Link>
-
-                    <Link
-                      href={`/${locale}/profile`}
-                      className="block p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all group"
-                    >
-                      <div className="flex items-center">
-                        <div className="p-3 bg-gray-100 rounded-lg mr-4 group-hover:bg-gray-200 transition-colors">
-                          <Settings className="w-6 h-6 text-gray-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">Mon Profil</h3>
-                          <p className="text-sm text-gray-600">Gérez votre compte</p>
-                        </div>
-                      </div>
-                    </Link>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <Footer />
-      </>
     );
   }
 
   // Barber view - show profile and shop
   if (isBarber && !isShopOwner) {
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -374,8 +351,6 @@ export function MySpaceClient({
           </div>
         </div>
       </div>
-      <Footer />
-      </>
     );
   }
 
@@ -387,9 +362,7 @@ export function MySpaceClient({
   // No barbershops found for shop owner
   if (barbershops.length === 0 && !isBarber) {
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
           <div className="text-center mb-8">
             <Store className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -441,16 +414,12 @@ export function MySpaceClient({
           </div>
         </div>
       </div>
-      <Footer />
-      </>
     );
   }
 
   // Shop owner with barbershops
   return (
-    <>
-      <Header />
-      <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -621,7 +590,5 @@ export function MySpaceClient({
         </div>
       </div>
     </div>
-    <Footer />
-    </>
   );
 }

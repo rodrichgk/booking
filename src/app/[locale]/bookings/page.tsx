@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
-// Redirect old /profile routes to new /my-space routes
-export default async function ProfilePage({ 
+// Redirect old /bookings routes to new /my-space routes
+export default async function BookingsPage({ 
   params 
 }: { 
   params: Promise<{ locale: string }> 
