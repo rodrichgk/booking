@@ -28,21 +28,15 @@ export function Header() {
       { href: '/services', label: t('services') },
     ];
 
+    // Admin/Dev users: Keep nav clean, access admin features via My Space
     if (isAdmin) {
-      return [
-        ...baseItems,
-        { href: '/admin/users', label: 'Users' },
-        { href: '/admin/barbershops', label: 'Barbershops' },
-        { href: '/admin/analytics', label: 'Analytics' },
-      ];
+      return baseItems;
     }
 
     if (isBarber) {
       return [
         ...baseItems,
         { href: '/barber/dashboard', label: t('dashboard') },
-        { href: '/barber/schedule', label: 'Schedule' },
-        { href: '/barber/services', label: 'My Services' },
       ];
     }
 
@@ -107,6 +101,7 @@ export function Header() {
               <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
             ) : session ? (
               <div className="flex items-center space-x-4">
+                <LanguageSwitcher />
                 <Link href="/bookings" className="p-2 text-gray-600 hover:text-primary-600 transition-colors">
                   <Calendar className="w-5 h-5" />
                 </Link>
@@ -180,6 +175,9 @@ export function Header() {
               ))}
               {session ? (
                 <>
+                  <div className="py-2">
+                    <LanguageSwitcher />
+                  </div>
                   {accountMenuItems.map((item) => (
                     <Link
                       key={item.href}
