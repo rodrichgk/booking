@@ -4,13 +4,14 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp } from 'lucide-react';
+import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp, AlertCircle, Mail } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { db } from '@/lib/db';
 import { barbershops, users, barbers, bookings, services } from '@/lib/db';
 import { eq, sql, and, gte, desc, lt } from 'drizzle-orm';
 import { MySpaceClient } from './client';
+import { EmailVerificationBanner } from '@/components/email-verification-banner';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -34,13 +35,17 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
   const userRole = (user as any).role || 'customer';
   const userEmail = session.user.email;
 
-  // DEBUG: Log session data to see what's happening
-  console.log('🔍 DEBUG - Session User:', {
-    email: userEmail,
-    role: (user as any).role,
-    userRole: userRole,
-    fullUser: user
-  });
+  // Fetch user's email verification status
+  const currentUser = await db
+    .select({
+      id: users.id,
+      emailVerified: users.emailVerified,
+    })
+    .from(users)
+    .where(eq(users.email, userEmail || ''))
+    .limit(1);
+
+  const isEmailVerified = currentUser[0]?.emailVerified !== null;
 
   // Define today for use across different role checks
   const today = new Date();
@@ -275,6 +280,11 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
             </div>
           </div>
         </div>
+
+        {/* Email Verification Banner */}
+        {!isEmailVerified && (
+          <EmailVerificationBanner email={userEmail || ''} userName={user.name || ''} />
+        )}
 
         {/* Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
