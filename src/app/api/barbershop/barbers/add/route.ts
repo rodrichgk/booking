@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbers, users, barbershops } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
@@ -13,9 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { barbershopId, email, specialties } = await request.json();
+    const { barbershopId, name, email, phone, password, specialties } = await request.json();
 
-    if (!barbershopId || !email) {
+    if (!barbershopId || !name || !email || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -41,26 +42,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Find the user to add as barber
-    const userToAdd = await db
+    // Check if email already exists
+    const existingUser = await db
       .select()
       .from(users)
       .where(eq(users.email, email))
       .limit(1);
 
-    if (userToAdd.length === 0) {
+    if (existingUser.length > 0) {
       return NextResponse.json({ 
-        error: 'User not found. The user must have an account on the platform first.' 
-      }, { status: 404 });
+        error: 'Un utilisateur avec cet email existe déjà' 
+      }, { status: 400 });
     }
 
-    // Check if already a barber at this barbershop
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user with barber role
+    const [newUser] = await db.insert(users).values({
+      name,
+      email,
+      phone: phone || null,
+      password: hashedPassword,
+      role: 'barber',
+    }).returning();
+
+    // Check if already a barber at this barbershop (shouldn't happen but safety check)
     const existingBarber = await db
       .select()
       .from(barbers)
       .where(
         and(
-          eq(barbers.userId, userToAdd[0].id),
+          eq(barbers.userId, newUser.id),
           eq(barbers.barbershopId, barbershopId)
         )
       )
@@ -72,17 +85,17 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Add the barber
+    // Add the barber profile
     await db.insert(barbers).values({
-      userId: userToAdd[0].id,
+      userId: newUser.id,
       barbershopId: barbershopId,
       specialties: specialties || [],
       isActive: true,
     });
 
     return NextResponse.json({ 
-      message: 'Barber added successfully',
-      barberId: userToAdd[0].id
+      message: 'Coiffeur créé et ajouté avec succès',
+      barberId: newUser.id
     });
 
   } catch (error) {
