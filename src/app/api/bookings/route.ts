@@ -4,7 +4,18 @@ import { bookings, barbershops, barbers, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization of Resend to avoid build-time errors
+let resendInstance: Resend | null = null;
+function getResend() {
+  if (!resendInstance) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is not configured');
+    }
+    resendInstance = new Resend(apiKey);
+  }
+  return resendInstance;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -152,7 +163,8 @@ export async function POST(request: NextRequest) {
     console.log('📧 Using Resend API Key:', process.env.RESEND_API_KEY ? 'Present' : 'Missing');
     
     try {
-      const emailResponse = await resend.emails.send({
+      const resendClient = getResend();
+      const emailResponse = await resendClient.emails.send({
         from: 'Orphlia Bookings <onboarding@resend.dev>',
         to: customerEmail,
         subject: `Confirmation de votre rendez-vous chez ${barbershop.name}`,
@@ -243,7 +255,8 @@ export async function POST(request: NextRequest) {
       // Send notification to barbershop
       if (barbershop.email) {
         console.log('📧 Attempting to send email to barbershop:', barbershop.email);
-        await resend.emails.send({
+        const resendClient = getResend();
+        await resendClient.emails.send({
           from: 'Orphlia Bookings <onboarding@resend.dev>',
           to: barbershop.email,
           subject: `Nouvelle réservation - ${customerName}`,

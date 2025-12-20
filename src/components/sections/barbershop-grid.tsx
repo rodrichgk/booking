@@ -265,7 +265,7 @@ export function BarbershopGrid() {
                   {t('viewDetails')}
                 </Link>
                 <Link
-                  href={`/barbershops/${shop.id}/book`}
+                  href={`/barbershops/${shop.id}/booking`}
                   className="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-center py-2 px-4 rounded-lg font-medium transition-colors"
                 >
                   {t('bookNow')}
