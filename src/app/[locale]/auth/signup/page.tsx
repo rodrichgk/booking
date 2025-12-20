@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link } from '@/routing';
+import { useToast } from '@/hooks/use-toast';
 
 interface SignUpFormData {
   name: string;
@@ -18,6 +19,7 @@ interface SignUpFormData {
 }
 
 export default function SignUpPage() {
+  const { toast } = useToast();
   const router = useRouter();
   const t = useTranslations('auth');
   const tCommon = useTranslations('common');
@@ -115,13 +117,29 @@ export default function SignUpPage() {
 
       if (signInResult?.error) {
         // Registration successful but auto-login failed
+        toast({
+          title: "✅ Inscription réussie!",
+          description: t('registrationSuccessful'),
+          variant: "success",
+        });
         router.push('/auth/signin?message=' + encodeURIComponent(t('registrationSuccessful')));
       } else {
         // Both registration and login successful
+        toast({
+          title: "✅ Bienvenue sur Orphelia!",
+          description: "Votre compte a été créé avec succès",
+          variant: "success",
+        });
         router.push('/');
       }
     } catch (error) {
-      setApiError(error instanceof Error ? error.message : tErrors('somethingWentWrong'));
+      const errorMsg = error instanceof Error ? error.message : tErrors('somethingWentWrong');
+      setApiError(errorMsg);
+      toast({
+        title: "❌ Erreur d'inscription",
+        description: errorMsg,
+        variant: "error",
+      });
     } finally {
       setIsLoading(false);
     }

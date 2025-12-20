@@ -65,14 +65,16 @@ export default async function UserManagementPage({ params }: { params: Promise<{
            createdAt.getFullYear() === thisMonth.getFullYear();
   }).length;
 
+  const t = await getTranslations({ locale, namespace: 'admin' });
+  
   const stats = [
-    { label: 'Total', value: totalUsers, icon: 'Users', color: 'blue' },
-    { label: 'Devs', value: devUsers, icon: 'Shield', color: 'red' },
-    { label: 'Admins', value: adminUsers, icon: 'Crown', color: 'yellow' },
-    { label: 'Barbers', value: barberUsers, icon: 'Scissors', color: 'green' },
-    { label: 'Customers', value: customerUsers, icon: 'User', color: 'gray' },
-    { label: 'Verified', value: verifiedUsers, icon: 'Users', color: 'emerald' },
-    { label: 'This Month', value: usersThisMonth, icon: 'Users', color: 'indigo' },
+    { label: t('total'), value: totalUsers, icon: 'Users', color: 'blue' },
+    { label: t('devs'), value: devUsers, icon: 'Shield', color: 'red' },
+    { label: t('admins'), value: adminUsers, icon: 'Crown', color: 'yellow' },
+    { label: t('barbers'), value: barberUsers, icon: 'Scissors', color: 'green' },
+    { label: t('customers'), value: customerUsers, icon: 'User', color: 'gray' },
+    { label: t('verifiedUsers'), value: verifiedUsers, icon: 'Users', color: 'emerald' },
+    { label: t('thisMonth'), value: usersThisMonth, icon: 'Users', color: 'indigo' },
   ];
 
   return (

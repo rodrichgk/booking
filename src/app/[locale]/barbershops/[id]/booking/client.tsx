@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { Link } from '@/routing';
-import { Calendar, Clock, User, ArrowLeft, Check, AlertCircle, Scissors, Euro } from 'lucide-react';
+import { Calendar, Clock, User, ArrowLeft, Check, AlertCircle, Scissors, Euro, Loader2 } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useToast } from '@/hooks/use-toast';
 
 interface Barbershop {
   id: string;
@@ -30,11 +31,18 @@ interface Service {
   category: string | null;
 }
 
+interface UserInfo {
+  name: string;
+  email: string;
+  phone: string;
+}
+
 interface BookingClientProps {
   shop: Barbershop;
   barbers: Barber[];
   services: Service[];
   locale: string;
+  userInfo: UserInfo | null;
 }
 
 // Generate available dates for the next 7 days
@@ -79,15 +87,16 @@ const generateTimeSlots = (selectedDate: Date | null) => {
   return slots;
 };
 
-export function BookingClient({ shop, barbers, services, locale }: BookingClientProps) {
+export function BookingClient({ shop, barbers, services, locale, userInfo }: BookingClientProps) {
+  const { toast } = useToast();
   const [step, setStep] = useState<'service' | 'barber' | 'date' | 'time' | 'confirm'>('service');
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState(userInfo?.name || '');
+  const [customerEmail, setCustomerEmail] = useState(userInfo?.email || '');
+  const [customerPhone, setCustomerPhone] = useState(userInfo?.phone || '');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -157,8 +166,19 @@ export function BookingClient({ shop, barbers, services, locale }: BookingClient
         }
 
         setSuccess(true);
+        toast({
+          title: "✅ Réservation confirmée!",
+          description: `Votre rendez-vous a été confirmé pour le ${formatDate(selectedDate!)} à ${selectedTime}`,
+          variant: "success",
+        });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+        const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+        setError(errorMessage);
+        toast({
+          title: "❌ Erreur de réservation",
+          description: errorMessage,
+          variant: "error",
+        });
       } finally {
         setIsSubmitting(false);
       }
@@ -506,6 +526,7 @@ export function BookingClient({ shop, barbers, services, locale }: BookingClient
                     onChange={(e) => setCustomerName(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="Votre nom"
+                    disabled={!!userInfo?.name}
                   />
                 </div>
 
@@ -519,6 +540,7 @@ export function BookingClient({ shop, barbers, services, locale }: BookingClient
                     onChange={(e) => setCustomerEmail(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="votre@email.com"
+                    disabled={!!userInfo?.email}
                   />
                 </div>
 
@@ -532,6 +554,7 @@ export function BookingClient({ shop, barbers, services, locale }: BookingClient
                     onChange={(e) => setCustomerPhone(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="+33 6 12 34 56 78"
+                    disabled={!!userInfo?.phone}
                   />
                 </div>
 
@@ -564,12 +587,13 @@ export function BookingClient({ shop, barbers, services, locale }: BookingClient
             <button
               onClick={handleNext}
               disabled={!canProceed() || isSubmitting}
-              className={`ml-auto px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`ml-auto px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                 canProceed() && !isSubmitting
                   ? 'bg-primary-600 hover:bg-primary-700 text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? 'En cours...' : step === 'confirm' ? 'Confirmer la réservation' : 'Suivant'}
             </button>
           </div>

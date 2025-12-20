@@ -7,8 +7,10 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link } from '@/routing';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SignInPage() {
+  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations('auth');
@@ -80,9 +82,20 @@ export default function SignInPage() {
 
       if (result?.error) {
         setApiError(t('invalidCredentials'));
+        toast({
+          title: "❌ Erreur de connexion",
+          description: t('invalidCredentials'),
+          variant: "error",
+        });
       } else {
         // Get the updated session to check user role
         const session = await getSession();
+        
+        toast({
+          title: "✅ Connexion réussie!",
+          description: "Bienvenue sur Orphelia",
+          variant: "success",
+        });
         
         // Redirect based on user role or to home
         const callbackUrl = searchParams.get('callbackUrl') || '/';
@@ -90,6 +103,11 @@ export default function SignInPage() {
       }
     } catch (error) {
       setApiError(tErrors('somethingWentWrong'));
+      toast({
+        title: "❌ Erreur",
+        description: tErrors('somethingWentWrong'),
+        variant: "error",
+      });
     } finally {
       setIsLoading(false);
     }
