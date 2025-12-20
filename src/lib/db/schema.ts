@@ -103,10 +103,10 @@ export const services = pgTable('services', {
 // Bookings table
 export const bookings = pgTable('bookings', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id).notNull(),
+  userId: uuid('user_id').references(() => users.id), // Nullable for guest bookings
   barbershopId: uuid('barbershop_id').references(() => barbershops.id).notNull(),
-  barberId: uuid('barber_id').references(() => barbers.id).notNull(),
-  serviceId: uuid('service_id').references(() => services.id).notNull(),
+  barberId: uuid('barber_id').references(() => barbers.id), // Nullable if no specific barber
+  serviceId: uuid('service_id').references(() => services.id), // Nullable if no specific service
   startTime: timestamp('start_time').notNull(),
   endTime: timestamp('end_time').notNull(),
   status: varchar('status', { length: 255 }),
