@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { email } = await request.json();
+    const { email, shopId } = await request.json();
 
     // TODO: Integrate with Stripe for real payment processing
     // For now, this is a placeholder that will be integrated with Stripe later
@@ -33,16 +33,20 @@ export async function POST(request: Request) {
     //     quantity: 1,
     //   }],
     //   mode: 'subscription',
-    //   success_url: `${process.env.NEXTAUTH_URL}/subscription/success`,
-    //   cancel_url: `${process.env.NEXTAUTH_URL}/subscription`,
+    //   success_url: `${process.env.NEXTAUTH_URL}/subscription/success?shopId=${shopId}`,
+    //   cancel_url: `${process.env.NEXTAUTH_URL}/subscription?shopId=${shopId}`,
     //   customer_email: email,
+    //   metadata: {
+    //     shopId: shopId,
+    //   },
     // });
 
     // For demonstration purposes, return a mock success URL
     // In production, replace this with actual Stripe checkout URL
     return NextResponse.json({ 
-      checkoutUrl: `/subscription/success?mock=true`,
-      message: 'Checkout session created (demo mode)'
+      checkoutUrl: `/subscription/success?mock=true${shopId ? `&shopId=${shopId}` : ''}`,
+      message: 'Checkout session created (demo mode)',
+      shopId: shopId
     });
 
   } catch (error) {

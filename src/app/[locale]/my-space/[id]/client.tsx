@@ -74,12 +74,25 @@ export function ManageBarbershopClient({
 }: ManageBarbershopClientProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'settings'>('overview');
   const [isAddingBarber, setIsAddingBarber] = useState(false);
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shopActive, setShopActive] = useState(shop.isActive);
   const [serviceStatuses, setServiceStatuses] = useState<Record<string, boolean>>(
     services.reduce((acc, s) => ({ ...acc, [s.id]: s.isActive ?? true }), {})
   );
+  
+  // Form states
+  const [barberEmail, setBarberEmail] = useState('');
+  const [barberSpecialties, setBarberSpecialties] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [serviceName, setServiceName] = useState('');
+  const [serviceDescription, setServiceDescription] = useState('');
+  const [servicePrice, setServicePrice] = useState('');
+  const [serviceDuration, setServiceDuration] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('haircut');
 
   // Calculate stats
   const totalBarbers = barbers.length;
@@ -183,6 +196,179 @@ export function ManageBarbershopClient({
       console.error('Error toggling service status:', error);
       alert('Une erreur est survenue');
     }
+  };
+  
+  const handleAddBarber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barberEmail.trim()) {
+      alert('Veuillez entrer un email');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const specialtiesArray = barberSpecialties
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      
+      const res = await fetch('/api/barbershop/barbers/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barbershopId: shop.id,
+          email: barberEmail,
+          specialties: specialtiesArray,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert('Coiffeur ajouté avec succès!');
+        setBarberEmail('');
+        setBarberSpecialties('');
+        setIsAddingBarber(false);
+        window.location.reload();
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error adding barber:', error);
+      alert('Une erreur est survenue');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleDeleteBarber = async (barberId: string, barberName: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir retirer ${barberName} de votre équipe ?`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/barbershop/barbers/${barberId}`, {
+        method: 'DELETE',
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert('Coiffeur retiré avec succès');
+        window.location.reload();
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error deleting barber:', error);
+      alert('Une erreur est survenue');
+    }
+  };
+  
+  const handleAddService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serviceName.trim() || !servicePrice || !serviceDuration) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barbershopId: shop.id,
+          name: serviceName,
+          description: serviceDescription || null,
+          price: parseFloat(servicePrice),
+          duration: parseInt(serviceDuration),
+          category: serviceCategory,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert('Service ajouté avec succès!');
+        setServiceName('');
+        setServiceDescription('');
+        setServicePrice('');
+        setServiceDuration('');
+        setServiceCategory('haircut');
+        setIsAddingService(false);
+        window.location.reload();
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error adding service:', error);
+      alert('Une erreur est survenue');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleEditService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService || !serviceName.trim() || !servicePrice || !serviceDuration) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/services/${editingService.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: serviceName,
+          description: serviceDescription || null,
+          price: parseFloat(servicePrice),
+          duration: parseInt(serviceDuration),
+          category: serviceCategory,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert('Service modifié avec succès!');
+        setEditingService(null);
+        setServiceName('');
+        setServiceDescription('');
+        setServicePrice('');
+        setServiceDuration('');
+        setServiceCategory('haircut');
+        window.location.reload();
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error editing service:', error);
+      alert('Une erreur est survenue');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const openEditServiceModal = (service: Service) => {
+    setEditingService(service);
+    setServiceName(service.name);
+    setServiceDescription(service.description || '');
+    setServicePrice(service.price);
+    setServiceDuration(service.duration.toString());
+    setServiceCategory(service.category || 'haircut');
+  };
+  
+  const closeServiceModal = () => {
+    setIsAddingService(false);
+    setEditingService(null);
+    setServiceName('');
+    setServiceDescription('');
+    setServicePrice('');
+    setServiceDuration('');
+    setServiceCategory('haircut');
   };
 
   const tabs = [
@@ -408,7 +594,8 @@ export function ManageBarbershopClient({
                 <h2 className="text-2xl font-bold text-gray-900">Équipe</h2>
                 <p className="text-gray-600 mt-1">Gérez les coiffeurs de votre salon</p>
               </div>
-              <button onClick={() => setIsAddingBarber(true)}
+              <button 
+                onClick={() => setIsAddingBarber(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                 <Plus className="w-4 h-4" />
                 <span>Ajouter un Coiffeur</span>
@@ -487,11 +674,13 @@ export function ManageBarbershopClient({
                       )}
                     </div>
 
-                    <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
-                      <button className="flex-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors">
-                        Modifier
+                    <div className="flex items-center space-x-2 ml-4">
+                      <button className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <button 
+                        onClick={() => handleDeleteBarber(barber.id, barber.name || 'ce coiffeur')}
+                        className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -509,7 +698,9 @@ export function ManageBarbershopClient({
                 <h2 className="text-2xl font-bold text-gray-900">Services</h2>
                 <p className="text-gray-600 mt-1">Gérez les services proposés par votre salon</p>
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
+              <button 
+                onClick={() => setIsAddingService(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                 <Plus className="w-4 h-4" />
                 <span>Ajouter un Service</span>
               </button>
@@ -562,7 +753,9 @@ export function ManageBarbershopClient({
                               </div>
                             </div>
                             <div className="flex items-center space-x-2 ml-4">
-                              <button className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                              <button 
+                                onClick={() => openEditServiceModal(service)}
+                                className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button 
@@ -587,7 +780,9 @@ export function ManageBarbershopClient({
                 <Scissors className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun service</h3>
                 <p className="text-gray-600 mb-6">Commencez par ajouter les services proposés par votre salon</p>
-                <button className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
+                <button 
+                  onClick={() => setIsAddingService(true)}
+                  className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                   Ajouter un Service
                 </button>
               </div>
@@ -715,6 +910,176 @@ export function ManageBarbershopClient({
       </div>
       
       <Footer />
+
+      {/* Add Barber Modal */}
+      {isAddingBarber && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900">Ajouter un Coiffeur</h3>
+                <button 
+                  onClick={() => setIsAddingBarber(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleAddBarber} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email du coiffeur <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={barberEmail}
+                  onChange={(e) => setBarberEmail(e.target.value)}
+                  placeholder="coiffeur@example.com"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">L'utilisateur doit avoir un compte sur la plateforme</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Spécialités (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={barberSpecialties}
+                  onChange={(e) => setBarberSpecialties(e.target.value)}
+                  placeholder="Coupes, Barbe, Tresses (séparés par des virgules)"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingBarber(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSubmitting ? 'Ajout...' : 'Ajouter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Service Modal */}
+      {(isAddingService || editingService) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {editingService ? 'Modifier le Service' : 'Ajouter un Service'}
+                </h3>
+                <button 
+                  onClick={closeServiceModal}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={editingService ? handleEditService : handleAddService} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom du service <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={serviceName}
+                  onChange={(e) => setServiceName(e.target.value)}
+                  placeholder="Ex: Coupe Homme"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={serviceDescription}
+                  onChange={(e) => setServiceDescription(e.target.value)}
+                  placeholder="Description du service..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prix (€) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={servicePrice}
+                    onChange={(e) => setServicePrice(e.target.value)}
+                    placeholder="29.90"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Durée (min) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="5"
+                    step="5"
+                    value={serviceDuration}
+                    onChange={(e) => setServiceDuration(e.target.value)}
+                    placeholder="30"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Catégorie <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={serviceCategory}
+                  onChange={(e) => setServiceCategory(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                  <option value="haircut">💇 Coupes</option>
+                  <option value="beard">🧔 Barbe</option>
+                  <option value="styling">✨ Coiffure</option>
+                  <option value="coloring">🎨 Coloration</option>
+                  <option value="treatment">💆 Soins</option>
+                  <option value="combo">🎁 Forfaits</option>
+                </select>
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closeServiceModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSubmitting ? (editingService ? 'Modification...' : 'Ajout...') : (editingService ? 'Modifier' : 'Ajouter')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
