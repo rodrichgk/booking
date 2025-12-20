@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
     try {
       const resendClient = getResend();
       const emailResponse = await resendClient.emails.send({
-        from: 'Orphlia Bookings <onboarding@resend.dev>',
+        from: 'Orphelia <noreply@orphelia.net>',
         to: customerEmail,
         subject: `Confirmation de votre rendez-vous chez ${barbershop.name}`,
         html: `
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
         console.log('📧 Attempting to send email to barbershop:', barbershop.email);
         const resendClient = getResend();
         await resendClient.emails.send({
-          from: 'Orphlia Bookings <onboarding@resend.dev>',
+          from: 'Orphelia <noreply@orphelia.net>',
           to: barbershop.email,
           subject: `Nouvelle réservation - ${customerName}`,
           html: `

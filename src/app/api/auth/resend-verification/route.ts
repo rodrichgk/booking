@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const resend = getResend();
     await resend.emails.send({
-      from: 'Orphelia <onboarding@resend.dev>',
+      from: 'Orphelia <noreply@orphelia.net>',
       to: email,
       subject: 'Vérifiez votre adresse email - Orphelia',
       html: `
