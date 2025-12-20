@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { bookings, barbershops, barbers, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -19,6 +21,10 @@ function getResend() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get user session if authenticated
+    const session = await getServerSession(authOptions);
+    const userId = session?.user ? (session.user as any).id : null;
+
     const body = await request.json();
     const {
       barbershopId,
@@ -122,18 +128,17 @@ export async function POST(request: NextRequest) {
       barberInfo = barber;
     }
 
-    // Create booking - using dummy values for required fields
-    // Note: In production, you'd want to make these optional in the database
+    // Create booking
     const endTime = new Date(appointmentDateTime);
     endTime.setHours(endTime.getHours() + 1); // Default 1 hour appointment
     
     const [booking] = await db
       .insert(bookings)
       .values({
-        userId: '00000000-0000-0000-0000-000000000000', // Placeholder for guest bookings
+        userId: userId || null, // Use authenticated user ID or null for guest
         barbershopId,
-        barberId: barberId || '00000000-0000-0000-0000-000000000000', // Placeholder if no barber
-        serviceId: serviceId || '00000000-0000-0000-0000-000000000000', // Use actual service or placeholder
+        barberId: barberId || null, // Null if no specific barber selected
+        serviceId: serviceId || null, // Null if no specific service selected
         startTime: appointmentDateTime,
         endTime: endTime,
         totalPrice: '0', // TODO: Get from service price
