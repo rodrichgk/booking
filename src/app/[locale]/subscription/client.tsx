@@ -7,6 +7,7 @@ import {
   CreditCard, Shield, Zap, Globe, MessageSquare, Clock
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from '@/routing';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 
@@ -44,6 +45,7 @@ export function SubscriptionClient({
   shopId
 }: SubscriptionClientProps) {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const features = [
     { icon: 'Store', title: 'Barbershop Listing', description: 'Get your barbershop listed on our platform' },
@@ -68,7 +70,14 @@ export function SubscriptionClient({
       const data = await response.json();
       
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        // Check if it's an external URL (Stripe) or internal redirect
+        if (data.checkoutUrl.startsWith('http')) {
+          // External Stripe checkout - use window.location
+          window.location.href = data.checkoutUrl;
+        } else {
+          // Internal redirect (admin bypass or mock) - use locale-aware router
+          router.push(data.checkoutUrl);
+        }
       } else {
         alert('Error creating checkout session. Please try again.');
       }
