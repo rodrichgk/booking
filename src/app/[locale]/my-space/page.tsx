@@ -11,6 +11,7 @@ import { db } from '@/lib/db';
 import { barbershops, users, barbers, bookings, services } from '@/lib/db';
 import { eq, sql, and, gte, desc, lt } from 'drizzle-orm';
 import { MySpaceClient } from './client';
+import { BarberSpaceClient } from './barber-client';
 import { EmailVerificationBanner } from '@/components/email-verification-banner';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -236,6 +237,52 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     barberRating = parseFloat(String(barberProfile[0].rating || 0));
   }
 
+  // Fetch barber's upcoming bookings with details
+  let barberBookingsList: any[] = [];
+  let barberBarbershop: any = null;
+
+  if (userRole === 'barber' && barberProfile.length > 0) {
+    const barberId = barberProfile[0].id;
+    
+    // Get barbershop info
+    if (barberProfile[0].barbershopId) {
+      const shopInfo = await db
+        .select({
+          id: barbershops.id,
+          name: barbershops.name,
+          address: barbershops.address,
+          city: barbershops.city,
+        })
+        .from(barbershops)
+        .where(eq(barbershops.id, barberProfile[0].barbershopId))
+        .limit(1);
+      
+      barberBarbershop = shopInfo[0] || null;
+    }
+
+    // Get upcoming bookings
+    barberBookingsList = await db
+      .select({
+        id: bookings.id,
+        customerName: users.name,
+        customerPhone: users.phone,
+        serviceName: services.name,
+        startTime: bookings.startTime,
+        endTime: bookings.endTime,
+        status: bookings.status,
+        totalPrice: bookings.totalPrice,
+      })
+      .from(bookings)
+      .leftJoin(users, eq(bookings.userId, users.id))
+      .leftJoin(services, eq(bookings.serviceId, services.id))
+      .where(and(
+        eq(bookings.barberId, barberId),
+        gte(bookings.startTime, today)
+      ))
+      .orderBy(bookings.startTime)
+      .limit(20);
+  }
+
   const barberStats = {
     bookingsToday: barberBookingsToday,
     bookingsWeek: barberBookingsWeek,
@@ -290,7 +337,16 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {userRole === 'dev' && <DevDashboard locale={locale} stats={stats} />}
           {userRole === 'admin' && <AdminDashboard locale={locale} stats={stats} />}
-          {userRole === 'barber' && <BarberDashboard locale={locale} stats={barberStats} />}
+          {userRole === 'barber' && (
+            <BarberSpaceClient
+              profile={barberProfile[0] as any}
+              barbershop={barberBarbershop}
+              bookings={barberBookingsList as any}
+              stats={barberStats}
+              locale={locale}
+              userName={session.user.name || ''}
+            />
+          )}
           {userRole === 'customer' && (
             <MySpaceClient 
               barbershops={userBarbershops as any}
@@ -486,71 +542,3 @@ async function AdminDashboard({ locale, stats: realStats }: { locale: string; st
   );
 }
 
-// Barber Dashboard
-interface BarberStats {
-  bookingsToday: number;
-  bookingsWeek: number;
-  monthlyEarnings: string;
-  rating: string;
-}
-
-function BarberDashboard({ locale, stats: realStats }: { locale: string; stats: BarberStats }) {
-  const stats = [
-    { label: 'Today\'s Bookings', value: realStats.bookingsToday.toString(), icon: Calendar, color: 'blue' },
-    { label: 'This Week', value: realStats.bookingsWeek.toString(), icon: Clock, color: 'green' },
-    { label: 'Earnings (Month)', value: `€${realStats.monthlyEarnings}`, icon: DollarSign, color: 'yellow' },
-    { label: 'Rating', value: realStats.rating, icon: Star, color: 'purple' },
-  ];
-
-  const sections = [
-    { title: 'My Schedule', icon: Calendar, href: `/${locale}/barber/schedule`, desc: 'View and manage your schedule' },
-    { title: 'Bookings', icon: Clock, href: `/${locale}/barber/bookings`, desc: 'Today\'s and upcoming appointments' },
-    { title: 'Earnings', icon: DollarSign, href: `/${locale}/barber/earnings`, desc: 'Track your earnings and tips' },
-    { title: 'Reviews', icon: Star, href: `/${locale}/barber/reviews`, desc: 'View customer reviews and ratings' },
-    { title: 'My Profile', icon: Users, href: `/${locale}/barber/profile`, desc: 'Manage your professional profile' },
-    { title: 'Settings', icon: Settings, href: `/${locale}/barber/settings`, desc: 'Availability and preferences' },
-  ];
-
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-              </div>
-              <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Professional Dashboard</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sections.map((section) => (
-            <Link
-              key={section.title}
-              href={section.href}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-primary-50 rounded-lg group-hover:bg-primary-100 transition-colors">
-                  <section.icon className="w-6 h-6 text-primary-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{section.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{section.desc}</p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}

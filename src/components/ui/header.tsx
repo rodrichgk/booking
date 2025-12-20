@@ -34,10 +34,7 @@ export function Header() {
     }
 
     if (isBarber) {
-      return [
-        ...baseItems,
-        { href: '/barber/dashboard', label: t('dashboard') },
-      ];
+      return baseItems;
     }
 
     return [
@@ -57,12 +54,7 @@ export function Header() {
     }
 
     if (isBarber) {
-      return [
-        ...baseItems,
-        { href: '/barber/dashboard', label: 'Barber Dashboard' },
-        { href: '/barber/profile', label: 'Barber Profile' },
-        { href: '/barber/schedule', label: 'My Schedule' },
-      ];
+      return baseItems;
     }
 
     return baseItems;
