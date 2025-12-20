@@ -96,41 +96,97 @@ export async function POST(request: NextRequest) {
         subject: 'Vérifiez votre adresse email - Orphelia',
         html: `
           <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 40px 20px;">
-            <div style="max-width: 560px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-              <div style="background: linear-gradient(135deg, #FFD700, #B8860B); padding: 40px 20px; text-align: center;">
-                <div style="width: 60px; height: 60px; background-color: white; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
-                  <span style="font-size: 32px; font-weight: bold; color: #B8860B;">O</span>
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Vérification Email Orphelia</title>
+  <style>
+    table, td, div, h1, p {font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;}
+    
+    /* Reset styles */
+    body {margin: 0; padding: 0; word-spacing: normal; background-color: #f9fafb;}
+    table {border-collapse: collapse;}
+    
+    /* Mobile styles */
+    @media screen and (max-width: 530px) {
+      .col-lge {max-width: 100% !important;}
+      .content-padding {padding: 30px 20px !important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;word-spacing:normal;background-color:#f9fafb;">
+  
+  <div role="article" aria-roledescription="email" lang="fr" style="text-size-adjust:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;background-color:#f9fafb;">
+    <table role="presentation" style="width:100%;border:none;border-spacing:0;">
+      <tr>
+        <td align="center" style="padding:40px 0;">
+          
+          <table role="presentation" style="width:94%;max-width:550px;border:none;border-spacing:0;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#363636;">
+            
+            <tr>
+              <td style="padding:0 0 20px 0;text-align:center;">
+                <div style="display:inline-block;width:48px;height:48px;line-height:48px;border-radius:50%;background-color:#1a1a2e;color:#D4AF37;font-size:24px;font-weight:bold;text-align:center;">
+                  O
                 </div>
-                <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Orphelia</h1>
-              </div>
-              <div style="padding: 40px 30px;">
-                <h2 style="color: #1a1a2e; margin: 0 0 16px; font-size: 20px;">Bienvenue ${name} ! 👋</h2>
-                <p style="color: #4b5563; line-height: 1.6; margin: 0 0 24px;">
-                  Merci de vous être inscrit sur Orphelia. Pour activer votre compte et accéder à toutes les fonctionnalités, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous.
-                </p>
-                <div style="text-align: center; margin: 32px 0;">
-                  <a href="${verificationUrl}" style="display: inline-block; background: linear-gradient(135deg, #FFD700, #B8860B); color: #1a1a2e; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                    Vérifier mon email
-                  </a>
+                <div style="margin-top:8px;font-size:14px;font-weight:600;letter-spacing:1px;color:#1a1a2e;text-transform:uppercase;">
+                  Orphelia
                 </div>
-                <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0;">
-                  Ce lien expire dans 24 heures. Si vous n'avez pas créé de compte sur Orphelia, vous pouvez ignorer cet email.
+              </td>
+            </tr>
+
+            <tr>
+              <td class="content-padding" style="padding:45px 40px;background-color:#ffffff;border-radius:12px;box-shadow: 0 4px 20px rgba(0,0,0,0.05);border:1px solid #eeeeee;">
+                
+                <h1 style="margin-top:0;margin-bottom:16px;font-size:24px;font-weight:700;color:#111111;text-align:center;">
+                  Vérifiez votre email
+                </h1>
+                
+                <p style="margin:0 0 20px 0;color:#555555;text-align:center;">
+                  Bienvenue, <strong>${name}</strong> !
                 </p>
-              </div>
-              <div style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                
+                <p style="margin:0 0 30px 0;color:#555555;line-height:1.6;text-align:center;">
+                  Merci de rejoindre Orphelia. Pour garantir la sécurité de votre compte et accéder à nos services exclusifs, veuillez valider votre adresse email.
+                </p>
+
+                <table role="presentation" style="margin:0 auto;border-spacing:0;border-collapse:separate;width:auto;">
+                  <tr>
+                    <td style="border-radius:6px;background-color:#1a1a2e;text-align:center;">
+                      <a href="${verificationUrl}" target="_blank" style="background-color:#1a1a2e;border:1px solid #1a1a2e;border-radius:6px;color:#ffffff;display:inline-block;font-size:16px;font-weight:600;line-height:48px;padding:0 32px;text-align:center;text-decoration:none;width:auto;">
+                        <span style="color:#D4AF37;">Vérifier mon email</span>
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:30px 0 0 0;font-size:13px;color:#888888;text-align:center;">
+                  Ce lien est valide pendant 24 heures.
+                </p>
+
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:24px;text-align:center;font-size:12px;color:#999999;">
+                <p style="margin:0 0 8px 0;">
+                  Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
+                </p>
+                <p style="margin:0;">
                   © ${new Date().getFullYear()} Orphelia. Tous droits réservés.
                 </p>
-              </div>
-            </div>
-          </body>
-          </html>
+              </td>
+            </tr>
+
+          </table>
+          
+          </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
         `,
       });
     } catch (emailError) {

@@ -267,6 +267,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
         customerName: users.name,
         customerPhone: users.phone,
         serviceName: services.name,
+        servicePrice: services.price,
         startTime: bookings.startTime,
         endTime: bookings.endTime,
         status: bookings.status,

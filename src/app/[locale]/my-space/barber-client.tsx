@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Calendar, Clock, DollarSign, Star, Users, Camera, Loader2, MapPin, Phone, Scissors } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Star, Users, Camera, Loader2, MapPin, Phone, Scissors, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface BarberProfile {
@@ -22,10 +22,11 @@ interface BarberBooking {
   customerName: string;
   customerPhone: string | null;
   serviceName: string;
+  servicePrice: string | null;
   startTime: Date;
   endTime: Date;
   status: string;
-  totalPrice: string;
+  totalPrice: string | null;
 }
 
 interface BarbershopInfo {
@@ -58,12 +59,14 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
   const [bio, setBio] = useState(profile?.bio || '');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [isSavingBio, setIsSavingBio] = useState(false);
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
+  const [bookingsList, setBookingsList] = useState(bookings);
 
   const statsDisplay = [
-    { label: "Rendez-vous aujourd'hui", value: stats.bookingsToday.toString(), icon: Calendar, color: 'bg-blue-100 text-blue-600' },
-    { label: 'Cette semaine', value: stats.bookingsWeek.toString(), icon: Clock, color: 'bg-green-100 text-green-600' },
-    { label: 'Gains du mois', value: `€${stats.monthlyEarnings}`, icon: DollarSign, color: 'bg-yellow-100 text-yellow-600' },
-    { label: 'Note moyenne', value: stats.rating, icon: Star, color: 'bg-purple-100 text-purple-600' },
+    { label: "Rendez-vous aujourd'hui", value: stats.bookingsToday.toString(), icon: Calendar, color: 'bg-slate-100 text-slate-700' },
+    { label: 'Cette semaine', value: stats.bookingsWeek.toString(), icon: Clock, color: 'bg-slate-100 text-slate-700' },
+    { label: 'Gains du mois', value: `€${stats.monthlyEarnings}`, icon: DollarSign, color: 'bg-slate-100 text-slate-700' },
+    { label: 'Note moyenne', value: stats.rating, icon: Star, color: 'bg-amber-50 text-amber-600' },
   ];
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,6 +130,35 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
     } finally {
       setIsSavingBio(false);
     }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')) return;
+
+    setCancellingBookingId(bookingId);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/cancel`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'annulation');
+
+      setBookingsList(prev => prev.map(b => 
+        b.id === bookingId ? { ...b, status: 'cancelled' } : b
+      ));
+      toast({ variant: 'success', title: 'Succès', description: 'Rendez-vous annulé' });
+    } catch (error: any) {
+      toast({ variant: 'error', title: 'Erreur', description: error.message || 'Une erreur est survenue' });
+    } finally {
+      setCancellingBookingId(null);
+    }
+  };
+
+  const getBookingPrice = (booking: BarberBooking) => {
+    const price = booking.totalPrice || booking.servicePrice || '0';
+    return parseFloat(price).toFixed(2);
   };
 
   const formatDate = (date: Date) => {
@@ -216,16 +248,16 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
                     alt={userName}
                     width={120}
                     height={120}
-                    className="w-30 h-30 rounded-full object-cover border-4 border-primary-100"
+                    className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 shadow-sm"
                   />
                 ) : (
-                  <div className="w-30 h-30 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center border-4 border-primary-100">
-                    <span className="text-4xl font-bold text-white">
+                  <div className="w-28 h-28 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center border-2 border-gray-200 shadow-sm">
+                    <span className="text-3xl font-semibold text-white">
                       {userName?.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                   <input
                     type="file"
                     accept="image/*"
@@ -234,9 +266,9 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
                     disabled={isUploadingImage}
                   />
                   {isUploadingImage ? (
-                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
                   ) : (
-                    <Camera className="w-8 h-8 text-white" />
+                    <Camera className="w-6 h-6 text-white" />
                   )}
                 </label>
               </div>
@@ -263,7 +295,7 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
                 <p className="text-sm text-gray-500">Biographie</p>
                 <button
                   onClick={() => setIsEditingBio(!isEditingBio)}
-                  className="text-sm text-primary-600 hover:text-primary-700"
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium"
                 >
                   {isEditingBio ? 'Annuler' : 'Modifier'}
                 </button>
@@ -273,14 +305,14 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
                   <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm"
                     rows={4}
                     placeholder="Décrivez votre expérience, vos spécialités..."
                   />
                   <button
                     onClick={handleSaveBio}
                     disabled={isSavingBio}
-                    className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm font-medium"
+                    className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 text-sm font-medium transition-colors"
                   >
                     {isSavingBio ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
@@ -316,21 +348,21 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Mes Rendez-vous</h3>
             
-            {bookings.length === 0 ? (
+            {bookingsList.length === 0 ? (
               <div className="text-center py-8">
                 <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">Aucun rendez-vous à venir</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {bookings.map((booking) => (
+                {bookingsList.map((booking) => (
                   <div
                     key={booking.id}
                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="w-6 h-6 text-primary-600" />
+                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-gray-600" />
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{booking.customerName}</p>
@@ -340,11 +372,27 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(booking.status)}`}>
-                        {getStatusLabel(booking.status)}
-                      </span>
-                      <p className="text-sm font-semibold text-gray-900 mt-1">€{booking.totalPrice}</p>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(booking.status)}`}>
+                          {getStatusLabel(booking.status)}
+                        </span>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">€{getBookingPrice(booking)}</p>
+                      </div>
+                      {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                        <button
+                          onClick={() => handleCancelBooking(booking.id)}
+                          disabled={cancellingBookingId === booking.id}
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Annuler le rendez-vous"
+                        >
+                          {cancellingBookingId === booking.id ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <X className="w-5 h-5" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
