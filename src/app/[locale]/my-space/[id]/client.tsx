@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useToast } from '@/hooks/use-toast';
 
 interface Barbershop {
   id: string;
@@ -72,6 +73,7 @@ export function ManageBarbershopClient({
   subscriptionStatus,
   locale 
 }: ManageBarbershopClientProps) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'settings'>('overview');
   const [isAddingService, setIsAddingService] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -135,14 +137,26 @@ export function ManageBarbershopClient({
       
       if (res.ok) {
         setShopActive(data.isActive);
-        alert(data.message);
-        window.location.reload();
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: data.message,
+        });
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        alert(data.error || 'Une erreur est survenue');
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
       }
     } catch (error) {
       console.error('Error toggling shop status:', error);
-      alert('Une erreur est survenue');
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
     } finally {
       setIsToggling(false);
     }
@@ -168,14 +182,26 @@ export function ManageBarbershopClient({
       const data = await res.json();
       
       if (res.ok) {
-        alert(data.message);
-        window.location.href = `/${locale}/my-space`;
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: data.message,
+        });
+        setTimeout(() => window.location.href = `/${locale}/my-space`, 1000);
       } else {
-        alert(data.error || 'Une erreur est survenue');
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
       }
     } catch (error) {
       console.error('Error deleting shop:', error);
-      alert('Une erreur est survenue');
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -191,13 +217,25 @@ export function ManageBarbershopClient({
       
       if (res.ok) {
         setServiceStatuses(prev => ({ ...prev, [serviceId]: data.isActive }));
-        alert(data.message);
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: data.message,
+        });
       } else {
-        alert(data.error || 'Une erreur est survenue');
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
       }
     } catch (error) {
       console.error('Error toggling service status:', error);
-      alert('Une erreur est survenue');
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
     }
   };
   
@@ -214,21 +252,37 @@ export function ManageBarbershopClient({
       const data = await res.json();
       
       if (res.ok) {
-        alert('Coiffeur retiré avec succès');
-        window.location.reload();
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: 'Coiffeur retiré avec succès',
+        });
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        alert(data.error || 'Une erreur est survenue');
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
       }
     } catch (error) {
       console.error('Error deleting barber:', error);
-      alert('Une erreur est survenue');
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
     }
   };
   
   const handleAddBarber = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barberName.trim() || !barberEmail.trim() || !barberPassword.trim()) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      toast({
+        variant: 'warning',
+        title: 'Attention',
+        description: 'Veuillez remplir tous les champs obligatoires',
+      });
       return;
     }
     
@@ -249,19 +303,31 @@ export function ManageBarbershopClient({
       const data = await res.json();
       
       if (res.ok) {
-        alert('Coiffeur ajouté avec succès!');
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: 'Coiffeur ajouté avec succès!',
+        });
         setBarberName('');
         setBarberEmail('');
         setBarberPhone('');
         setBarberPassword('');
         setIsAddingBarber(false);
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        alert(data.error || 'Une erreur est survenue');
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
       }
     } catch (error) {
       console.error('Error adding barber:', error);
-      alert('Une erreur est survenue');
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -270,7 +336,11 @@ export function ManageBarbershopClient({
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!serviceName.trim() || !servicePrice || !serviceDuration) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      toast({
+        variant: 'warning',
+        title: 'Attention',
+        description: 'Veuillez remplir tous les champs obligatoires',
+      });
       return;
     }
     
@@ -292,20 +362,32 @@ export function ManageBarbershopClient({
       const data = await res.json();
       
       if (res.ok) {
-        alert('Service ajouté avec succès!');
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: 'Service ajouté avec succès!',
+        });
         setServiceName('');
         setServiceDescription('');
         setServicePrice('');
         setServiceDuration('');
         setServiceCategory('haircut');
         setIsAddingService(false);
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        alert(data.error || 'Une erreur est survenue');
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
       }
     } catch (error) {
       console.error('Error adding service:', error);
-      alert('Une erreur est survenue');
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -314,7 +396,11 @@ export function ManageBarbershopClient({
   const handleEditService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingService || !serviceName.trim() || !servicePrice || !serviceDuration) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      toast({
+        variant: 'warning',
+        title: 'Attention',
+        description: 'Veuillez remplir tous les champs obligatoires',
+      });
       return;
     }
     
@@ -335,20 +421,32 @@ export function ManageBarbershopClient({
       const data = await res.json();
       
       if (res.ok) {
-        alert('Service modifié avec succès!');
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: 'Service modifié avec succès!',
+        });
         setEditingService(null);
         setServiceName('');
         setServiceDescription('');
         setServicePrice('');
         setServiceDuration('');
         setServiceCategory('haircut');
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        alert(data.error || 'Une erreur est survenue');
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
       }
     } catch (error) {
       console.error('Error editing service:', error);
-      alert('Une erreur est survenue');
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
     } finally {
       setIsSubmitting(false);
     }
