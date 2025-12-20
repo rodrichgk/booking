@@ -118,7 +118,7 @@ booking/
 │   │   │   │   ├── page.tsx      # Subscription page
 │   │   │   │   ├── client.tsx
 │   │   │   │   └── success/
-│   │   │   │       └── page.tsx  # Payment success
+│   │   │   │       └── page.tsx  # Payment success + DB activation
 │   │   │   │
 │   │   │   └── admin/            # Admin panel
 │   │   │       ├── users/
@@ -184,8 +184,10 @@ booking/
 │   │   │   │           └── route.ts
 │   │   │   │
 │   │   │   ├── subscription/
-│   │   │   │   └── create-checkout/
-│   │   │   │       └── route.ts  # Stripe checkout
+│   │   │   │   ├── create-checkout/
+│   │   │   │   │   └── route.ts  # Stripe checkout
+│   │   │   │   └── activate/
+│   │   │   │       └── route.ts  # Activate subscription in DB
 │   │   │   │
 │   │   │   └── uploadthing/
 │   │   │       ├── core.ts       # Upload config
@@ -404,6 +406,7 @@ booking/
 - `POST /api/admin/users` → Créer utilisateur (admin)
 - `PATCH/DELETE /api/admin/users/[id]` → Modifier/supprimer utilisateur
 - `POST /api/subscription/create-checkout` → Créer session Stripe
+- `POST /api/subscription/activate` → Activer abonnement dans la DB
 - `POST /api/uploadthing` → Upload d'images
 
 ---
@@ -716,6 +719,7 @@ Le projet est spécialisé dans les soins capillaires afro:
 - [ ] Documentation API (Swagger/OpenAPI)
 
 ### 🐛 **Bugs Corrigés Récemment / Recently Fixed Bugs**
+- [x] **Activation d'abonnement en base de données** (Dec 2024) - Le renouvellement d'abonnement était uniquement visuel et ne mettait pas à jour le statut dans la base de données. Fix: Création de l'endpoint `/api/subscription/activate` qui met à jour `createdAt` (pour réinitialiser la période de 30 jours) et `isActive=true`. La page de succès (`/subscription/success`) appelle maintenant cet endpoint automatiquement avec le `shopId` pour activer l'abonnement.
 - [x] **Renouvellement d'abonnement** (Dec 2024) - Le bouton "Renouveler" depuis `/my-space/[id]` passait le `shopId` en paramètre URL mais la page `/subscription` ne l'utilisait pas. Fix: Extraction du `shopId` depuis `searchParams` et transmission à l'API Stripe.
 - [x] **404 sur Subscribe Now** (Dec 2024) - Le bouton "Subscribe Now" redirigait vers une URL avec locale hardcodé (`/fr/`) au lieu du locale de l'utilisateur. Fix: API retourne URL relative, client utilise `router.push()` de `next-intl` pour redirection locale-aware.
 - [x] **Flux d'ajout de coiffeur** (Dec 2024) - Le bouton "Ajouter un Coiffeur" utilisait un modal simple. Changé pour rediriger vers la page de création d'utilisateur admin (`/admin/users`) pour maintenir la cohérence UX.
