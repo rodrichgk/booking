@@ -89,6 +89,13 @@ export function ManageBarbershopClient({
   const [servicePrice, setServicePrice] = useState('');
   const [serviceDuration, setServiceDuration] = useState('');
   const [serviceCategory, setServiceCategory] = useState('haircut');
+  
+  // Barber form states
+  const [isAddingBarber, setIsAddingBarber] = useState(false);
+  const [barberName, setBarberName] = useState('');
+  const [barberEmail, setBarberEmail] = useState('');
+  const [barberPhone, setBarberPhone] = useState('');
+  const [barberPassword, setBarberPassword] = useState('');
 
   // Calculate stats
   const totalBarbers = barbers.length;
@@ -215,6 +222,48 @@ export function ManageBarbershopClient({
     } catch (error) {
       console.error('Error deleting barber:', error);
       alert('Une erreur est survenue');
+    }
+  };
+  
+  const handleAddBarber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barberName.trim() || !barberEmail.trim() || !barberPassword.trim()) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/barbershop/barbers/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: barberName,
+          email: barberEmail,
+          phone: barberPhone || null,
+          password: barberPassword,
+          barbershopId: shop.id,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert('Coiffeur ajouté avec succès!');
+        setBarberName('');
+        setBarberEmail('');
+        setBarberPhone('');
+        setBarberPassword('');
+        setIsAddingBarber(false);
+        window.location.reload();
+      } else {
+        alert(data.error || 'Une erreur est survenue');
+      }
+    } catch (error) {
+      console.error('Error adding barber:', error);
+      alert('Une erreur est survenue');
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -547,12 +596,12 @@ export function ManageBarbershopClient({
                 <h2 className="text-2xl font-bold text-gray-900">Équipe</h2>
                 <p className="text-gray-600 mt-1">Gérez les coiffeurs de votre salon</p>
               </div>
-              <Link 
-                href={`/${locale}/admin/users?action=add&returnTo=/my-space/${shop.id}`}
+              <button 
+                onClick={() => setIsAddingBarber(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                 <Plus className="w-4 h-4" />
                 <span>Ajouter un Coiffeur</span>
-              </Link>
+              </button>
             </div>
 
             {barbers.length === 0 ? (
@@ -560,11 +609,11 @@ export function ManageBarbershopClient({
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun coiffeur</h3>
                 <p className="text-gray-600 mb-6">Commencez par ajouter votre premier coiffeur à votre équipe</p>
-                <Link 
-                  href={`/${locale}/admin/users?action=add&returnTo=/my-space/${shop.id}`}
+                <button 
+                  onClick={() => setIsAddingBarber(true)}
                   className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                   Ajouter un Coiffeur
-                </Link>
+                </button>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -864,6 +913,93 @@ export function ManageBarbershopClient({
       </div>
       
       <Footer />
+      
+      {/* Add Barber Modal */}
+      {isAddingBarber && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900">Ajouter un Coiffeur</h3>
+                <button 
+                  onClick={() => setIsAddingBarber(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleAddBarber} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom complet <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={barberName}
+                  onChange={(e) => setBarberName(e.target.value)}
+                  placeholder="Ex: Jean Dupont"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={barberEmail}
+                  onChange={(e) => setBarberEmail(e.target.value)}
+                  placeholder="jean.dupont@example.com"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  value={barberPhone}
+                  onChange={(e) => setBarberPhone(e.target.value)}
+                  placeholder="+33 6 12 34 56 78"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mot de passe <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={barberPassword}
+                  onChange={(e) => setBarberPassword(e.target.value)}
+                  placeholder="Minimum 6 caractères"
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Le coiffeur pourra se connecter avec cet email et ce mot de passe</p>
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingBarber(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSubmitting ? 'Ajout...' : 'Ajouter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       {/* Add/Edit Service Modal */}
       {(isAddingService || editingService) && (
