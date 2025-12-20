@@ -125,7 +125,7 @@ export function FeaturedBarbershops() {
                     {t('viewDetails')}
                   </Link>
                   <Link
-                    href={`/barbershops/${shop.id}/book`}
+                    href={`/barbershops/${shop.id}/booking`}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 text-center py-2 px-4 rounded-lg font-medium transition-colors"
                   >
                     {t('bookNow')}
