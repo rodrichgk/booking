@@ -290,7 +290,29 @@
   },
   "barbershopManagement": {
     "title": "My Barbershop",
-    "description": "Manage your barbershop and team"
+    "description": "Manage your barbershop and team",
+    "tabs": {
+      "overview": "Overview",
+      "team": "Team",
+      "services": "Services",
+      "gallery": "Gallery",
+      "settings": "Settings"
+    },
+    "gallery": {
+      "title": "Photo Gallery",
+      "subtitle": "Manage your salon photos",
+      "photosTitle": "Salon Photos",
+      "photosSubtitle": "Upload photos to showcase your salon",
+      "noImages": "No photos",
+      "uploadTitle": "Click to upload or drag and drop",
+      "uploadFormats": "PNG, JPG, GIF up to 4MB",
+      "uploadButton": "Upload photos",
+      "uploadNote": "Photos will be visible on your public page"
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Manage your salon settings"
+    }
   },
   "language": {
     "french": "Français",

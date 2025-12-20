@@ -19,7 +19,7 @@ const featuredShops = [
   {
     id: '2',
     name: 'Afro Artistry Studio',
-    image: 'https://images.unsplash.com/photo-1622286346003-c8b4e2c6f0d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    image: 'https://lesatelierscrepus.com/cdn/shop/articles/top-5-des-coiffeurs-experts-en-cheveux-cre_CC_81pus-a_CC_80-Paris.jpg?v=1730206921',
     rating: 4.8,
     reviewCount: 89,
     address: 'Atlanta, GA',

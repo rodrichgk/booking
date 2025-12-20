@@ -65,6 +65,8 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       primaryColor: '#6366f1',
       darkMode: false,
       compactMode: false,
+      featuredMode: 'manual' as const,
+      featuredBarbershopIds: [] as string[],
     },
   };
 

@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbershops, barbers, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -10,6 +12,8 @@ export default async function BarbershopDetailsPage({
   params: Promise<{ id: string; locale: string }> 
 }) {
   const { id, locale } = await params;
+  const session = await getServerSession(authOptions);
+  const isAuthenticated = !!session?.user;
 
   // Fetch barbershop from database
   const [shop] = await db
@@ -50,5 +54,5 @@ export default async function BarbershopDetailsPage({
     .innerJoin(users, eq(barbers.userId, users.id))
     .where(eq(barbers.barbershopId, id));
 
-  return <BarbershopDetailClient shop={shop as any} barbers={shopBarbers as any} locale={locale} />;
+  return <BarbershopDetailClient shop={shop as any} barbers={shopBarbers as any} locale={locale} isAuthenticated={isAuthenticated} />;
 }

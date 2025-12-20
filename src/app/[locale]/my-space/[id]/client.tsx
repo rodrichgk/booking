@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { Link } from '@/routing';
+import { useTranslations } from 'next-intl';
 import { 
   Store, MapPin, Phone, Mail, Globe, Star, Calendar, Users, 
   Settings, CreditCard, Plus, Edit2, Trash2, Check, X, 
-  AlertCircle, TrendingUp, Clock, ArrowLeft, Scissors, Euro, Tag
+  AlertCircle, TrendingUp, Clock, ArrowLeft, Scissors, Euro, Tag, Image as ImageIcon
 } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
@@ -33,6 +34,7 @@ interface Barber {
   name: string | null;
   email: string | null;
   phone: string | null;
+  profileImage: string | null;
   specialties: string[] | null;
   experience: number | null;
   rating: string | null;
@@ -44,6 +46,7 @@ interface Service {
   id: string;
   name: string;
   description: string | null;
+  image: string | null;
   price: string;
   duration: number;
   category: string | null;
@@ -74,7 +77,8 @@ export function ManageBarbershopClient({
   locale 
 }: ManageBarbershopClientProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'gallery' | 'settings'>('overview');
+  const t = useTranslations('barbershopManagement');
   const [isAddingService, setIsAddingService] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isToggling, setIsToggling] = useState(false);
@@ -91,6 +95,8 @@ export function ManageBarbershopClient({
   const [servicePrice, setServicePrice] = useState('');
   const [serviceDuration, setServiceDuration] = useState('');
   const [serviceCategory, setServiceCategory] = useState('haircut');
+  const [serviceImage, setServiceImage] = useState('');
+  const [isUploadingServiceImage, setIsUploadingServiceImage] = useState(false);
   
   // Barber form states
   const [isAddingBarber, setIsAddingBarber] = useState(false);
@@ -98,6 +104,17 @@ export function ManageBarbershopClient({
   const [barberEmail, setBarberEmail] = useState('');
   const [barberPhone, setBarberPhone] = useState('');
   const [barberPassword, setBarberPassword] = useState('');
+  
+  // Shop edit states
+  const [isEditingShop, setIsEditingShop] = useState(false);
+  const [isUpdatingShop, setIsUpdatingShop] = useState(false);
+  const [shopName, setShopName] = useState(shop.name);
+  const [shopAddress, setShopAddress] = useState(shop.address);
+  const [shopCity, setShopCity] = useState(shop.city);
+  const [shopPhone, setShopPhone] = useState(shop.phone || '');
+  const [shopEmail, setShopEmail] = useState(shop.email || '');
+  const [shopWebsite, setShopWebsite] = useState(shop.website || '');
+  const [shopDescription, setShopDescription] = useState(shop.description || '');
 
   // Calculate stats
   const totalBarbers = barbers.length;
@@ -204,6 +221,55 @@ export function ManageBarbershopClient({
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleUpdateShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isUpdatingShop) return;
+    
+    setIsUpdatingShop(true);
+    try {
+      const res = await fetch(`/api/barbershops/${shop.id}/update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: shopName,
+          address: shopAddress,
+          city: shopCity,
+          phone: shopPhone || null,
+          email: shopEmail || null,
+          website: shopWebsite || null,
+          description: shopDescription || null,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: 'Informations mises à jour avec succès',
+        });
+        setIsEditingShop(false);
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating shop:', error);
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
+    } finally {
+      setIsUpdatingShop(false);
     }
   };
   
@@ -333,6 +399,47 @@ export function ManageBarbershopClient({
     }
   };
   
+  const handleImageUpload = async (file: File, type: 'service' | 'barber') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Erreur lors du téléchargement');
+    }
+    return data.url;
+  };
+
+  const handleServiceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingServiceImage(true);
+    try {
+      const url = await handleImageUpload(file, 'service');
+      setServiceImage(url);
+      toast({
+        variant: 'success',
+        title: 'Image téléchargée',
+        description: 'L\'image a été ajoutée avec succès',
+      });
+    } catch (error) {
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Erreur lors du téléchargement',
+      });
+    } finally {
+      setIsUploadingServiceImage(false);
+    }
+  };
+
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!serviceName.trim() || !servicePrice || !serviceDuration) {
@@ -353,6 +460,7 @@ export function ManageBarbershopClient({
           barbershopId: shop.id,
           name: serviceName,
           description: serviceDescription || null,
+          image: serviceImage || null,
           price: parseFloat(servicePrice),
           duration: parseInt(serviceDuration),
           category: serviceCategory,
@@ -372,6 +480,7 @@ export function ManageBarbershopClient({
         setServicePrice('');
         setServiceDuration('');
         setServiceCategory('haircut');
+        setServiceImage('');
         setIsAddingService(false);
         setTimeout(() => window.location.reload(), 1000);
       } else {
@@ -472,10 +581,11 @@ export function ManageBarbershopClient({
   };
 
   const tabs = [
-    { id: 'overview' as const, label: 'Vue d\'ensemble', icon: TrendingUp },
-    { id: 'barbers' as const, label: 'Équipe', icon: Users },
-    { id: 'services' as const, label: 'Services', icon: Scissors },
-    { id: 'settings' as const, label: 'Paramètres', icon: Settings },
+    { id: 'overview' as const, label: t('tabs.overview'), icon: TrendingUp },
+    { id: 'barbers' as const, label: t('tabs.team'), icon: Users },
+    { id: 'services' as const, label: t('tabs.services'), icon: Scissors },
+    { id: 'gallery' as const, label: t('tabs.gallery'), icon: ImageIcon },
+    { id: 'settings' as const, label: t('tabs.settings'), icon: Settings },
   ];
 
   return (
@@ -589,7 +699,9 @@ export function ManageBarbershopClient({
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Informations du Salon</h2>
-                <button className="flex items-center space-x-2 px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                <button 
+                  onClick={() => setIsEditingShop(true)}
+                  className="flex items-center space-x-2 px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                   <Edit2 className="w-4 h-4" />
                   <span className="font-medium">Modifier</span>
                 </button>
@@ -719,10 +831,44 @@ export function ManageBarbershopClient({
                   <div key={barber.id} className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold text-lg">
-                            {barber.name?.split(' ').map(n => n[0]).join('') || '?'}
-                          </span>
+                        <div className="relative group">
+                          {barber.profileImage ? (
+                            <img 
+                              src={barber.profileImage} 
+                              alt={barber.name || 'Barber'} 
+                              className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-white font-bold text-lg">
+                                {barber.name?.split(' ').map(n => n[0]).join('') || '?'}
+                              </span>
+                            </div>
+                          )}
+                          <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const url = await handleImageUpload(file, 'barber');
+                                  await fetch(`/api/barbers/${barber.id}/update`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ profileImage: url }),
+                                  });
+                                  toast({ variant: 'success', title: 'Photo mise à jour' });
+                                  setTimeout(() => window.location.reload(), 1000);
+                                } catch (error) {
+                                  toast({ variant: 'error', title: 'Erreur', description: 'Échec du téléchargement' });
+                                }
+                              }}
+                            />
+                            <ImageIcon className="w-4 h-4 text-white" />
+                          </label>
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">{barber.name}</h3>
@@ -830,26 +976,39 @@ export function ManageBarbershopClient({
                       {categoryServices.map((service) => (
                         <div key={service.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                           <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3">
-                                <h4 className="font-medium text-gray-900">{service.name}</h4>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {service.isActive ? 'Actif' : 'Inactif'}
-                                </span>
-                              </div>
-                              {service.description && (
-                                <p className="text-sm text-gray-600 mt-1">{service.description}</p>
-                              )}
-                              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                                <div className="flex items-center">
-                                  <Euro className="w-3 h-3 mr-1" />
-                                  <span className="font-medium text-gray-700">{service.price}€</span>
+                            <div className="flex items-center space-x-4 flex-1">
+                              {service.image ? (
+                                <img 
+                                  src={service.image} 
+                                  alt={service.name} 
+                                  className="w-16 h-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <Scissors className="w-6 h-6 text-gray-400" />
                                 </div>
-                                <div className="flex items-center">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  <span>{service.duration} min</span>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-3">
+                                  <h4 className="font-medium text-gray-900">{service.name}</h4>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    {service.isActive ? 'Actif' : 'Inactif'}
+                                  </span>
+                                </div>
+                                {service.description && (
+                                  <p className="text-sm text-gray-600 mt-1 truncate">{service.description}</p>
+                                )}
+                                <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                                  <div className="flex items-center">
+                                    <Euro className="w-3 h-3 mr-1" />
+                                    <span className="font-medium text-gray-700">{service.price}€</span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    <span>{service.duration} min</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -891,11 +1050,51 @@ export function ManageBarbershopClient({
           </div>
         )}
 
+        {activeTab === 'gallery' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">{t('gallery.title')}</h2>
+              <p className="text-gray-600 mt-1">{t('gallery.subtitle')}</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 bg-primary-100 rounded-lg">
+                  <ImageIcon className="w-5 h-5 text-primary-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{t('gallery.photosTitle')}</h3>
+                  <p className="text-sm text-gray-600">{t('gallery.photosSubtitle')}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                {/* Placeholder for existing images */}
+                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+                  <span className="text-gray-400 text-sm">{t('gallery.noImages')}</span>
+                </div>
+              </div>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 transition-colors cursor-pointer">
+                <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-700">{t('gallery.uploadTitle')}</p>
+                <p className="text-xs text-gray-500 mt-1">{t('gallery.uploadFormats')}</p>
+                <button className="mt-4 px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
+                  {t('gallery.uploadButton')}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                {t('gallery.uploadNote')}
+              </p>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Paramètres</h2>
-              <p className="text-gray-600 mt-1">Gérez les paramètres de votre salon</p>
+              <h2 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h2>
+              <p className="text-gray-600 mt-1">{t('settings.subtitle')}</p>
             </div>
 
             {/* Inactive shop warning */}
@@ -912,38 +1111,6 @@ export function ManageBarbershopClient({
                 </div>
               </div>
             )}
-
-            {/* Shop Images Section */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-primary-100 rounded-lg">
-                  <Store className="w-5 h-5 text-primary-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Photos du Salon</h3>
-                  <p className="text-sm text-gray-600">Téléchargez des photos de votre salon</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Images du salon (max 5)
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors cursor-pointer">
-                    <Store className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Cliquez pour télécharger ou glissez-déposez</p>
-                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF jusqu'à 4MB</p>
-                    <button className="mt-4 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                      Télécharger des photos
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Note: Upload Ting configuration nécessaire. Configurez UPLOADTHING_SECRET et UPLOADTHING_APP_ID dans .env.local
-                  </p>
-                </div>
-                {/* TODO: Display existing images here */}
-              </div>
-            </div>
 
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
@@ -1011,6 +1178,120 @@ export function ManageBarbershopClient({
       </div>
       
       <Footer />
+
+      {/* Edit Shop Modal */}
+      {isEditingShop && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900">Modifier les Informations du Salon</h3>
+                <button 
+                  onClick={() => setIsEditingShop(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleUpdateShop} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom du salon <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Adresse <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={shopAddress}
+                    onChange={(e) => setShopAddress(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ville <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={shopCity}
+                    onChange={(e) => setShopCity(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                  <input
+                    type="tel"
+                    value={shopPhone}
+                    onChange={(e) => setShopPhone(e.target.value)}
+                    placeholder="+33612345678"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={shopEmail}
+                    onChange={(e) => setShopEmail(e.target.value)}
+                    placeholder="contact@salon.com"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Site Web</label>
+                <input
+                  type="url"
+                  value={shopWebsite}
+                  onChange={(e) => setShopWebsite(e.target.value)}
+                  placeholder="https://www.monsalon.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={shopDescription}
+                  onChange={(e) => setShopDescription(e.target.value)}
+                  rows={4}
+                  placeholder="Décrivez votre salon..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingShop(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingShop}
+                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isUpdatingShop ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       {/* Add Barber Modal */}
       {isAddingBarber && (
@@ -1189,6 +1470,43 @@ export function ManageBarbershopClient({
                   <option value="treatment">💆 Soins</option>
                   <option value="combo">🎁 Forfaits</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image du service
+                </label>
+                <div className="flex items-center space-x-4">
+                  {serviceImage ? (
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                      <img src={serviceImage} alt="Service" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setServiceImage('')}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleServiceImageChange}
+                        className="hidden"
+                        disabled={isUploadingServiceImage}
+                      />
+                      {isUploadingServiceImage ? (
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                      ) : (
+                        <>
+                          <ImageIcon className="w-6 h-6 text-gray-400" />
+                          <span className="text-xs text-gray-500 mt-1">Ajouter</span>
+                        </>
+                      )}
+                    </label>
+                  )}
+                  <p className="text-xs text-gray-500">JPG, PNG, WebP. Max 5MB</p>
+                </div>
               </div>
               <div className="flex space-x-3 pt-4">
                 <button
