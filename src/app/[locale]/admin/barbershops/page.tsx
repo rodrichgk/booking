@@ -82,14 +82,16 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
   const totalBarbers = Math.max(0, allBarbershops.reduce((acc, b) => acc + (parseInt(String(b.barberCount)) || 0), 0));
   const monthlyRevenue = activeBarbershops * 29.9;
 
+  const t = await getTranslations({ locale, namespace: 'admin' });
+  
   const stats = [
-    { label: 'Total', value: totalBarbershops, icon: 'Store', color: 'blue' },
-    { label: 'Active', value: activeBarbershops, icon: 'CheckCircle', color: 'green' },
-    { label: 'Pending', value: pendingBarbershops, icon: 'Clock', color: 'yellow' },
-    { label: 'Expired', value: expiredBarbershops, icon: 'XCircle', color: 'red' },
-    { label: 'Total Barbers', value: totalBarbers, icon: 'Store', color: 'purple' },
-    { label: 'Avg Rating', value: avgRating.toFixed(1), icon: 'Star', color: 'yellow' },
-    { label: 'Monthly Revenue', value: `€${monthlyRevenue.toFixed(0)}`, icon: 'DollarSign', color: 'green' },
+    { label: t('total'), value: totalBarbershops, icon: 'Store', color: 'blue' },
+    { label: t('active'), value: activeBarbershops, icon: 'CheckCircle', color: 'green' },
+    { label: t('pending'), value: pendingBarbershops, icon: 'Clock', color: 'yellow' },
+    { label: t('expired'), value: expiredBarbershops, icon: 'XCircle', color: 'red' },
+    { label: t('totalBarbers'), value: totalBarbers, icon: 'Store', color: 'purple' },
+    { label: t('avgRating'), value: avgRating.toFixed(1), icon: 'Star', color: 'yellow' },
+    { label: t('monthlyRevenue'), value: `€${monthlyRevenue.toFixed(0)}`, icon: 'DollarSign', color: 'green' },
   ];
 
   return (

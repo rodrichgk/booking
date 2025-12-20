@@ -87,7 +87,7 @@ export function MySpaceClient({
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-4xl font-display font-bold mb-2">👋 {t('welcome')}, {userName}!</h1>
-                  <p className="text-primary-100 text-lg">Gérez vos réservations et découvrez de nouveaux salons</p>
+                  <p className="text-primary-100 text-lg">{t('manageBookingsAndDiscover')}</p>
                 </div>
                 <Sparkles className="w-16 h-16 text-primary-200 hidden md:block" />
               </div>
@@ -100,7 +100,7 @@ export function MySpaceClient({
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Réservations à venir</p>
+                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('upcomingBookings')}</p>
                     <p className="text-4xl font-bold text-gray-900 mt-2">{upcomingBookings.length}</p>
                   </div>
                   <div className="p-4 bg-blue-100 rounded-full">
@@ -112,7 +112,7 @@ export function MySpaceClient({
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-500">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Rendez-vous réalisés</p>
+                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('completedAppointmentsCount')}</p>
                     <p className="text-4xl font-bold text-gray-900 mt-2">{completedBookings.length}</p>
                   </div>
                   <div className="p-4 bg-green-100 rounded-full">
@@ -124,7 +124,7 @@ export function MySpaceClient({
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-purple-500">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Réservations</p>
+                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('totalBookings')}</p>
                     <p className="text-4xl font-bold text-gray-900 mt-2">{bookings.length}</p>
                   </div>
                   <div className="p-4 bg-purple-100 rounded-full">
@@ -140,19 +140,19 @@ export function MySpaceClient({
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
-                    <h2 className="text-2xl font-display font-bold text-gray-900">Prochains Rendez-vous</h2>
+                    <h2 className="text-2xl font-display font-bold text-gray-900">{t('upcomingAppointmentsTitle')}</h2>
                   </div>
                   <div className="p-6">
                     {upcomingBookings.length === 0 ? (
                       <div className="text-center py-12">
                         <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500 mb-4">Aucune réservation à venir</p>
+                        <p className="text-gray-500 mb-4">{t('noUpcomingBookings')}</p>
                         <Link
                           href={`/${locale}/barbershops`}
                           className="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"
                         >
                           <Store className="w-4 h-4 mr-2" />
-                          Réserver maintenant
+                          {t('bookNow')}
                         </Link>
                       </div>
                     ) : (
@@ -198,7 +198,7 @@ export function MySpaceClient({
                                 href={`/${locale}/barbershops/${booking.barbershopId}`}
                                 className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
                               >
-                                Voir
+                                {t('view')}
                               </Link>
                             </div>
                           </div>
@@ -212,7 +212,7 @@ export function MySpaceClient({
                 {completedBookings.length > 0 && (
                   <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-8">
                     <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-white">
-                      <h2 className="text-2xl font-display font-bold text-gray-900">Historique Récent</h2>
+                      <h2 className="text-2xl font-display font-bold text-gray-900">{t('recentHistory')}</h2>
                     </div>
                     <div className="p-6">
                       <div className="space-y-3">
@@ -226,7 +226,7 @@ export function MySpaceClient({
                             </div>
                             <span className="text-green-600 font-semibold flex items-center">
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              Terminé
+                              {t('completed')}
                             </span>
                           </div>
                         ))}
@@ -240,7 +240,7 @@ export function MySpaceClient({
               <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
-                    <h2 className="text-xl font-display font-bold text-gray-900">Actions Rapides</h2>
+                    <h2 className="text-xl font-display font-bold text-gray-900">{t('quickActions')}</h2>
                   </div>
                   <div className="p-6 space-y-4">
                     <Link
@@ -252,8 +252,8 @@ export function MySpaceClient({
                           <Store className="w-6 h-6 text-primary-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">Trouver un Salon</h3>
-                          <p className="text-sm text-gray-600">Découvrez les meilleurs salons</p>
+                          <h3 className="font-semibold text-gray-900">{t('findSalon')}</h3>
+                          <p className="text-sm text-gray-600">{t('discoverBestSalons')}</p>
                         </div>
                       </div>
                     </Link>
@@ -267,8 +267,8 @@ export function MySpaceClient({
                           <User className="w-6 h-6 text-purple-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">Coiffeurs Pro</h3>
-                          <p className="text-sm text-gray-600">Trouvez votre coiffeur idéal</p>
+                          <h3 className="font-semibold text-gray-900">{t('proProfessionals')}</h3>
+                          <p className="text-sm text-gray-600">{t('findIdealBarber')}</p>
                         </div>
                       </div>
                     </Link>
@@ -308,7 +308,7 @@ export function MySpaceClient({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-900">{t('barberProfile')}</h2>
-              <p className="text-gray-600 mt-1">Manage your professional profile</p>
+              <p className="text-gray-600 mt-1">{t('manageProfessionalProfile')}</p>
             </div>
             
             <div className="p-6">
@@ -320,7 +320,7 @@ export function MySpaceClient({
                 >
                   <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="font-semibold text-gray-900 text-center mb-2">{t('profileImage')}</h3>
-                  <p className="text-sm text-gray-600 text-center">Update your profile picture</p>
+                  <p className="text-sm text-gray-600 text-center">{t('updateProfilePicture')}</p>
                 </Link>
                 
                 {/* Gallery */}
@@ -331,7 +331,7 @@ export function MySpaceClient({
                   <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="font-semibold text-gray-900 text-center mb-2">{t('gallery')}</h3>
                   <p className="text-sm text-gray-600 text-center">
-                    {barberProfile?.galleryImages?.length || 0} images
+                    {barberProfile?.galleryImages?.length || 0} {t('imagesCount')}
                   </p>
                 </Link>
                 
@@ -343,7 +343,7 @@ export function MySpaceClient({
                   <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="font-semibold text-gray-900 text-center mb-2">{t('videos')}</h3>
                   <p className="text-sm text-gray-600 text-center">
-                    {barberProfile?.youtubeLinks?.length || 0} videos
+                    {barberProfile?.youtubeLinks?.length || 0} {t('videosCount')}
                   </p>
                 </Link>
               </div>
@@ -366,34 +366,33 @@ export function MySpaceClient({
         <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
           <div className="text-center mb-8">
             <Store className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Create Your Barbershop</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('createYourBarbershop')}</h2>
             <p className="text-gray-600 mb-2">
-              You don't have any barbershops yet. Follow these steps to get started:
+              {t('noBarbershopsYet')}
             </p>
           </div>
           
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-            <h3 className="font-semibold text-blue-900 mb-3">How it works:</h3>
+            <h3 className="font-semibold text-blue-900 mb-3">{t('howItWorksTitle')}</h3>
             <ol className="space-y-3 text-blue-800">
               <li className="flex items-start">
                 <span className="font-bold mr-3 text-blue-600">1.</span>
-                <span>Contact an administrator to create your barbershop listing</span>
+                <span>{t('contactAdminStep')}</span>
               </li>
               <li className="flex items-start">
                 <span className="font-bold mr-3 text-blue-600">2.</span>
-                <span>Once created, subscribe for €29.90/month to activate it</span>
+                <span>{t('subscribeStep')}</span>
               </li>
               <li className="flex items-start">
                 <span className="font-bold mr-3 text-blue-600">3.</span>
-                <span>Add your barbers and start accepting bookings!</span>
+                <span>{t('addBarbersStep')}</span>
               </li>
             </ol>
           </div>
           
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> Each barbershop location requires its own subscription (€29.90/month). 
-              Multiple locations = multiple subscriptions.
+              <strong>Note:</strong> {t('subscriptionNote')}
             </p>
           </div>
           
@@ -402,14 +401,14 @@ export function MySpaceClient({
               href={`/${locale}/profile`}
               className="inline-flex items-center justify-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors"
             >
-              Back to Profile
+              {t('backToProfile')}
             </Link>
             <a
               href="mailto:support@orphelia.com?subject=Create Barbershop"
               className="inline-flex items-center justify-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"
             >
               <Mail className="w-4 h-4 mr-2" />
-              Contact Admin
+              {t('contactAdmin')}
             </a>
           </div>
         </div>
@@ -445,7 +444,7 @@ export function MySpaceClient({
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600">Total Locations</p>
+                  <p className="text-sm font-medium text-blue-600">{t('totalLocations')}</p>
                   <p className="text-3xl font-bold text-blue-900 mt-2">{barbershops.length}</p>
                 </div>
                 <Store className="w-12 h-12 text-blue-600 opacity-50" />
@@ -455,7 +454,7 @@ export function MySpaceClient({
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-600">Active Shops</p>
+                  <p className="text-sm font-medium text-green-600">{t('activeShops')}</p>
                   <p className="text-3xl font-bold text-green-900 mt-2">
                     {barbershops.filter(b => b.subscriptionStatus === 'active').length}
                   </p>
@@ -467,7 +466,7 @@ export function MySpaceClient({
             <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-600">Inactive Shops</p>
+                  <p className="text-sm font-medium text-red-600">{t('inactiveShops')}</p>
                   <p className="text-3xl font-bold text-red-900 mt-2">
                     {barbershops.filter(b => b.subscriptionStatus !== 'active').length}
                   </p>
@@ -479,7 +478,7 @@ export function MySpaceClient({
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-600">Monthly Cost</p>
+                  <p className="text-sm font-medium text-purple-600">{t('monthlyCost')}</p>
                   <p className="text-3xl font-bold text-purple-900 mt-2">
                     €{(barbershops.filter(b => b.subscriptionStatus === 'active').length * 29.90).toFixed(2)}
                   </p>
@@ -503,13 +502,13 @@ export function MySpaceClient({
               {barbershop.subscriptionStatus !== 'active' && (
                 <div className="bg-yellow-500 text-white px-4 py-2 text-sm font-medium flex items-center">
                   <AlertCircle className="w-4 h-4 mr-2" />
-                  Subscription Required
+                  {t('subscriptionRequired')}
                 </div>
               )}
               {barbershop.subscriptionStatus === 'active' && (
                 <div className="bg-green-500 text-white px-4 py-2 text-sm font-medium flex items-center">
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Active & Visible
+                  {t('activeAndVisible')}
                 </div>
               )}
 
@@ -549,7 +548,7 @@ export function MySpaceClient({
                     <p className="text-sm text-gray-600 flex items-center">
                       <Globe className="w-4 h-4 mr-2 flex-shrink-0" />
                       <a href={barbershop.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary-600">
-                        Website
+                        {t('website')}
                       </a>
                     </p>
                   )}
@@ -560,7 +559,7 @@ export function MySpaceClient({
                   <div className="flex items-center mb-4">
                     <span className="text-yellow-500 text-lg font-bold mr-1">★</span>
                     <span className="text-gray-900 font-semibold">{barbershop.rating}</span>
-                    <span className="text-gray-500 text-sm ml-1">({barbershop.reviewCount} reviews)</span>
+                    <span className="text-gray-500 text-sm ml-1">({barbershop.reviewCount} {t('reviewsCount')})</span>
                   </div>
                 )}
 
@@ -571,7 +570,7 @@ export function MySpaceClient({
                       onClick={() => handleSubscribe(barbershop.id)}
                       className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
                     >
-                      Subscribe Now
+                      {t('subscribeNow')}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </button>
                   ) : (
@@ -579,7 +578,7 @@ export function MySpaceClient({
                       href={`/${locale}/my-space/${barbershop.id}`}
                       className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
                     >
-                      Manage Shop
+                      {t('manageShop')}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
                   )}

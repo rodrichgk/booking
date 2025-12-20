@@ -311,53 +311,55 @@ interface DashboardStats {
   avgRating: string;
 }
 
-function DevDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
+async function DevDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
+  const t = await getTranslations({ locale, namespace: 'mySpace' });
+  
   const stats = [
-    { label: 'Total Users', value: realStats.totalUsers.toString(), icon: Users, color: 'blue' },
-    { label: 'Barbershops', value: realStats.totalBarbershops.toString(), icon: Store, color: 'green' },
-    { label: 'Bookings Today', value: realStats.bookingsToday.toString(), icon: Calendar, color: 'purple' },
-    { label: 'Revenue', value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
+    { label: t('totalUsers'), value: realStats.totalUsers.toString(), icon: Users, color: 'blue' },
+    { label: t('barbershops'), value: realStats.totalBarbershops.toString(), icon: Store, color: 'green' },
+    { label: t('bookingsToday'), value: realStats.bookingsToday.toString(), icon: Calendar, color: 'purple' },
+    { label: t('revenue'), value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
   ];
 
   const sections = [
     {
-      title: 'User Management',
-      description: 'Manage all users, roles, and permissions',
+      title: t('userManagement'),
+      description: t('userManagementDesc'),
       icon: Users,
       color: 'blue',
       link: `/${locale}/admin/users`,
     },
     {
-      title: 'Barbershop Management',
-      description: 'Manage barbershops and €29.9/month subscriptions',
+      title: t('barbershopManagement'),
+      description: t('barbershopManagementDesc'),
       icon: Store,
       color: 'green',
       link: `/${locale}/admin/barbershops`,
     },
     {
-      title: 'System Analytics',
-      description: 'View system-wide analytics and reports',
+      title: t('systemAnalytics'),
+      description: t('systemAnalyticsDesc'),
       icon: BarChart3,
       color: 'purple',
       link: `/${locale}/admin/analytics`,
     },
     {
-      title: 'Database Management',
-      description: 'Database backups and maintenance',
+      title: t('databaseManagement'),
+      description: t('databaseManagementDesc'),
       icon: Database,
       color: 'orange',
       link: `/${locale}/admin/database`,
     },
     {
-      title: 'Settings',
-      description: 'System configuration and settings',
+      title: t('settings'),
+      description: t('settingsDesc'),
       icon: Settings,
       color: 'gray',
       link: `/${locale}/admin/settings`,
     },
     {
-      title: 'Security',
-      description: 'Security logs and access control',
+      title: t('security'),
+      description: t('securityDesc'),
       icon: Shield,
       color: 'red',
       link: `/${locale}/admin/security`,
@@ -385,7 +387,7 @@ function DevDashboard({ locale, stats: realStats }: { locale: string; stats: Das
 
       {/* Admin Sections */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">System Administration</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('systemAdministration')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sections.map((section) => (
             <Link
@@ -411,21 +413,23 @@ function DevDashboard({ locale, stats: realStats }: { locale: string; stats: Das
 }
 
 // Admin/Owner Dashboard - Business management
-function AdminDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
+async function AdminDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
+  const t = await getTranslations({ locale, namespace: 'mySpace' });
+  
   const stats = [
-    { label: 'Total Bookings', value: realStats.totalBookings.toString(), icon: Calendar, color: 'blue' },
-    { label: 'Active Barbers', value: realStats.totalBarbers.toString(), icon: Scissors, color: 'green' },
-    { label: 'Monthly Revenue', value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
-    { label: 'Avg Rating', value: realStats.avgRating, icon: Star, color: 'purple' },
+    { label: t('totalBookingsAdmin'), value: realStats.totalBookings.toString(), icon: Calendar, color: 'blue' },
+    { label: t('activeBarbers'), value: realStats.totalBarbers.toString(), icon: Scissors, color: 'green' },
+    { label: t('monthlyRevenue'), value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
+    { label: t('avgRating'), value: realStats.avgRating, icon: Star, color: 'purple' },
   ];
 
   const sections = [
-    { title: 'My Space', icon: Store, link: `/${locale}/my-space`, desc: 'Manage your space and profile' },
-    { title: 'Staff Management', icon: Users, link: `/${locale}/admin/staff`, desc: 'Manage barbers and staff' },
-    { title: 'Bookings', icon: Calendar, link: `/${locale}/admin/bookings`, desc: 'View and manage all bookings' },
-    { title: 'Analytics', icon: BarChart3, link: `/${locale}/admin/analytics`, desc: 'Business analytics and insights' },
-    { title: 'Services & Pricing', icon: DollarSign, link: `/${locale}/admin/services`, desc: 'Manage services and pricing' },
-    { title: 'Settings', icon: Settings, link: `/${locale}/admin/settings`, desc: 'Business settings and preferences' },
+    { title: t('mySpaceLink'), icon: Store, link: `/${locale}/my-space`, desc: t('mySpaceDesc') },
+    { title: t('staffManagement'), icon: Users, link: `/${locale}/admin/staff`, desc: t('staffManagementDesc') },
+    { title: t('bookingsManagement'), icon: Calendar, link: `/${locale}/admin/bookings`, desc: t('bookingsManagementDesc') },
+    { title: t('analytics'), icon: BarChart3, link: `/${locale}/admin/analytics`, desc: t('analyticsDesc') },
+    { title: t('servicesPricing'), icon: DollarSign, link: `/${locale}/admin/services`, desc: t('servicesPricingDesc') },
+    { title: t('settingsPreferences'), icon: Settings, link: `/${locale}/admin/settings`, desc: t('settingsPreferencesDesc') },
   ];
 
   return (
@@ -447,7 +451,7 @@ function AdminDashboard({ locale, stats: realStats }: { locale: string; stats: D
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Business Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('businessManagement')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sections.map((section) => (
             <Link

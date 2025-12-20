@@ -77,6 +77,7 @@ export function BarbershopManagementClient({
   locale, 
   currentUserRole 
 }: BarbershopManagementClientProps) {
+  const t = useTranslations('admin');
   const [barbershops, setBarbershops] = useState(initialBarbershops);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -99,21 +100,21 @@ export function BarbershopManagementClient({
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle className="w-3 h-3 mr-1" />
-            Active
+            {t('active')}
           </span>
         );
       case 'expired':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle className="w-3 h-3 mr-1" />
-            Expired
+            {t('expired')}
           </span>
         );
       case 'inactive':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <Clock className="w-3 h-3 mr-1" />
-            Pending
+            {t('pending')}
           </span>
         );
       default:
@@ -232,7 +233,7 @@ export function BarbershopManagementClient({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder="Search barbershops by name, owner, city, or address..."
+                  placeholder={t('searchBarbershops')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -245,10 +246,10 @@ export function BarbershopManagementClient({
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="expired">Expired</option>
-                <option value="inactive">Pending</option>
+                <option value="all">{t('allStatus')}</option>
+                <option value="active">{t('active')}</option>
+                <option value="expired">{t('expired')}</option>
+                <option value="inactive">{t('pending')}</option>
               </select>
             </div>
           </div>
@@ -325,7 +326,7 @@ export function BarbershopManagementClient({
                       <div className="space-y-2">
                         {getStatusBadge(barbershop.subscriptionStatus, barbershop.isActive)}
                         <div className="text-xs text-gray-500">
-                          Expires: {formatDate(barbershop.subscriptionExpiry)}
+                          {t('expires')}: {formatDate(barbershop.subscriptionExpiry)}
                         </div>
                         <div className="text-xs font-medium text-primary-600">
                           €29.9/month
@@ -365,9 +366,9 @@ export function BarbershopManagementClient({
                                 ? 'bg-red-100 text-red-700 hover:bg-red-200' 
                                 : 'bg-green-100 text-green-700 hover:bg-green-200'
                             }`}
-                            title={barbershop.isActive ? 'Deactivate' : 'Activate'}
+                            title={barbershop.isActive ? t('deactivate') : t('activate')}
                           >
-                            {barbershop.isActive ? '● Deactivate' : '● Activate'}
+                            {barbershop.isActive ? `● ${t('deactivate')}` : `● ${t('activate')}`}
                           </button>
                         </div>
                       </div>
@@ -381,8 +382,8 @@ export function BarbershopManagementClient({
           {filteredBarbershops.length === 0 && (
             <div className="text-center py-12">
               <Store className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No barbershops found</h3>
-              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">{t('noBarbershopsFound')}</h3>
+              <p className="mt-1 text-sm text-gray-500">{t('tryDifferentFilter')}</p>
             </div>
           )}
         </div>

@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbershops, barbers, users, services } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -10,6 +12,7 @@ export default async function BookingPage({
   params: Promise<{ id: string; locale: string }> 
 }) {
   const { id, locale } = await params;
+  const session = await getServerSession(authOptions);
 
   // Fetch barbershop from database
   const [shop] = await db
@@ -56,5 +59,12 @@ export default async function BookingPage({
     .from(services)
     .where(eq(services.barbershopId, id));
 
-  return <BookingClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} />;
+  // Get user info from session
+  const userInfo = session?.user ? {
+    name: session.user.name || '',
+    email: session.user.email || '',
+    phone: (session.user as any).phone || '',
+  } : null;
+
+  return <BookingClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} userInfo={userInfo} />;
 }
