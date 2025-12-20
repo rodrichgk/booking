@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Link } from '@/routing';
 import { Search, MapPin, Star, Clock, Filter, Store } from 'lucide-react';
+import Image from 'next/image';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 
@@ -15,6 +16,7 @@ interface Barbershop {
   phone: string | null;
   email: string | null;
   website: string | null;
+  images: string[] | null;
   rating: string | null;
   reviewCount: number | null;
   isActive: boolean;
@@ -172,13 +174,23 @@ export function BarbershopsClient({ barbershops, locale }: BarbershopsClientProp
               href={`/barbershops/${shop.id}`}
               className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-gray-200"
             >
-              {/* Header with gradient */}
-              <div className="relative h-32 bg-gradient-to-br from-primary-500 to-primary-700">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Store className="w-16 h-16 text-white opacity-20" />
-                </div>
+              {/* Header with image or gradient */}
+              <div className="relative h-48 bg-gradient-to-br from-primary-500 to-primary-700">
+                {shop.images && shop.images.length > 0 ? (
+                  <Image
+                    src={shop.images[0]}
+                    alt={shop.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Store className="w-16 h-16 text-white opacity-20" />
+                  </div>
+                )}
                 <div className="absolute top-4 right-4">
-                  <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-body font-semibold">
+                  <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-body font-semibold shadow-lg">
                     Actif
                   </span>
                 </div>

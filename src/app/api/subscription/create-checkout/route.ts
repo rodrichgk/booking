@@ -43,8 +43,9 @@ export async function POST(request: Request) {
 
     // For demonstration purposes, return a mock success URL
     // In production, replace this with actual Stripe checkout URL
+    // Note: The locale will be added by the client-side redirect
     return NextResponse.json({ 
-      checkoutUrl: `/subscription/success?mock=true${shopId ? `&shopId=${shopId}` : ''}`,
+      checkoutUrl: `${process.env.NEXTAUTH_URL}/fr/subscription/success?mock=true${shopId ? `&shopId=${shopId}` : ''}`,
       message: 'Checkout session created (demo mode)',
       shopId: shopId
     });
