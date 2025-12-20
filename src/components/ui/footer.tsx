@@ -2,7 +2,7 @@
 
 import { Link } from '@/routing';
 import { useTranslations } from 'next-intl';
-import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Mail, MapPin } from 'lucide-react';
 
 export function Footer() {
   const t = useTranslations('footer');
@@ -40,9 +40,9 @@ export function Footer() {
             <h3 className="font-semibold text-lg mb-4">Liens Rapides</h3>
             <ul className="space-y-2">
               <li><Link href="/barbershops" className="text-gray-400 hover:text-white transition-colors">Trouver des Salons</Link></li>
-              <li><Link href="/services" className="text-gray-400 hover:text-white transition-colors">Services</Link></li>
-              <li><Link href="/about" className="text-gray-400 hover:text-white transition-colors">À Propos</Link></li>
-              <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="/" className="text-gray-400 hover:text-white transition-colors">Accueil</Link></li>
+              <li><Link href="/auth/signup" className="text-gray-400 hover:text-white transition-colors">S'inscrire</Link></li>
+              <li><Link href="/auth/signin" className="text-gray-400 hover:text-white transition-colors">Se Connecter</Link></li>
             </ul>
           </div>
 
@@ -50,10 +50,9 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-lg mb-4">Pour les Entreprises</h3>
             <ul className="space-y-2">
-              <li><Link href="/business/signup" className="text-gray-400 hover:text-white transition-colors">Inscrire Votre Salon</Link></li>
-              <li><Link href="/business/dashboard" className="text-gray-400 hover:text-white transition-colors">Tableau de Bord</Link></li>
-              <li><Link href="/business/pricing" className="text-gray-400 hover:text-white transition-colors">Tarification</Link></li>
-              <li><Link href="/business/support" className="text-gray-400 hover:text-white transition-colors">Support Entreprise</Link></li>
+              <li><Link href="/auth/signup" className="text-gray-400 hover:text-white transition-colors">Inscrire Votre Salon</Link></li>
+              <li><Link href="/my-space" className="text-gray-400 hover:text-white transition-colors">Tableau de Bord</Link></li>
+              <li><Link href="/auth/signin" className="text-gray-400 hover:text-white transition-colors">Se Connecter</Link></li>
             </ul>
           </div>
 
@@ -61,17 +60,13 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-lg mb-4">Nous Contacter</h3>
             <div className="space-y-3">
-              <div className="flex items-center space-x-3">
+              <a href="mailto:contact@orphelia.net" className="flex items-center space-x-3 hover:text-white transition-colors">
                 <Mail className="w-5 h-5 text-primary-400" />
-                <span className="text-gray-400">hello@orphlia.com</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-primary-400" />
-                <span className="text-gray-400">1-800-ORPHLIA</span>
-              </div>
+                <span className="text-gray-400 hover:text-white">contact@orphelia.net</span>
+              </a>
               <div className="flex items-center space-x-3">
                 <MapPin className="w-5 h-5 text-primary-400" />
-                <span className="text-gray-400">Disponible Partout</span>
+                <span className="text-gray-400">Marseille, France</span>
               </div>
             </div>
           </div>
@@ -80,7 +75,7 @@ export function Footer() {
         <div className="border-t border-gray-800 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2024 Orphlia. Tous droits réservés.
+              © 2025 ORPHELIA. Tous droits réservés.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">

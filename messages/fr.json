@@ -372,7 +372,29 @@
   },
   "barbershopManagement": {
     "title": "Mon Salon",
-    "description": "Gérer votre salon et votre équipe"
+    "description": "Gérer votre salon et votre équipe",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "team": "Équipe",
+      "services": "Services",
+      "gallery": "Galerie",
+      "settings": "Paramètres"
+    },
+    "gallery": {
+      "title": "Galerie Photos",
+      "subtitle": "Gérez les photos de votre salon",
+      "photosTitle": "Photos du Salon",
+      "photosSubtitle": "Téléchargez des photos pour présenter votre salon",
+      "noImages": "Aucune photo",
+      "uploadTitle": "Cliquez pour télécharger ou glissez-déposez",
+      "uploadFormats": "PNG, JPG, GIF jusqu'à 4MB",
+      "uploadButton": "Télécharger des photos",
+      "uploadNote": "Les photos seront visibles sur votre page publique"
+    },
+    "settings": {
+      "title": "Paramètres",
+      "subtitle": "Gérez les paramètres de votre salon"
+    }
   },
   "mySpace": {
     "title": "Mon Espace",

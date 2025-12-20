@@ -119,15 +119,15 @@ export default function SignUpPage() {
         // Registration successful but auto-login failed
         toast({
           title: "✅ Inscription réussie!",
-          description: t('registrationSuccessful'),
+          description: "Vérifiez votre email pour activer votre compte",
           variant: "success",
         });
-        router.push('/auth/signin?message=' + encodeURIComponent(t('registrationSuccessful')));
+        router.push('/auth/signin?message=' + encodeURIComponent('Vérifiez votre email pour activer votre compte'));
       } else {
         // Both registration and login successful
         toast({
           title: "✅ Bienvenue sur Orphelia!",
-          description: "Votre compte a été créé avec succès",
+          description: "Un email de vérification vous a été envoyé",
           variant: "success",
         });
         router.push('/');

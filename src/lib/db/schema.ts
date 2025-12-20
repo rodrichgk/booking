@@ -92,6 +92,7 @@ export const services = pgTable('services', {
   barbershopId: uuid('barbershop_id').references(() => barbershops.id).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
+  image: text('image'),
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
   duration: integer('duration').notNull(), // in minutes
   category: varchar('category', { length: 255 }),
@@ -212,3 +213,14 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
     references: [bookings.id],
   }),
 }));
+
+// Site Settings table (for admin/dev configuration)
+export const siteSettings = pgTable('site_settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  key: varchar('key', { length: 255 }).notNull().unique(),
+  value: jsonb('value').notNull(),
+  description: text('description'),
+  updatedBy: uuid('updated_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});

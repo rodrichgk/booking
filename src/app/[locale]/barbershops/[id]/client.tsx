@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from '@/routing';
 import Image from 'next/image';
-import { Star, MapPin, Clock, Phone, Calendar, Heart, Share2, Mail, Globe, Store, Scissors } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Calendar, Heart, Share2, Mail, Globe, Store, Scissors, MessageSquare, Send } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useToast } from '@/hooks/use-toast';
 
 interface Barbershop {
   id: string;
@@ -32,14 +33,104 @@ interface Barber {
   isActive: boolean;
 }
 
+interface Review {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  customerName: string;
+  customerImage: string | null;
+}
+
 interface BarbershopDetailClientProps {
   shop: Barbershop;
   barbers: Barber[];
   locale: string;
+  isAuthenticated?: boolean;
 }
 
-export function BarbershopDetailClient({ shop, barbers, locale }: BarbershopDetailClientProps) {
+export function BarbershopDetailClient({ shop, barbers, locale, isAuthenticated = false }: BarbershopDetailClientProps) {
+  const { toast } = useToast();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Fetch reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await fetch(`/api/reviews?barbershopId=${shop.id}&limit=10`);
+        const data = await res.json();
+        setReviews(data.reviews || []);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+    fetchReviews();
+  }, [shop.id]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toast({
+        variant: 'error',
+        title: 'Connexion requise',
+        description: 'Vous devez être connecté pour laisser un avis',
+      });
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barbershopId: shop.id,
+          rating: reviewRating,
+          comment: reviewComment || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast({
+          variant: 'success',
+          title: 'Merci !',
+          description: 'Votre avis a été ajouté avec succès',
+        });
+        setShowReviewForm(false);
+        setReviewComment('');
+        setReviewRating(5);
+        // Refresh reviews
+        const refreshRes = await fetch(`/api/reviews?barbershopId=${shop.id}&limit=10`);
+        const refreshData = await refreshRes.json();
+        setReviews(refreshData.reviews || []);
+      } else {
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -174,6 +265,120 @@ export function BarbershopDetailClient({ shop, barbers, locale }: BarbershopDeta
                 </p>
               </div>
             )}
+
+            {/* Reviews Section */}
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <MessageSquare className="w-6 h-6 text-primary-600" />
+                  <h2 className="text-2xl font-sans font-bold text-gray-900">Avis clients</h2>
+                </div>
+                <button
+                  onClick={() => setShowReviewForm(!showReviewForm)}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors text-sm"
+                >
+                  {showReviewForm ? 'Annuler' : 'Laisser un avis'}
+                </button>
+              </div>
+
+              {/* Review Form */}
+              {showReviewForm && (
+                <form onSubmit={handleSubmitReview} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Votre note</label>
+                    <div className="flex space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          className="p-1 transition-transform hover:scale-110"
+                        >
+                          <Star
+                            className={`w-8 h-8 ${star <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Votre commentaire (optionnel)</label>
+                    <textarea
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      rows={3}
+                      placeholder="Partagez votre expérience..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submittingReview}
+                    className="flex items-center justify-center space-x-2 w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{submittingReview ? 'Envoi...' : 'Envoyer mon avis'}</span>
+                  </button>
+                </form>
+              )}
+
+              {/* Reviews List */}
+              {loadingReviews ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                  <p className="text-gray-500 mt-2">Chargement des avis...</p>
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Aucun avis pour le moment</p>
+                  <p className="text-sm text-gray-400 mt-1">Soyez le premier à laisser un avis !</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          {review.customerImage ? (
+                            <Image
+                              src={review.customerImage}
+                              alt={review.customerName}
+                              width={40}
+                              height={40}
+                              className="rounded-full"
+                            />
+                          ) : (
+                            <span className="text-white font-bold text-sm">
+                              {review.customerName?.charAt(0).toUpperCase() || '?'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-gray-900">{review.customerName}</h4>
+                            <span className="text-xs text-gray-500">
+                              {new Date(review.createdAt).toLocaleDateString('fr-FR')}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1 my-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                              />
+                            ))}
+                          </div>
+                          {review.comment && (
+                            <p className="text-gray-600 text-sm mt-1">{review.comment}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sidebar */}

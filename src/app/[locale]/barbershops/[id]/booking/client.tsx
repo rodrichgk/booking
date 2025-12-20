@@ -216,53 +216,53 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
           </div>
 
           {/* Progress Steps */}
-          <div className="flex items-center justify-center space-x-4 mt-6">
+          <div className="flex items-center justify-center space-x-2 sm:space-x-4 mt-6 overflow-x-auto pb-2">
             {/* Service Step */}
-            <div className={`flex items-center ${step === 'service' ? 'text-primary-600' : 'text-green-600'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step === 'service' ? 'bg-primary-600 text-white' : 'bg-green-600 text-white'}`}>
-                {step === 'service' ? '1' : <Check className="w-5 h-5" />}
+            <div className={`flex items-center flex-shrink-0 ${step === 'service' ? 'text-primary-600' : 'text-green-600'}`}>
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'service' ? 'bg-primary-600 text-white' : 'bg-green-600 text-white'}`}>
+                {step === 'service' ? '1' : <Check className="w-4 h-4 sm:w-5 sm:h-5" />}
               </div>
-              <span className="ml-2 text-sm font-medium">Service</span>
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Service</span>
             </div>
-            <div className="w-12 h-0.5 bg-gray-300" />
+            <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
 
             {/* Barber Step (conditional) */}
             {activeBarbers.length > 0 && (
               <>
-                <div className={`flex items-center ${step === 'barber' ? 'text-primary-600' : (step === 'date' || step === 'time' || step === 'confirm') ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step === 'barber' ? 'bg-primary-600 text-white' : (step === 'date' || step === 'time' || step === 'confirm') ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
-                    {(step === 'date' || step === 'time' || step === 'confirm') ? <Check className="w-5 h-5" /> : '2'}
+                <div className={`flex items-center flex-shrink-0 ${step === 'barber' ? 'text-primary-600' : (step === 'date' || step === 'time' || step === 'confirm') ? 'text-green-600' : 'text-gray-400'}`}>
+                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'barber' ? 'bg-primary-600 text-white' : (step === 'date' || step === 'time' || step === 'confirm') ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
+                    {(step === 'date' || step === 'time' || step === 'confirm') ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : '2'}
                   </div>
-                  <span className="ml-2 text-sm font-medium">Coiffeur</span>
+                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">Coiffeur</span>
                 </div>
-                <div className="w-12 h-0.5 bg-gray-300" />
+                <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
               </>
             )}
             
             {/* Date Step */}
-            <div className={`flex items-center ${step === 'date' ? 'text-primary-600' : (step === 'time' || step === 'confirm') ? 'text-green-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step === 'date' ? 'bg-primary-600 text-white' : (step === 'time' || step === 'confirm') ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
-                {(step === 'time' || step === 'confirm') ? <Check className="w-5 h-5" /> : activeBarbers.length > 0 ? '3' : '2'}
+            <div className={`flex items-center flex-shrink-0 ${step === 'date' ? 'text-primary-600' : (step === 'time' || step === 'confirm') ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'date' ? 'bg-primary-600 text-white' : (step === 'time' || step === 'confirm') ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
+                {(step === 'time' || step === 'confirm') ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : activeBarbers.length > 0 ? '3' : '2'}
               </div>
-              <span className="ml-2 text-sm font-medium">Date</span>
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Date</span>
             </div>
-            <div className="w-12 h-0.5 bg-gray-300" />
+            <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
             
             {/* Time Step */}
-            <div className={`flex items-center ${step === 'time' ? 'text-primary-600' : step === 'confirm' ? 'text-green-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step === 'time' ? 'bg-primary-600 text-white' : step === 'confirm' ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
-                {step === 'confirm' ? <Check className="w-5 h-5" /> : activeBarbers.length > 0 ? '4' : '3'}
+            <div className={`flex items-center flex-shrink-0 ${step === 'time' ? 'text-primary-600' : step === 'confirm' ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'time' ? 'bg-primary-600 text-white' : step === 'confirm' ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
+                {step === 'confirm' ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : activeBarbers.length > 0 ? '4' : '3'}
               </div>
-              <span className="ml-2 text-sm font-medium">Heure</span>
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Heure</span>
             </div>
-            <div className="w-12 h-0.5 bg-gray-300" />
+            <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
             
             {/* Confirm Step */}
-            <div className={`flex items-center ${step === 'confirm' ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step === 'confirm' ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>
+            <div className={`flex items-center flex-shrink-0 ${step === 'confirm' ? 'text-primary-600' : 'text-gray-400'}`}>
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'confirm' ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>
                 {activeBarbers.length > 0 ? '5' : '4'}
               </div>
-              <span className="ml-2 text-sm font-medium">Confirmer</span>
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">Confirmer</span>
             </div>
           </div>
         </div>
@@ -575,11 +575,11 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-6 pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 pt-6 border-t border-gray-200">
             {step !== 'service' && (
               <button
                 onClick={handleBack}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors order-2 sm:order-1"
               >
                 Retour
               </button>
@@ -587,14 +587,14 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
             <button
               onClick={handleNext}
               disabled={!canProceed() || isSubmitting}
-              className={`ml-auto px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              className={`sm:ml-auto px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 ${
                 canProceed() && !isSubmitting
                   ? 'bg-primary-600 hover:bg-primary-700 text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSubmitting ? 'En cours...' : step === 'confirm' ? 'Confirmer la réservation' : 'Suivant'}
+              {isSubmitting ? 'En cours...' : step === 'confirm' ? 'Confirmer' : 'Suivant'}
             </button>
           </div>
           </div>

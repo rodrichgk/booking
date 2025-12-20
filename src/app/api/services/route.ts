@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { barbershopId, name, description, price, duration, category } = await request.json();
+    const { barbershopId, name, description, image, price, duration, category } = await request.json();
 
     if (!barbershopId || !name || !price || !duration) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       barbershopId,
       name,
       description: description || null,
+      image: image || null,
       price: price.toString(),
       duration,
       category: category || null,

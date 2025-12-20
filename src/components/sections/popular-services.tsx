@@ -22,7 +22,7 @@ const services = [
     icon: Sparkles,
     price: 'From $80',
     duration: '2-4 hours',
-    image: 'https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    image: 'https://s.abcnews.com/images/GMA/jordan-dunn-file-gty-jef-220713_1657746177062_hpMain.jpg',
     popular: true,
   },
   {
