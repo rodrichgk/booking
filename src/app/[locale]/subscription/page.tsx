@@ -14,8 +14,15 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
-export default async function SubscriptionPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function SubscriptionPage({ 
+  params,
+  searchParams 
+}: { 
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ shopId?: string }>;
+}) {
   const { locale } = await params;
+  const { shopId } = await searchParams;
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
@@ -31,6 +38,7 @@ export default async function SubscriptionPage({ params }: { params: Promise<{ l
         locale={locale}
         userEmail={userEmail || ''}
         userRole={userRole}
+        shopId={shopId}
       />
     </div>
   );

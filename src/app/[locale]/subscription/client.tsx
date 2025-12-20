@@ -14,6 +14,7 @@ interface SubscriptionClientProps {
   locale: string;
   userEmail: string;
   userRole: string;
+  shopId?: string;
 }
 
 const renderIcon = (iconName: string, className: string) => {
@@ -39,7 +40,8 @@ const renderIcon = (iconName: string, className: string) => {
 export function SubscriptionClient({ 
   locale, 
   userEmail, 
-  userRole 
+  userRole,
+  shopId
 }: SubscriptionClientProps) {
   const [loading, setLoading] = useState(false);
 
@@ -60,7 +62,7 @@ export function SubscriptionClient({
       const response = await fetch('/api/subscription/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail }),
+        body: JSON.stringify({ email: userEmail, shopId }),
       });
 
       const data = await response.json();
