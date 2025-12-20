@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
         expires,
       });
 
-    // Send email
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://www.orphelia.net';
+    // Send email - always use production URL for verification links
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.orphelia.net';
     const verificationUrl = `${baseUrl}/fr/auth/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 
     const resend = getResend();
