@@ -164,10 +164,11 @@ booking/
 │   │   │   │           └── route.ts # Manage barber
 │   │   │   │
 │   │   │   ├── services/
+│   │   │   │   ├── route.ts          # Create service
 │   │   │   │   └── [id]/
-│   │   │   │       ├── route.ts
+│   │   │   │       ├── route.ts      # Update service
 │   │   │   │       └── toggle-status/
-│   │   │   │           └── route.ts
+│   │   │   │           └── route.ts  # Toggle service status
 │   │   │   │
 │   │   │   ├── admin/
 │   │   │   │   ├── users/
@@ -203,6 +204,8 @@ booking/
 │   │   │   ├── footer.tsx        # Site footer
 │   │   │   ├── button.tsx        # Button component
 │   │   │   ├── input.tsx         # Input component
+│   │   │   ├── toast.tsx         # Toast notification component
+│   │   │   ├── toaster.tsx       # Toast container
 │   │   │   └── language-switcher.tsx # Language toggle
 │   │   │
 │   │   └── sections/             # Page sections
@@ -223,7 +226,8 @@ booking/
 │   │   └── uploadthing.ts        # UploadThing client
 │   │
 │   ├── hooks/                    # Custom React hooks
-│   │   └── use-safe-translations.ts # i18n hook
+│   │   ├── use-safe-translations.ts # i18n hook
+│   │   └── use-toast.ts          # Toast notifications hook
 │   │
 │   ├── types/                    # TypeScript types
 │   │   └── next-auth.d.ts        # NextAuth type extensions
@@ -405,6 +409,9 @@ booking/
 - `GET/PATCH /api/barbershops/[id]` → Détails/modifier salon
 - `POST /api/admin/users` → Créer utilisateur (admin)
 - `PATCH/DELETE /api/admin/users/[id]` → Modifier/supprimer utilisateur
+- `POST /api/services` → Créer un service
+- `PATCH /api/services/[id]` → Modifier un service
+- `POST /api/services/[id]/toggle-status` → Activer/désactiver un service
 - `POST /api/subscription/create-checkout` → Créer session Stripe
 - `POST /api/subscription/activate` → Activer abonnement dans la DB
 - `POST /api/uploadthing` → Upload d'images
@@ -719,10 +726,11 @@ Le projet est spécialisé dans les soins capillaires afro:
 - [ ] Documentation API (Swagger/OpenAPI)
 
 ### 🐛 **Bugs Corrigés Récemment / Recently Fixed Bugs**
+- [x] **Création de services** (Dec 2024) - L'ajout de services échouait avec "une erreur est survenue" car les endpoints API `/api/services` (POST) et `/api/services/[id]` (PATCH) n'existaient pas. Fix: Création des deux endpoints avec validation de propriété du salon. Remplacement de tous les `alert()` par des notifications toast modernes (@radix-ui/react-toast) pour une meilleure UX.
+- [x] **Ajout de coiffeur avec dialogue** (Dec 2024) - Le bouton "Ajouter un Coiffeur" redirigait vers `/admin/users` au lieu d'ouvrir un dialogue. Fix: Remplacement du `<Link>` par un `<button>` qui ouvre un modal avec formulaire complet (nom, email, téléphone, mot de passe). L'API `/api/barbershop/barbers/add` crée maintenant un nouveau compte utilisateur avec rôle "barber" au lieu de chercher un utilisateur existant.
 - [x] **Activation d'abonnement en base de données** (Dec 2024) - Le renouvellement d'abonnement était uniquement visuel et ne mettait pas à jour le statut dans la base de données. Fix: Création de l'endpoint `/api/subscription/activate` qui met à jour `createdAt` (pour réinitialiser la période de 30 jours) et `isActive=true`. La page de succès (`/subscription/success`) appelle maintenant cet endpoint automatiquement avec le `shopId` pour activer l'abonnement.
 - [x] **Renouvellement d'abonnement** (Dec 2024) - Le bouton "Renouveler" depuis `/my-space/[id]` passait le `shopId` en paramètre URL mais la page `/subscription` ne l'utilisait pas. Fix: Extraction du `shopId` depuis `searchParams` et transmission à l'API Stripe.
 - [x] **404 sur Subscribe Now** (Dec 2024) - Le bouton "Subscribe Now" redirigait vers une URL avec locale hardcodé (`/fr/`) au lieu du locale de l'utilisateur. Fix: API retourne URL relative, client utilise `router.push()` de `next-intl` pour redirection locale-aware.
-- [x] **Flux d'ajout de coiffeur** (Dec 2024) - Le bouton "Ajouter un Coiffeur" utilisait un modal simple. Changé pour rediriger vers la page de création d'utilisateur admin (`/admin/users`) pour maintenir la cohérence UX.
 - [x] **Filtrage par abonnement** (Dec 2024) - Les salons avec abonnements expirés (>30 jours) apparaissaient toujours dans la liste publique `/barbershops`. Fix: Ajout d'un filtre côté serveur pour n'afficher que les salons avec abonnements valides.
 - [x] **Affichage des images** (Dec 2024) - La page `/barbershops` n'affichait pas les images des salons. Fix: Ajout du champ `images` à la requête et affichage de la première image avec fallback sur gradient.
 - [x] **Intégration Stripe** (Dec 2024) - Le bouton "Subscribe Now" allait directement à la page de succès au lieu de Stripe. Fix: Implémentation complète de Stripe Checkout avec bypass admin/dev pour les tests.
