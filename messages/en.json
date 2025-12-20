@@ -207,7 +207,13 @@
     "myReservationsDesc": "Manage your past and upcoming appointments",
     "proProfessionals": "Pro Stylists",
     "proProfessionalsDesc": "Find the best specialized hairstylists",
-    "discover": "Discover"
+    "discover": "Discover",
+    "manageBookingsAndDiscover": "Manage your bookings and discover new salons",
+    "completedAppointmentsCount": "Completed appointments",
+    "upcomingAppointmentsTitle": "Upcoming Appointments",
+    "noUpcomingBookings": "No upcoming bookings",
+    "findSalon": "Find a Salon",
+    "findIdealBarber": "Find your ideal barber"
   },
   "admin": {
     "users": "User Management",
