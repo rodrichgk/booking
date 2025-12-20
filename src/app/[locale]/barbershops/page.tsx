@@ -28,12 +28,22 @@ export default async function BarbershopsPage({ params }: { params: Promise<{ lo
       phone: barbershops.phone,
       email: barbershops.email,
       website: barbershops.website,
+      images: barbershops.images,
       rating: barbershops.rating,
       reviewCount: barbershops.reviewCount,
       isActive: barbershops.isActive,
+      createdAt: barbershops.createdAt,
     })
     .from(barbershops)
     .where(eq(barbershops.isActive, true)); // Only show active shops
 
-  return <BarbershopsClient barbershops={allBarbershops as any} locale={locale} />;
+  // Filter out shops with expired subscriptions (> 30 days since creation)
+  const now = new Date();
+  const validBarbershops = allBarbershops.filter(shop => {
+    const createdDate = new Date(shop.createdAt);
+    const daysSinceCreation = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    return daysSinceCreation <= 30; // Only show shops with valid subscriptions
+  });
+
+  return <BarbershopsClient barbershops={validBarbershops as any} locale={locale} />;
 }

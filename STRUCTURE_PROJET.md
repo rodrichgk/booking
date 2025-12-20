@@ -717,6 +717,10 @@ Le projet est spécialisé dans les soins capillaires afro:
 
 ### 🐛 **Bugs Corrigés Récemment / Recently Fixed Bugs**
 - [x] **Renouvellement d'abonnement** (Dec 2024) - Le bouton "Renouveler" depuis `/my-space/[id]` passait le `shopId` en paramètre URL mais la page `/subscription` ne l'utilisait pas. Fix: Extraction du `shopId` depuis `searchParams` et transmission à l'API Stripe.
+- [x] **404 sur Subscribe Now** (Dec 2024) - Le bouton "Subscribe Now" redirigait vers une URL sans préfixe locale, causant une erreur 404. Fix: Ajout du préfixe locale et de l'URL complète dans l'API checkout.
+- [x] **Flux d'ajout de coiffeur** (Dec 2024) - Le bouton "Ajouter un Coiffeur" utilisait un modal simple. Changé pour rediriger vers la page de création d'utilisateur admin (`/admin/users`) pour maintenir la cohérence UX.
+- [x] **Filtrage par abonnement** (Dec 2024) - Les salons avec abonnements expirés (>30 jours) apparaissaient toujours dans la liste publique `/barbershops`. Fix: Ajout d'un filtre côté serveur pour n'afficher que les salons avec abonnements valides.
+- [x] **Affichage des images** (Dec 2024) - La page `/barbershops` n'affichait pas les images des salons. Fix: Ajout du champ `images` à la requête et affichage de la première image avec fallback sur gradient.
 
 ---
 
