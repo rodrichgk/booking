@@ -65,6 +65,11 @@ export const barbershops = pgTable('barbershops', {
     [key: string]: { open: string; close: string; closed: boolean };
   }>(),
   specialties: jsonb('specialties').$type<string[]>().default([]),
+  // Stripe subscription fields
+  stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+  subscriptionStatus: varchar('subscription_status', { length: 50 }).default('inactive'), // active, canceled, past_due, trialing, inactive
+  currentPeriodEnd: timestamp('current_period_end'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
