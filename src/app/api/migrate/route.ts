@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     // Only allow dev/admin users to run migrations
     const userRole = (session?.user as any)?.role;
     if (!session?.user || !['dev', 'admin'].includes(userRole)) {
@@ -35,6 +35,11 @@ export async function POST(request: NextRequest) {
         )`,
         // Add image column to services
         `ALTER TABLE services ADD COLUMN IF NOT EXISTS image TEXT`,
+        // Stripe subscription columns for barbershops
+        `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)`,
+        `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255)`,
+        `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'inactive'`,
+        `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMP`,
       ];
 
       const results = [];
@@ -73,7 +78,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     // Only allow dev/admin users
     const userRole = (session?.user as any)?.role;
     if (!session?.user || !['dev', 'admin'].includes(userRole)) {
