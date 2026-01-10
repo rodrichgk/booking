@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { Link } from '@/routing';
 import { useTranslations } from 'next-intl';
-import { 
-  Store, MapPin, Phone, Mail, Globe, Star, Calendar, Users, 
-  Settings, CreditCard, Plus, Edit2, Trash2, Check, X, 
+import {
+  Store, MapPin, Phone, Mail, Globe, Star, Calendar, Users,
+  Settings, CreditCard, Plus, Edit2, Trash2, Check, X,
   AlertCircle, TrendingUp, Clock, ArrowLeft, Scissors, Euro, Tag, Image as ImageIcon
 } from 'lucide-react';
 import { Header } from '@/components/ui/header';
@@ -68,13 +68,13 @@ interface ManageBarbershopClientProps {
   locale: string;
 }
 
-export function ManageBarbershopClient({ 
-  shop, 
+export function ManageBarbershopClient({
+  shop,
   barbers,
   services,
   bookings,
   subscriptionStatus,
-  locale 
+  locale
 }: ManageBarbershopClientProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'gallery' | 'settings'>('overview');
@@ -87,7 +87,7 @@ export function ManageBarbershopClient({
   const [serviceStatuses, setServiceStatuses] = useState<Record<string, boolean>>(
     services.reduce((acc, s) => ({ ...acc, [s.id]: s.isActive ?? true }), {})
   );
-  
+
   // Service form states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serviceName, setServiceName] = useState('');
@@ -97,14 +97,14 @@ export function ManageBarbershopClient({
   const [serviceCategory, setServiceCategory] = useState('haircut');
   const [serviceImage, setServiceImage] = useState('');
   const [isUploadingServiceImage, setIsUploadingServiceImage] = useState(false);
-  
+
   // Barber form states
   const [isAddingBarber, setIsAddingBarber] = useState(false);
   const [barberName, setBarberName] = useState('');
   const [barberEmail, setBarberEmail] = useState('');
   const [barberPhone, setBarberPhone] = useState('');
   const [barberPassword, setBarberPassword] = useState('');
-  
+
   // Shop edit states
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [isUpdatingShop, setIsUpdatingShop] = useState(false);
@@ -119,39 +119,39 @@ export function ManageBarbershopClient({
   // Calculate stats
   const totalBarbers = barbers.length;
   const activeBarbers = barbers.filter(b => b.isActive).length;
-  const avgRating = barbers.length > 0 
+  const avgRating = barbers.length > 0
     ? (barbers.reduce((sum, b) => sum + (parseFloat(b.rating || '0')), 0) / barbers.length).toFixed(1)
     : '0';
-  
+
   // Calculate monthly bookings
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  
+
   const monthlyBookings = bookings.filter(booking => {
     const bookingDate = new Date(booking.startTime);
-    return bookingDate >= firstDayOfMonth && 
-           bookingDate <= lastDayOfMonth &&
-           booking.status !== 'cancelled';
+    return bookingDate >= firstDayOfMonth &&
+      bookingDate <= lastDayOfMonth &&
+      booking.status !== 'cancelled';
   }).length;
 
   const handleToggleShopStatus = async () => {
     if (isToggling) return;
-    
-    const confirmMsg = shopActive 
+
+    const confirmMsg = shopActive
       ? 'Êtes-vous sûr de vouloir désactiver ce salon ? Il ne sera plus visible sur la plateforme.'
       : 'Voulez-vous activer ce salon ?';
-    
+
     if (!confirm(confirmMsg)) return;
-    
+
     setIsToggling(true);
     try {
       const res = await fetch(`/api/barbershops/${shop.id}/toggle-status`, {
         method: 'POST',
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         setShopActive(data.isActive);
         toast({
@@ -178,26 +178,26 @@ export function ManageBarbershopClient({
       setIsToggling(false);
     }
   };
-  
+
   const handleDeleteShop = async () => {
     const confirmMsg = 'ATTENTION: Cette action est irréversible. Êtes-vous sûr de vouloir supprimer ce salon ?\n\nTapez "SUPPRIMER" pour confirmer.';
     const userInput = prompt(confirmMsg);
-    
+
     if (userInput !== 'SUPPRIMER') {
       if (userInput !== null) {
         alert('Suppression annulée');
       }
       return;
     }
-    
+
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/barbershops/${shop.id}/delete`, {
         method: 'DELETE',
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         toast({
           variant: 'success',
@@ -227,7 +227,7 @@ export function ManageBarbershopClient({
   const handleUpdateShop = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isUpdatingShop) return;
-    
+
     setIsUpdatingShop(true);
     try {
       const res = await fetch(`/api/barbershops/${shop.id}/update`, {
@@ -243,9 +243,9 @@ export function ManageBarbershopClient({
           description: shopDescription || null,
         }),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         toast({
           variant: 'success',
@@ -272,15 +272,15 @@ export function ManageBarbershopClient({
       setIsUpdatingShop(false);
     }
   };
-  
+
   const handleToggleServiceStatus = async (serviceId: string) => {
     try {
       const res = await fetch(`/api/services/${serviceId}/toggle-status`, {
         method: 'POST',
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         setServiceStatuses(prev => ({ ...prev, [serviceId]: data.isActive }));
         toast({
@@ -304,19 +304,19 @@ export function ManageBarbershopClient({
       });
     }
   };
-  
+
   const handleDeleteBarber = async (barberId: string, barberName: string) => {
     if (!confirm(`Êtes-vous sûr de vouloir retirer ${barberName} de votre équipe ?`)) {
       return;
     }
-    
+
     try {
       const res = await fetch(`/api/barbershop/barbers/${barberId}`, {
         method: 'DELETE',
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         toast({
           variant: 'success',
@@ -340,7 +340,7 @@ export function ManageBarbershopClient({
       });
     }
   };
-  
+
   const handleAddBarber = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barberName.trim() || !barberEmail.trim() || !barberPassword.trim()) {
@@ -351,7 +351,7 @@ export function ManageBarbershopClient({
       });
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/barbershop/barbers/add', {
@@ -365,9 +365,9 @@ export function ManageBarbershopClient({
           barbershopId: shop.id,
         }),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         toast({
           variant: 'success',
@@ -398,7 +398,7 @@ export function ManageBarbershopClient({
       setIsSubmitting(false);
     }
   };
-  
+
   const handleImageUpload = async (file: File, type: 'service' | 'barber') => {
     const formData = new FormData();
     formData.append('file', file);
@@ -450,7 +450,7 @@ export function ManageBarbershopClient({
       });
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/services', {
@@ -466,9 +466,9 @@ export function ManageBarbershopClient({
           category: serviceCategory,
         }),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         toast({
           variant: 'success',
@@ -501,7 +501,7 @@ export function ManageBarbershopClient({
       setIsSubmitting(false);
     }
   };
-  
+
   const handleEditService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingService || !serviceName.trim() || !servicePrice || !serviceDuration) {
@@ -512,7 +512,7 @@ export function ManageBarbershopClient({
       });
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/services/${editingService.id}`, {
@@ -526,9 +526,9 @@ export function ManageBarbershopClient({
           category: serviceCategory,
         }),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         toast({
           variant: 'success',
@@ -560,7 +560,7 @@ export function ManageBarbershopClient({
       setIsSubmitting(false);
     }
   };
-  
+
   const openEditServiceModal = (service: Service) => {
     setEditingService(service);
     setServiceName(service.name);
@@ -569,7 +569,7 @@ export function ManageBarbershopClient({
     setServiceDuration(service.duration.toString());
     setServiceCategory(service.category || 'haircut');
   };
-  
+
   const closeServiceModal = () => {
     setIsAddingService(false);
     setEditingService(null);
@@ -591,7 +591,7 @@ export function ManageBarbershopClient({
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -615,17 +615,15 @@ export function ManageBarbershopClient({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
-              <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
-                shopActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-              }`}>
+              <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${shopActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                }`}>
                 {shopActive ? '● Actif' : '● Inactif'}
               </div>
-              <div className={`px-4 py-2 rounded-lg font-semibold text-sm ${
-                subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' :
-                subscriptionStatus === 'expired' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-              }`}>
+              <div className={`px-4 py-2 rounded-lg font-semibold text-sm ${subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' :
+                  subscriptionStatus === 'expired' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                }`}>
                 {subscriptionStatus === 'active' && '✓ Abonnement Actif'}
                 {subscriptionStatus === 'expired' && '⚠ Abonnement Expiré'}
                 {subscriptionStatus === 'inactive' && '✗ Inactif'}
@@ -641,9 +639,8 @@ export function ManageBarbershopClient({
           <div className="flex space-x-1 mt-6 border-b border-gray-200">
             {tabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-colors ${
-                  activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}>
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-colors ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'
+                  }`}>
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
               </button>
@@ -699,7 +696,7 @@ export function ManageBarbershopClient({
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Informations du Salon</h2>
-                <button 
+                <button
                   onClick={() => setIsEditingShop(true)}
                   className="flex items-center space-x-2 px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                   <Edit2 className="w-4 h-4" />
@@ -806,7 +803,7 @@ export function ManageBarbershopClient({
                 <h2 className="text-2xl font-bold text-gray-900">Équipe</h2>
                 <p className="text-gray-600 mt-1">Gérez les coiffeurs de votre salon</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsAddingBarber(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                 <Plus className="w-4 h-4" />
@@ -819,7 +816,7 @@ export function ManageBarbershopClient({
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun coiffeur</h3>
                 <p className="text-gray-600 mb-6">Commencez par ajouter votre premier coiffeur à votre équipe</p>
-                <button 
+                <button
                   onClick={() => setIsAddingBarber(true)}
                   className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                   Ajouter un Coiffeur
@@ -833,9 +830,9 @@ export function ManageBarbershopClient({
                       <div className="flex items-center space-x-3">
                         <div className="relative group">
                           {barber.profileImage ? (
-                            <img 
-                              src={barber.profileImage} 
-                              alt={barber.name || 'Barber'} 
+                            <img
+                              src={barber.profileImage}
+                              alt={barber.name || 'Barber'}
                               className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
                             />
                           ) : (
@@ -877,9 +874,8 @@ export function ManageBarbershopClient({
                           )}
                         </div>
                       </div>
-                      <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        barber.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <div className={`px-2 py-1 rounded-full text-xs font-semibold ${barber.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
                         {barber.isActive ? 'Actif' : 'Inactif'}
                       </div>
                     </div>
@@ -925,7 +921,7 @@ export function ManageBarbershopClient({
                       <button className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteBarber(barber.id, barber.name || 'ce coiffeur')}
                         className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4" />
@@ -945,7 +941,7 @@ export function ManageBarbershopClient({
                 <h2 className="text-2xl font-bold text-gray-900">Services</h2>
                 <p className="text-gray-600 mt-1">Gérez les services proposés par votre salon</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsAddingService(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                 <Plus className="w-4 h-4" />
@@ -978,9 +974,9 @@ export function ManageBarbershopClient({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4 flex-1">
                               {service.image ? (
-                                <img 
-                                  src={service.image} 
-                                  alt={service.name} 
+                                <img
+                                  src={service.image}
+                                  alt={service.name}
                                   className="w-16 h-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
                                 />
                               ) : (
@@ -991,9 +987,8 @@ export function ManageBarbershopClient({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-3">
                                   <h4 className="font-medium text-gray-900">{service.name}</h4>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                                  }`}>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                    }`}>
                                     {service.isActive ? 'Actif' : 'Inactif'}
                                   </span>
                                 </div>
@@ -1013,16 +1008,15 @@ export function ManageBarbershopClient({
                               </div>
                             </div>
                             <div className="flex items-center space-x-2 ml-4">
-                              <button 
+                              <button
                                 onClick={() => openEditServiceModal(service)}
                                 className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                                 <Edit2 className="w-4 h-4" />
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleToggleServiceStatus(service.id)}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                  serviceStatuses[service.id] ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                }`}>
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${serviceStatuses[service.id] ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  }`}>
                                 {serviceStatuses[service.id] ? 'Désactiver' : 'Activer'}
                               </button>
                             </div>
@@ -1040,7 +1034,7 @@ export function ManageBarbershopClient({
                 <Scissors className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun service</h3>
                 <p className="text-gray-600 mb-6">Commencez par ajouter les services proposés par votre salon</p>
-                <button 
+                <button
                   onClick={() => setIsAddingService(true)}
                   className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
                   Ajouter un Service
@@ -1067,7 +1061,7 @@ export function ManageBarbershopClient({
                   <p className="text-sm text-gray-600">{t('gallery.photosSubtitle')}</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
                 {/* Placeholder for existing images */}
                 <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
@@ -1123,9 +1117,8 @@ export function ManageBarbershopClient({
                     <p className="text-sm text-gray-600">€29.90/mois</p>
                   </div>
                 </div>
-                <div className={`px-4 py-2 rounded-lg font-semibold ${
-                  subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
+                <div className={`px-4 py-2 rounded-lg font-semibold ${subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
                   {subscriptionStatus === 'active' ? 'Actif' : 'Expiré'}
                 </div>
               </div>
@@ -1142,17 +1135,60 @@ export function ManageBarbershopClient({
                   </div>
                 </div>
               )}
-              <Link href={`/subscription?shopId=${shop.id}`}
-                className="block w-full text-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                {subscriptionStatus === 'active' ? 'Gérer l\'abonnement' : 'Renouveler l\'abonnement'}
-              </Link>
+              <div className="space-y-3">
+                <Link href={`/subscription?shopId=${shop.id}`}
+                  className="block w-full text-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
+                  {subscriptionStatus === 'active' ? 'Gérer l\'abonnement' : 'Renouveler l\'abonnement'}
+                </Link>
+                {subscriptionStatus === 'active' && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Êtes-vous sûr de vouloir annuler votre abonnement ? Votre salon restera visible jusqu\'à la fin de la période de facturation en cours.')) {
+                        return;
+                      }
+                      try {
+                        const res = await fetch('/api/subscription/cancel', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ shopId: shop.id }),
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                          toast({
+                            variant: 'success',
+                            title: 'Succès',
+                            description: 'Votre abonnement sera annulé à la fin de la période en cours.',
+                          });
+                          setTimeout(() => window.location.reload(), 2000);
+                        } else {
+                          toast({
+                            variant: 'error',
+                            title: 'Erreur',
+                            description: data.error || 'Une erreur est survenue',
+                          });
+                        }
+                      } catch (error) {
+                        console.error('Cancel subscription error:', error);
+                        toast({
+                          variant: 'error',
+                          title: 'Erreur',
+                          description: 'Une erreur est survenue',
+                        });
+                      }
+                    }}
+                    className="w-full px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
+                  >
+                    Annuler l'abonnement
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm p-6 border border-red-200">
               <h3 className="font-semibold text-red-900 mb-4">Zone de Danger</h3>
               <div className="space-y-4">
                 <div>
-                  <button 
+                  <button
                     onClick={handleToggleShopStatus}
                     disabled={isToggling}
                     className="w-full px-4 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -1163,7 +1199,7 @@ export function ManageBarbershopClient({
                   </p>
                 </div>
                 <div>
-                  <button 
+                  <button
                     onClick={handleDeleteShop}
                     disabled={isDeleting}
                     className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -1176,7 +1212,7 @@ export function ManageBarbershopClient({
           </div>
         )}
       </div>
-      
+
       <Footer />
 
       {/* Edit Shop Modal */}
@@ -1186,7 +1222,7 @@ export function ManageBarbershopClient({
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900">Modifier les Informations du Salon</h3>
-                <button 
+                <button
                   onClick={() => setIsEditingShop(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-gray-500" />
@@ -1292,7 +1328,7 @@ export function ManageBarbershopClient({
           </div>
         </div>
       )}
-      
+
       {/* Add Barber Modal */}
       {isAddingBarber && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1300,7 +1336,7 @@ export function ManageBarbershopClient({
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900">Ajouter un Coiffeur</h3>
-                <button 
+                <button
                   onClick={() => setIsAddingBarber(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-gray-500" />
@@ -1379,7 +1415,7 @@ export function ManageBarbershopClient({
           </div>
         </div>
       )}
-      
+
       {/* Add/Edit Service Modal */}
       {(isAddingService || editingService) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1389,7 +1425,7 @@ export function ManageBarbershopClient({
                 <h3 className="text-xl font-bold text-gray-900">
                   {editingService ? 'Modifier le Service' : 'Ajouter un Service'}
                 </h3>
-                <button 
+                <button
                   onClick={closeServiceModal}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-gray-500" />
