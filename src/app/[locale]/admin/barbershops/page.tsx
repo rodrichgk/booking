@@ -11,7 +11,7 @@ import { BarbershopManagementClient } from './client';
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'admin' });
-  
+
   return {
     title: t('barbershopManagement'),
     description: t('barbershopManagementDesc'),
@@ -27,7 +27,7 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
   }
 
   const userRole = (session.user as any).role;
-  
+
   // STRICT: Only dev and admin can access this page
   // Shop owners, barbers, and customers should use /my-space instead
   if (userRole !== 'dev' && userRole !== 'admin') {
@@ -53,16 +53,28 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
       ownerEmail: users.email,
       ownerPhone: sql<string>`COALESCE(${users.phone}, '')`.as('owner_phone'),
       barberCount: sql<number>`COUNT(${barbers.id})`.as('barber_count'),
+      // Use actual database subscription fields
       subscriptionStatus: sql<string>`
         CASE 
+          WHEN COALESCE(${barbershops.subscriptionStatus}, 'inactive') = 'active' 
+               AND (${barbershops.currentPeriodEnd} IS NULL OR ${barbershops.currentPeriodEnd} > NOW()) THEN 'active'
+          WHEN COALESCE(${barbershops.subscriptionStatus}, 'inactive') = 'canceled' THEN 'canceled'
+          WHEN COALESCE(${barbershops.subscriptionStatus}, 'inactive') = 'past_due' THEN 'past_due'
+          WHEN ${barbershops.currentPeriodEnd} IS NOT NULL AND ${barbershops.currentPeriodEnd} < NOW() THEN 'expired'
           WHEN ${barbershops.isActive} = false THEN 'inactive'
-          WHEN ${barbershops.createdAt} < NOW() - INTERVAL '1 month' THEN 'expired'
+          WHEN ${barbershops.createdAt} < NOW() - INTERVAL '1 month' AND ${barbershops.currentPeriodEnd} IS NULL THEN 'expired'
           ELSE 'active'
         END
       `.as('subscription_status'),
       subscriptionExpiry: sql<string>`
-        (${barbershops.createdAt} + INTERVAL '1 month')::text
+        COALESCE(
+          ${barbershops.currentPeriodEnd}::text,
+          (${barbershops.createdAt} + INTERVAL '1 month')::text
+        )
       `.as('subscription_expiry'),
+      // Also fetch raw fields for debugging
+      dbSubscriptionStatus: barbershops.subscriptionStatus,
+      dbCurrentPeriodEnd: barbershops.currentPeriodEnd,
     })
     .from(barbershops)
     .leftJoin(users, eq(barbershops.ownerId, users.id))
@@ -72,10 +84,10 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
 
   // Get barbershop statistics
   const totalBarbershops = allBarbershops.length;
-  const activeBarbershops = allBarbershops.filter(b => b.isActive).length;
+  const activeBarbershops = allBarbershops.filter(b => b.subscriptionStatus === 'active').length;
   const pendingBarbershops = allBarbershops.filter(b => !b.isActive).length;
-  const expiredBarbershops = allBarbershops.filter(b => 
-    new Date(b.createdAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const expiredBarbershops = allBarbershops.filter(b =>
+    b.subscriptionStatus === 'expired' || b.subscriptionStatus === 'canceled'
   ).length;
   const avgRating = allBarbershops.reduce((acc, b) => acc + (parseFloat(b.rating as string) || 0), 0) / totalBarbershops || 0;
   // Get accurate barber count
@@ -83,7 +95,7 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
   const monthlyRevenue = activeBarbershops * 29.9;
 
   const t = await getTranslations({ locale, namespace: 'admin' });
-  
+
   const stats = [
     { label: t('total'), value: totalBarbershops, icon: 'Store', color: 'blue' },
     { label: t('active'), value: activeBarbershops, icon: 'CheckCircle', color: 'green' },
@@ -96,7 +108,7 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
 
   return (
     <div className="min-h-screen bg-white">
-      <BarbershopManagementClient 
+      <BarbershopManagementClient
         initialBarbershops={allBarbershops as any}
         initialStats={stats as any}
         locale={locale}
