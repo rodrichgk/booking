@@ -101,6 +101,32 @@ export function SubscriptionClient({
     }
   };
 
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const handleManagePayment = async () => {
+    setPortalLoading(true);
+    try {
+      const response = await fetch('/api/subscription/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopId }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Error opening payment portal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Portal error:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
   // Determine subscription state
   const isExpired = shopData?.currentPeriodEnd
     ? new Date(shopData.currentPeriodEnd) < new Date()
@@ -218,18 +244,27 @@ export function SubscriptionClient({
                 {/* Action Buttons */}
                 <div className="mt-6 pt-6 border-t border-gray-100">
                   {isActive && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
                       <p className="text-green-600 font-medium">
                         ✓ Votre salon est visible sur la plateforme
                       </p>
-                      <a
-                        href="https://billing.stripe.com/p/login/test"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 hover:text-primary-700 font-medium"
+                      <button
+                        onClick={handleManagePayment}
+                        disabled={portalLoading}
+                        className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
                       >
-                        Gérer le paiement →
-                      </a>
+                        {portalLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
+                            Chargement...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="w-4 h-4 mr-2" />
+                            Gérer le paiement →
+                          </>
+                        )}
+                      </button>
                     </div>
                   )}
 
