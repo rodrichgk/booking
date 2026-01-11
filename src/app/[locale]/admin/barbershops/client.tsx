@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { 
+import {
   Store, Search, Filter, DollarSign, CheckCircle, XCircle, Clock, Star,
   MoreVertical, Mail, Phone, MapPin, Calendar, Edit, Eye, Ban, CreditCard
 } from 'lucide-react';
@@ -66,16 +66,16 @@ const renderIcon = (iconName: string, className: string) => {
     Ban,
     CreditCard,
   };
-  
+
   const IconComponent = iconMap[iconName];
   return IconComponent ? <IconComponent className={className} /> : null;
 };
 
-export function BarbershopManagementClient({ 
-  initialBarbershops, 
-  initialStats, 
-  locale, 
-  currentUserRole 
+export function BarbershopManagementClient({
+  initialBarbershops,
+  initialStats,
+  locale,
+  currentUserRole
 }: BarbershopManagementClientProps) {
   const t = useTranslations('admin');
   const [barbershops, setBarbershops] = useState(initialBarbershops);
@@ -84,12 +84,12 @@ export function BarbershopManagementClient({
   const [loading, setLoading] = useState(false);
 
   const filteredBarbershops = barbershops.filter(barbershop => {
-    const matchesSearch = 
+    const matchesSearch =
       barbershop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       barbershop.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       barbershop.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
       barbershop.address.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'all' || barbershop.subscriptionStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -139,9 +139,9 @@ export function BarbershopManagementClient({
     const confirmMsg = currentStatus
       ? 'Are you sure you want to deactivate this barbershop? It will be hidden from customers.'
       : 'Activate this barbershop?';
-    
+
     if (!confirm(confirmMsg)) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch(`/api/barbershops/${barbershopId}/toggle-status`, {
@@ -151,7 +151,7 @@ export function BarbershopManagementClient({
       const data = await response.json();
 
       if (response.ok) {
-        setBarbershops(barbershops.map(b => 
+        setBarbershops(barbershops.map(b =>
           b.id === barbershopId ? { ...b, isActive: data.isActive } : b
         ));
         alert(data.message);
@@ -160,6 +160,39 @@ export function BarbershopManagementClient({
       }
     } catch (error) {
       console.error('Failed to update barbershop status:', error);
+      alert('An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubscriptionToggle = async (barbershopId: string, action: 'activate' | 'deactivate' | 'expire') => {
+    const messages: Record<string, string> = {
+      activate: 'Activer l\'abonnement pour 30 jours ?',
+      deactivate: 'Désactiver l\'abonnement (pour tester le checkout) ?',
+      expire: 'Marquer l\'abonnement comme expiré ?',
+    };
+
+    if (!confirm(messages[action])) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/admin/barbershops/${barbershopId}/subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`✓ ${data.message}`);
+        window.location.reload();
+      } else {
+        alert(data.error || 'Failed to update subscription');
+      }
+    } catch (error) {
+      console.error('Failed to update subscription:', error);
       alert('An error occurred');
     } finally {
       setLoading(false);
@@ -189,207 +222,238 @@ export function BarbershopManagementClient({
     <>
       <Header />
       <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Barbershop Management</h1>
-              <p className="text-gray-600 mt-1">Manage barbershops and €29.9/month subscriptions</p>
-            </div>
-            <Link
-              href={`/${locale}/admin/barbershops/new`}
-              className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Add Barbershop
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {initialStats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                </div>
-                <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
-                  {renderIcon(stat.icon, `w-6 h-6 text-${stat.color}-600`)}
-                </div>
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Barbershop Management</h1>
+                <p className="text-gray-600 mt-1">Manage barbershops and €29.9/month subscriptions</p>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder={t('searchBarbershops')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-            </div>
-            <div className="sm:w-48">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              <Link
+                href={`/${locale}/admin/barbershops/new`}
+                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
               >
-                <option value="all">{t('allStatus')}</option>
-                <option value="active">{t('active')}</option>
-                <option value="expired">{t('expired')}</option>
-                <option value="inactive">{t('pending')}</option>
-              </select>
+                Add Barbershop
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Barbershops Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Barbershop
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Owner
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Subscription
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stats
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredBarbershops.map((barbershop) => (
-                  <tr key={barbershop.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{barbershop.name}</div>
-                        <div className="text-sm text-gray-500">ID: {barbershop.id.slice(0, 8)}...</div>
-                        {barbershop.website && (
-                          <a 
-                            href={barbershop.website} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-sm text-primary-600 hover:text-primary-800"
-                          >
-                            Website
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{barbershop.ownerName}</div>
-                      <div className="text-sm text-gray-500 flex items-center mt-1">
-                        <Mail className="w-3 h-3 mr-1 text-gray-400" />
-                        {barbershop.ownerEmail}
-                      </div>
-                      {barbershop.ownerPhone && (
-                        <div className="text-sm text-gray-500 flex items-center mt-1">
-                          <Phone className="w-3 h-3 mr-1 text-gray-400" />
-                          {barbershop.ownerPhone}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 flex items-center">
-                        <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                        {barbershop.city}
-                      </div>
-                      <div className="text-sm text-gray-500 truncate max-w-xs">
-                        {barbershop.address}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-2">
-                        {getStatusBadge(barbershop.subscriptionStatus, barbershop.isActive)}
-                        <div className="text-xs text-gray-500">
-                          {t('expires')}: {formatDate(barbershop.subscriptionExpiry)}
-                        </div>
-                        <div className="text-xs font-medium text-primary-600">
-                          €29.9/month
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                          {parseFloat(barbershop.rating || '0').toFixed(1)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {barbershop.reviewCount} reviews
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900 mt-1">
-                        <div className="flex items-center">
-                          <Store className="w-4 h-4 mr-1 text-gray-400" />
-                          {barbershop.barberCount} barbers
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex flex-col space-y-2">
-                        <Link
-                          href={`/${locale}/my-space/${barbershop.id}`}
-                          className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-medium transition-colors text-center"
-                        >
-                          Manage Shop
-                        </Link>
-                        <div className="flex items-center space-x-2 justify-center">
-                          <button
-                            onClick={() => handleStatusToggle(barbershop.id, barbershop.isActive)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                              barbershop.isActive 
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                            }`}
-                            title={barbershop.isActive ? t('deactivate') : t('activate')}
-                          >
-                            {barbershop.isActive ? `● ${t('deactivate')}` : `● ${t('activate')}`}
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Stats Grid */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {initialStats.map((stat) => (
+              <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                  </div>
+                  <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
+                    {renderIcon(stat.icon, `w-6 h-6 text-${stat.color}-600`)}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          
-          {filteredBarbershops.length === 0 && (
-            <div className="text-center py-12">
-              <Store className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">{t('noBarbershopsFound')}</h3>
-              <p className="mt-1 text-sm text-gray-500">{t('tryDifferentFilter')}</p>
+
+          {/* Filters */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder={t('searchBarbershops')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+              <div className="sm:w-48">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="all">{t('allStatus')}</option>
+                  <option value="active">{t('active')}</option>
+                  <option value="expired">{t('expired')}</option>
+                  <option value="inactive">{t('pending')}</option>
+                </select>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Barbershops Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Barbershop
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Owner
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Subscription
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Stats
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredBarbershops.map((barbershop) => (
+                    <tr key={barbershop.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{barbershop.name}</div>
+                          <div className="text-sm text-gray-500">ID: {barbershop.id.slice(0, 8)}...</div>
+                          {barbershop.website && (
+                            <a
+                              href={barbershop.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary-600 hover:text-primary-800"
+                            >
+                              Website
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{barbershop.ownerName}</div>
+                        <div className="text-sm text-gray-500 flex items-center mt-1">
+                          <Mail className="w-3 h-3 mr-1 text-gray-400" />
+                          {barbershop.ownerEmail}
+                        </div>
+                        {barbershop.ownerPhone && (
+                          <div className="text-sm text-gray-500 flex items-center mt-1">
+                            <Phone className="w-3 h-3 mr-1 text-gray-400" />
+                            {barbershop.ownerPhone}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 flex items-center">
+                          <MapPin className="w-4 h-4 mr-1 text-gray-400" />
+                          {barbershop.city}
+                        </div>
+                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                          {barbershop.address}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="space-y-2">
+                          {getStatusBadge(barbershop.subscriptionStatus, barbershop.isActive)}
+                          <div className="text-xs text-gray-500">
+                            {t('expires')}: {formatDate(barbershop.subscriptionExpiry)}
+                          </div>
+                          <div className="text-xs font-medium text-primary-600">
+                            €29.9/month
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 mr-1 text-yellow-400" />
+                            {parseFloat(barbershop.rating || '0').toFixed(1)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {barbershop.reviewCount} reviews
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-900 mt-1">
+                          <div className="flex items-center">
+                            <Store className="w-4 h-4 mr-1 text-gray-400" />
+                            {barbershop.barberCount} barbers
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex flex-col space-y-2">
+                          <Link
+                            href={`/${locale}/my-space/${barbershop.id}`}
+                            className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-medium transition-colors text-center"
+                          >
+                            Manage Shop
+                          </Link>
+                          <div className="flex items-center space-x-1 justify-center flex-wrap gap-1">
+                            <button
+                              onClick={() => handleStatusToggle(barbershop.id, barbershop.isActive)}
+                              disabled={loading}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${barbershop.isActive
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}
+                              title={barbershop.isActive ? t('deactivate') : t('activate')}
+                            >
+                              {barbershop.isActive ? `● ${t('deactivate')}` : `● ${t('activate')}`}
+                            </button>
+                          </div>
+                          {/* Subscription Controls (Admin/Dev only) */}
+                          <div className="border-t border-gray-200 pt-2 mt-1">
+                            <p className="text-xs text-gray-500 mb-1">Subscription:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {barbershop.subscriptionStatus !== 'active' && (
+                                <button
+                                  onClick={() => handleSubscriptionToggle(barbershop.id, 'activate')}
+                                  disabled={loading}
+                                  className="px-2 py-0.5 bg-green-100 text-green-700 hover:bg-green-200 rounded text-xs transition-colors disabled:opacity-50"
+                                >
+                                  ✓ Activer
+                                </button>
+                              )}
+                              {barbershop.subscriptionStatus === 'active' && (
+                                <button
+                                  onClick={() => handleSubscriptionToggle(barbershop.id, 'deactivate')}
+                                  disabled={loading}
+                                  className="px-2 py-0.5 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded text-xs transition-colors disabled:opacity-50"
+                                >
+                                  ⊘ Désactiver
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleSubscriptionToggle(barbershop.id, 'expire')}
+                                disabled={loading}
+                                className="px-2 py-0.5 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs transition-colors disabled:opacity-50"
+                              >
+                                ✕ Expirer
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredBarbershops.length === 0 && (
+              <div className="text-center py-12">
+                <Store className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">{t('noBarbershopsFound')}</h3>
+                <p className="mt-1 text-sm text-gray-500">{t('tryDifferentFilter')}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-    <Footer />
+      <Footer />
     </>
   );
 }
