@@ -11,7 +11,7 @@ import { AnalyticsClient } from './client';
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'admin' });
-  
+
   return {
     title: t('systemAnalytics'),
     description: t('systemAnalyticsDesc'),
@@ -141,19 +141,19 @@ export default async function SystemAnalyticsPage({ params }: { params: Promise<
     .slice(0, 20);
 
   const t = await getTranslations({ locale, namespace: 'admin' });
-  
+
   const overviewStats = [
-    { label: t('totalUsers'), value: totalUsers[0]?.count.toLocaleString() || '0', icon: 'Users', color: 'blue', change: `+${newUsersLastMonth[0]?.count || 0} ${t('thisMonth')}` },
-    { label: t('totalBarbershops'), value: totalBarbershops[0]?.count.toLocaleString() || '0', icon: 'Store', color: 'green', change: `+${newBarbershopsLastMonth[0]?.count || 0} ${t('thisMonth')}` },
-    { label: t('totalBookings'), value: totalBookings[0]?.count.toLocaleString() || '0', icon: 'Calendar', color: 'purple', change: `+${bookingsLastMonth[0]?.count || 0} ${t('thisMonth')}` },
-    { label: t('monthlyRevenue'), value: `€${monthlyRevenue.toFixed(0)}`, icon: 'DollarSign', color: 'yellow', change: `€${yearlyRevenue.toFixed(0)}/${t('perYear')}` },
-    { label: t('avgRating'), value: (avgRating[0]?.avg || 0).toFixed(1), icon: 'Star', color: 'orange', change: `${totalReviews[0]?.count || 0} ${t('reviews')}` },
-    { label: t('activeBarbershops'), value: activeBarbershops[0]?.count.toLocaleString() || '0', icon: 'Activity', color: 'emerald', change: `${Math.round((activeBarbershops[0]?.count || 0) / (totalBarbershops[0]?.count || 1) * 100)}% ${t('active')}` },
+    { label: t('totalUsers'), value: String(Number(totalUsers[0]?.count) || 0), icon: 'Users', color: 'blue', change: `+${Number(newUsersLastMonth[0]?.count) || 0} ${t('thisMonth')}` },
+    { label: t('totalBarbershops'), value: String(Number(totalBarbershops[0]?.count) || 0), icon: 'Store', color: 'green', change: `+${Number(newBarbershopsLastMonth[0]?.count) || 0} ${t('thisMonth')}` },
+    { label: t('totalBookings'), value: String(Number(totalBookings[0]?.count) || 0), icon: 'Calendar', color: 'purple', change: `+${Number(bookingsLastMonth[0]?.count) || 0} ${t('thisMonth')}` },
+    { label: t('monthlyRevenue'), value: `€${Math.round(monthlyRevenue)}`, icon: 'DollarSign', color: 'yellow', change: `€${Math.round(yearlyRevenue)}/${t('perYear')}` },
+    { label: t('avgRating'), value: (Number(avgRating[0]?.avg) || 0).toFixed(1), icon: 'Star', color: 'orange', change: `${Number(totalReviews[0]?.count) || 0} ${t('reviews')}` },
+    { label: t('activeBarbershops'), value: String(Number(activeBarbershops[0]?.count) || 0), icon: 'Activity', color: 'emerald', change: `${Math.round((Number(activeBarbershops[0]?.count) || 0) / (Number(totalBarbershops[0]?.count) || 1) * 100)}% ${t('active')}` },
   ];
 
   return (
     <div className="min-h-screen bg-white">
-      <AnalyticsClient 
+      <AnalyticsClient
         overviewStats={overviewStats as any}
         topBarbershops={topBarbershops as any}
         recentActivity={recentActivity as any}
