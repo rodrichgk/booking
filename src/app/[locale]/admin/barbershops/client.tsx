@@ -389,51 +389,32 @@ export function BarbershopManagementClient({
                             href={`/${locale}/my-space/${barbershop.id}`}
                             className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-medium transition-colors text-center"
                           >
-                            Manage Shop
+                            Gérer
                           </Link>
-                          <div className="flex items-center space-x-1 justify-center flex-wrap gap-1">
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => barbershop.subscriptionStatus !== 'active'
+                                ? handleSubscriptionToggle(barbershop.id, 'activate')
+                                : handleSubscriptionToggle(barbershop.id, 'deactivate')
+                              }
+                              disabled={loading}
+                              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${barbershop.subscriptionStatus === 'active'
+                                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}
+                            >
+                              {barbershop.subscriptionStatus === 'active' ? '⊘ Off' : '✓ On'}
+                            </button>
                             <button
                               onClick={() => handleStatusToggle(barbershop.id, barbershop.isActive)}
                               disabled={loading}
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${barbershop.isActive
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${barbershop.isActive
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                 }`}
-                              title={barbershop.isActive ? t('deactivate') : t('activate')}
                             >
-                              {barbershop.isActive ? `● ${t('deactivate')}` : `● ${t('activate')}`}
+                              {barbershop.isActive ? '👁 Hide' : '👁 Show'}
                             </button>
-                          </div>
-                          {/* Subscription Controls (Admin/Dev only) */}
-                          <div className="border-t border-gray-200 pt-2 mt-1">
-                            <p className="text-xs text-gray-500 mb-1">Subscription:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {barbershop.subscriptionStatus !== 'active' && (
-                                <button
-                                  onClick={() => handleSubscriptionToggle(barbershop.id, 'activate')}
-                                  disabled={loading}
-                                  className="px-2 py-0.5 bg-green-100 text-green-700 hover:bg-green-200 rounded text-xs transition-colors disabled:opacity-50"
-                                >
-                                  ✓ Activer
-                                </button>
-                              )}
-                              {barbershop.subscriptionStatus === 'active' && (
-                                <button
-                                  onClick={() => handleSubscriptionToggle(barbershop.id, 'deactivate')}
-                                  disabled={loading}
-                                  className="px-2 py-0.5 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded text-xs transition-colors disabled:opacity-50"
-                                >
-                                  ⊘ Désactiver
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleSubscriptionToggle(barbershop.id, 'expire')}
-                                disabled={loading}
-                                className="px-2 py-0.5 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs transition-colors disabled:opacity-50"
-                              >
-                                ✕ Expirer
-                              </button>
-                            </div>
                           </div>
                         </div>
                       </td>
