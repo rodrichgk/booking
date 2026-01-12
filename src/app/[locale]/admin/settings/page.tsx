@@ -2,13 +2,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Settings, Globe, CreditCard, Mail, Bell, Shield, Palette, Zap } from 'lucide-react';
+import { db } from '@/lib/db';
+import { siteSettings } from '@/lib/db/schema';
 import { SettingsClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'admin' });
-  
+
   return {
     title: t('settings'),
     description: t('settingsDesc'),
@@ -28,11 +29,11 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
     redirect(`/${locale}/profile`);
   }
 
-  // System settings (in real app, these would come from a settings table)
-  const systemSettings = {
+  // Default settings
+  const defaultSettings = {
     general: {
-      siteName: 'AfroBook',
-      siteUrl: 'https://afrobook.com',
+      siteName: 'Orphelia',
+      siteUrl: 'https://www.orphelia.net',
       defaultLanguage: 'fr',
       timezone: 'Europe/Paris',
       maintenanceMode: false,
@@ -44,10 +45,10 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       autoRenewal: true,
     },
     email: {
-      smtpHost: 'smtp.afrobook.com',
+      smtpHost: 'smtp.orphelia.net',
       smtpPort: 587,
-      senderEmail: 'noreply@afrobook.com',
-      senderName: 'AfroBook',
+      senderEmail: 'noreply@orphelia.net',
+      senderName: 'Orphelia',
     },
     notifications: {
       emailNotifications: true,
@@ -56,7 +57,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       bookingReminders: true,
     },
     security: {
-      twoFactorAuth: true,
+      twoFactorAuth: false,
       sessionTimeout: 24,
       maxLoginAttempts: 5,
       passwordMinLength: 8,
@@ -70,10 +71,26 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
     },
   };
 
+  // Load settings from database
+  try {
+    const dbSettings = await db.select().from(siteSettings);
+
+    // Merge database settings with defaults
+    for (const setting of dbSettings) {
+      const key = setting.key as keyof typeof defaultSettings;
+      if (key in defaultSettings && setting.value) {
+        (defaultSettings as any)[key] = setting.value;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading settings from database:', error);
+    // Continue with default settings
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      <SettingsClient 
-        settings={systemSettings}
+      <SettingsClient
+        settings={defaultSettings}
         locale={locale}
         currentUserRole={userRole}
       />
