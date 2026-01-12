@@ -6,10 +6,10 @@ import { barbershops, barbers, users, services, bookings } from '@/lib/db/schema
 import { eq, and } from 'drizzle-orm';
 import { ManageBarbershopClient } from './client';
 
-export default async function ManageBarbershopPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string; locale: string }> 
+export default async function ManageBarbershopPage({
+  params
+}: {
+  params: Promise<{ id: string; locale: string }>
 }) {
   const { id, locale } = await params;
   const session = await getServerSession(authOptions);
@@ -37,6 +37,8 @@ export default async function ManageBarbershopPage({
       isActive: barbershops.isActive,
       ownerId: barbershops.ownerId,
       createdAt: barbershops.createdAt,
+      subscriptionStatus: barbershops.subscriptionStatus,
+      currentPeriodEnd: barbershops.currentPeriodEnd,
     })
     .from(barbershops)
     .where(eq(barbershops.id, id))
@@ -107,28 +109,38 @@ export default async function ManageBarbershopPage({
     .from(bookings)
     .where(eq(bookings.barbershopId, id));
 
-  // Calculate subscription status
-  const createdDate = new Date(shop.createdAt);
+  // Calculate subscription status from database fields
   const now = new Date();
-  const daysSinceCreation = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-  
-  let subscriptionStatus: 'active' | 'expired' | 'inactive';
-  if (!shop.isActive) {
-    subscriptionStatus = 'inactive';
-  } else if (daysSinceCreation > 30) {
-    subscriptionStatus = 'expired';
-  } else {
+  let subscriptionStatus: 'active' | 'expired' | 'inactive' | 'past_due' | 'canceled';
+
+  const dbStatus = shop.subscriptionStatus || 'inactive';
+  const periodEnd = shop.currentPeriodEnd ? new Date(shop.currentPeriodEnd) : null;
+
+  if (dbStatus === 'active' && (!periodEnd || periodEnd > now)) {
     subscriptionStatus = 'active';
+  } else if (dbStatus === 'past_due') {
+    subscriptionStatus = 'past_due';
+  } else if (dbStatus === 'canceled') {
+    subscriptionStatus = 'canceled';
+  } else if (periodEnd && periodEnd < now) {
+    subscriptionStatus = 'expired';
+  } else if (dbStatus === 'inactive' || !shop.isActive) {
+    subscriptionStatus = 'inactive';
+  } else {
+    // Fallback to old logic for shops without subscription data
+    const createdDate = new Date(shop.createdAt);
+    const daysSinceCreation = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    subscriptionStatus = daysSinceCreation > 30 ? 'expired' : 'active';
   }
 
   return (
-    <ManageBarbershopClient 
-      shop={shop as any} 
+    <ManageBarbershopClient
+      shop={shop as any}
       barbers={shopBarbers as any}
       services={shopServices as any}
       bookings={shopBookings as any}
       subscriptionStatus={subscriptionStatus}
-      locale={locale} 
+      locale={locale}
     />
   );
 }

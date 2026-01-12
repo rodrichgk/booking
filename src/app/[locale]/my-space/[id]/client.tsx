@@ -64,7 +64,7 @@ interface ManageBarbershopClientProps {
   barbers: Barber[];
   services: Service[];
   bookings: Booking[];
-  subscriptionStatus: 'active' | 'expired' | 'inactive';
+  subscriptionStatus: 'active' | 'expired' | 'inactive' | 'past_due' | 'canceled';
   locale: string;
 }
 
