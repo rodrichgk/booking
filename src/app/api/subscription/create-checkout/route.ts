@@ -86,8 +86,8 @@ export async function POST(request: Request) {
         quantity: 1,
       }],
       mode: 'subscription',
-      success_url: `${process.env.NEXTAUTH_URL}/{locale}/subscription/success?session_id={CHECKOUT_SESSION_ID}&shopId=${shopId}`.replace('{locale}', 'fr'),
-      cancel_url: `${process.env.NEXTAUTH_URL}/subscription?shopId=${shopId}`,
+      success_url: `https://www.orphelia.net/fr/subscription/success?session_id={CHECKOUT_SESSION_ID}&shopId=${shopId}`,
+      cancel_url: `https://www.orphelia.net/fr/subscription?shopId=${shopId}`,
       metadata: {
         shopId: shopId,
         userEmail: email,
