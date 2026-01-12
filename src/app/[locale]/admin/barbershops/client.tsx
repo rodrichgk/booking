@@ -120,7 +120,7 @@ export function BarbershopManagementClient({
       default:
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            Unknown
+            Inconnu
           </span>
         );
     }
@@ -137,8 +137,8 @@ export function BarbershopManagementClient({
   const handleStatusToggle = async (barbershopId: string, currentStatus: boolean) => {
     const action = currentStatus ? 'deactivate' : 'activate';
     const confirmMsg = currentStatus
-      ? 'Are you sure you want to deactivate this barbershop? It will be hidden from customers.'
-      : 'Activate this barbershop?';
+      ? 'Êtes-vous sûr de vouloir désactiver ce salon ? Il ne sera plus visible pour les clients.'
+      : 'Activer ce salon ?';
 
     if (!confirm(confirmMsg)) return;
 
@@ -227,14 +227,14 @@ export function BarbershopManagementClient({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Barbershop Management</h1>
-                <p className="text-gray-600 mt-1">Manage barbershops and €29.9/month subscriptions</p>
+                <h1 className="text-3xl font-bold text-gray-900">Gestion des Salons</h1>
+                <p className="text-gray-600 mt-1">Gérer les salons et abonnements €29.9/mois</p>
               </div>
               <Link
                 href={`/${locale}/admin/barbershops/new`}
                 className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
               >
-                Add Barbershop
+                Ajouter un Salon
               </Link>
             </div>
           </div>
@@ -295,16 +295,16 @@ export function BarbershopManagementClient({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Barbershop
+                      Salon
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Owner
+                      Propriétaire
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Location
+                      Localisation
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Subscription
+                      Abonnement
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Stats
@@ -362,7 +362,7 @@ export function BarbershopManagementClient({
                             {t('expires')}: {formatDate(barbershop.subscriptionExpiry)}
                           </div>
                           <div className="text-xs font-medium text-primary-600">
-                            €29.9/month
+                            €29.9/mois
                           </div>
                         </div>
                       </td>
@@ -373,13 +373,13 @@ export function BarbershopManagementClient({
                             {parseFloat(barbershop.rating || '0').toFixed(1)}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {barbershop.reviewCount} reviews
+                            {barbershop.reviewCount} avis
                           </div>
                         </div>
                         <div className="text-sm text-gray-900 mt-1">
                           <div className="flex items-center">
                             <Store className="w-4 h-4 mr-1 text-gray-400" />
-                            {barbershop.barberCount} barbers
+                            {barbershop.barberCount} coiffeurs
                           </div>
                         </div>
                       </td>
@@ -399,8 +399,8 @@ export function BarbershopManagementClient({
                               }
                               disabled={loading}
                               className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${barbershop.subscriptionStatus === 'active'
-                                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
                                 }`}
                             >
                               {barbershop.subscriptionStatus === 'active' ? '⊘ Off' : '✓ On'}
@@ -409,8 +409,8 @@ export function BarbershopManagementClient({
                               onClick={() => handleStatusToggle(barbershop.id, barbershop.isActive)}
                               disabled={loading}
                               className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${barbershop.isActive
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                 }`}
                             >
                               {barbershop.isActive ? '👁 Hide' : '👁 Show'}
