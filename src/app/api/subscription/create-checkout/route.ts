@@ -25,37 +25,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Shop ID is required' }, { status: 400 });
     }
 
-    // Admin/Dev bypass for testing - skip payment and go directly to success
-    if (userRole === 'admin' || userRole === 'dev') {
-      // For admin/dev, directly activate the subscription in DB
-      const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-      await db
-        .update(barbershops)
-        .set({
-          subscriptionStatus: 'active',
-          currentPeriodEnd: currentPeriodEnd,
-          isActive: true,
-          updatedAt: new Date(),
-        })
-        .where(eq(barbershops.id, shopId));
-
-      return NextResponse.json({
-        checkoutUrl: `/subscription/success?bypass=true&shopId=${shopId}`,
-        message: 'Admin bypass - subscription activated',
-        shopId: shopId,
-        bypass: true
-      });
-    }
-
-    // Regular users - create Stripe checkout session
+    // Check if Stripe is configured
     if (!process.env.STRIPE_SECRET_KEY) {
-      // Fallback if Stripe is not configured
       return NextResponse.json({
-        checkoutUrl: `/subscription/success?mock=true&shopId=${shopId}`,
-        message: 'Stripe not configured - demo mode',
-        shopId: shopId
-      });
+        error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.',
+        checkoutUrl: null
+      }, { status: 500 });
     }
 
     // Get the barbershop to check for existing customer
