@@ -127,6 +127,42 @@ export function SubscriptionClient({
     }
   };
 
+  const [devBypassLoading, setDevBypassLoading] = useState(false);
+
+  const handleDevBypass = async () => {
+    if (!shopId) {
+      alert('Shop ID required');
+      return;
+    }
+
+    if (!confirm('⚠️ DEV BYPASS: Activer l\'abonnement pour 30 jours sans paiement ?')) {
+      return;
+    }
+
+    setDevBypassLoading(true);
+    try {
+      const response = await fetch(`/api/admin/barbershops/${shopId}/subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'activate' }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('✓ ' + data.message);
+        window.location.reload();
+      } else {
+        alert(data.error || 'Erreur lors de l\'activation');
+      }
+    } catch (error) {
+      console.error('Dev bypass error:', error);
+      alert('Une erreur est survenue');
+    } finally {
+      setDevBypassLoading(false);
+    }
+  };
+
   // Determine subscription state
   const isExpired = shopData?.currentPeriodEnd
     ? new Date(shopData.currentPeriodEnd) < new Date()
@@ -382,6 +418,31 @@ export function SubscriptionClient({
                           </>
                         )}
                       </button>
+
+                      {/* Dev Bypass Button - Only for dev/admin */}
+                      {(userRole === 'dev' || userRole === 'admin') && shopId && (
+                        <div className="mt-4 p-4 bg-yellow-50 border-2 border-dashed border-yellow-400 rounded-lg">
+                          <p className="text-sm text-yellow-800 mb-2 font-medium">🔧 Mode Développeur</p>
+                          <button
+                            onClick={handleDevBypass}
+                            disabled={devBypassLoading}
+                            className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg disabled:opacity-50"
+                          >
+                            {devBypassLoading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Activation...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="w-4 h-4 mr-2" />
+                                Activer sans payer (30 jours)
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+
                       {!shopId && (
                         <p className="text-sm text-red-500 mt-4">
                           Veuillez sélectionner un salon depuis votre espace.
