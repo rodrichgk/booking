@@ -617,22 +617,17 @@ export function ManageBarbershopClient({
             </div>
 
             <div className="flex items-center space-x-3">
-              <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${shopActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+              <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${shopActive ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-700'
                 }`}>
-                {shopActive ? '● Actif' : '● Inactif'}
+                {shopActive ? '👁 Visible' : '👁 Masqué'}
               </div>
               <div className={`px-4 py-2 rounded-lg font-semibold text-sm ${subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' :
-                  subscriptionStatus === 'expired' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                subscriptionStatus === 'expired' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                 }`}>
-                {subscriptionStatus === 'active' && '✓ Abonnement Actif'}
-                {subscriptionStatus === 'expired' && '⚠ Abonnement Expiré'}
-                {subscriptionStatus === 'inactive' && '✗ Inactif'}
+                {subscriptionStatus === 'active' && '✓ Abonné'}
+                {subscriptionStatus === 'expired' && '⚠ Expiré'}
+                {subscriptionStatus === 'inactive' && '✗ Non abonné'}
               </div>
-              {subscriptionStatus !== 'active' && (
-                <Link href={`/subscription?shopId=${shop.id}`} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold transition-colors">
-                  Renouveler
-                </Link>
-              )}
             </div>
           </div>
 
