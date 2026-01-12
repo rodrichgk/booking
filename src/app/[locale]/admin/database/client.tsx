@@ -21,14 +21,14 @@ interface DBStats {
     barbers: number;
     services: number;
   };
-  lastBackup: string;
-  nextBackup: string;
+  lastBackup: string | null;
+  nextBackup: string | null;
   backupStatus: string;
   connectionPool: {
     active: number;
     idle: number;
     max: number;
-  };
+  } | null;
 }
 
 interface DatabaseManagementClientProps {
@@ -265,10 +265,8 @@ export function DatabaseManagementClient({
                     <p className="text-xl font-bold text-gray-900">{dbStats.totalTables}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Pool de connexions</p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {dbStats.connectionPool.active}/{dbStats.connectionPool.max}
-                    </p>
+                    <p className="text-sm font-medium text-gray-600">Hébergement</p>
+                    <p className="text-xl font-bold text-gray-900">Vercel</p>
                   </div>
                 </div>
 
@@ -286,59 +284,52 @@ export function DatabaseManagementClient({
               </div>
             </div>
 
-            {/* Backup Status */}
+            {/* Backup Info */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">État des Sauvegardes</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Sauvegardes</h2>
               </div>
               <div className="p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Dernière sauvegarde</p>
-                    <p className="text-lg font-bold text-gray-900">{formatDate(dbStats.lastBackup)}</p>
-                  </div>
-                  {getStatusIcon(dbStats.backupStatus)}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Prochaine sauvegarde planifiée</p>
-                    <p className="text-lg font-bold text-gray-900">{formatDate(dbStats.nextBackup)}</p>
-                  </div>
-                  <Clock className="w-5 h-5 text-gray-400" />
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">Planification des Sauvegardes</h3>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center justify-between">
-                      <span>Sauvegarde complète</span>
-                      <span className="font-medium">Quotidienne à 2h00</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Durée de rétention</span>
-                      <span className="font-medium">30 jours</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Emplacement</span>
-                      <span className="font-medium">Local + Cloud</span>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <Database className="w-5 h-5 text-blue-600 mt-0.5 mr-3" />
+                    <div>
+                      <h3 className="text-sm font-medium text-blue-800">Vercel Postgres</h3>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Votre base de données est hébergée sur Vercel Postgres qui gère automatiquement
+                        les sauvegardes quotidiennes avec point-in-time recovery.
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Sauvegarde Manuelle</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Téléchargez une copie de votre base de données au format SQL.
+                    Utile pour les migrations ou backups locaux.
+                  </p>
                   <button
                     onClick={handleBackup}
                     disabled={isBackingUp}
                     className="w-full flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    {isBackingUp ? 'Sauvegarde en cours...' : 'Sauvegarde manuelle'}
+                    <Download className="w-4 h-4 mr-2" />
+                    {isBackingUp ? 'Téléchargement...' : 'Télécharger Backup SQL'}
                   </button>
-                  <button className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors">
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Voir l'historique
-                  </button>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 mr-3" />
+                    <div>
+                      <h3 className="text-sm font-medium text-yellow-800">Note</h3>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        La fonctionnalité pg_dump nécessite un accès direct au serveur.
+                        Pour une sauvegarde complète, utilisez la console Vercel.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

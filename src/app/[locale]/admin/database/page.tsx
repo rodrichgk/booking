@@ -62,14 +62,12 @@ export default async function DatabaseManagementPage({ params }: { params: Promi
       barbers: Number(totalBarbers[0]?.count) || 0,
       services: Number(totalServices[0]?.count) || 0,
     },
-    lastBackup: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    nextBackup: new Date(Date.now() + 22 * 60 * 60 * 1000).toISOString(),
-    backupStatus: 'success',
-    connectionPool: {
-      active: 5,
-      idle: 15,
-      max: 20,
-    },
+    // No automated backup system - manual only
+    lastBackup: null,
+    nextBackup: null,
+    backupStatus: 'manual',
+    // Vercel manages connection pooling
+    connectionPool: null,
   };
 
   return (
