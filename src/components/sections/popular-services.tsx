@@ -7,41 +7,41 @@ import { Scissors, Sparkles, Palette, Zap } from 'lucide-react';
 const services = [
   {
     id: '1',
-    name: 'Natural Hair Cuts',
-    description: 'Expert cuts for all natural hair textures and curl patterns',
+    name: 'Coupes Cheveux Naturels',
+    description: 'Coupes expertes pour toutes les textures et types de boucles',
     icon: Scissors,
-    price: 'From $45',
+    price: 'À partir de 45€',
     duration: '45-60 min',
     image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
     popular: true,
   },
   {
     id: '2',
-    name: 'Protective Styles',
-    description: 'Braids, twists, and styles that protect your natural hair',
+    name: 'Coiffures Protectrices',
+    description: 'Tresses, twists et styles qui protègent vos cheveux naturels',
     icon: Sparkles,
-    price: 'From $80',
-    duration: '2-4 hours',
+    price: 'À partir de 80€',
+    duration: '2-4 heures',
     image: 'https://s.abcnews.com/images/GMA/jordan-dunn-file-gty-jef-220713_1657746177062_hpMain.jpg',
     popular: true,
   },
   {
     id: '3',
-    name: 'Loc Maintenance',
-    description: 'Professional care for locs at every stage of development',
+    name: 'Entretien Locks',
+    description: 'Soins professionnels pour locks à chaque étape de développement',
     icon: Zap,
-    price: 'From $60',
-    duration: '1-2 hours',
+    price: 'À partir de 60€',
+    duration: '1-2 heures',
     image: 'https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
     popular: false,
   },
   {
     id: '4',
-    name: 'Color & Highlights',
-    description: 'Safe coloring techniques for textured and natural hair',
+    name: 'Coloration & Mèches',
+    description: 'Techniques de coloration sûres pour cheveux texturés et naturels',
     icon: Palette,
-    price: 'From $120',
-    duration: '2-3 hours',
+    price: 'À partir de 120€',
+    duration: '2-3 heures',
     image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
     popular: false,
   },
@@ -50,7 +50,7 @@ const services = [
 export function PopularServices() {
   const t = useTranslations('services');
   const tCommon = useTranslations('common');
-  
+
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,7 +94,7 @@ export function PopularServices() {
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                       {service.description}
                     </p>
-                    
+
                     <div className="flex items-center justify-between mb-4">
                       <div className="text-lg font-bold text-primary-600">
                         {service.price}
