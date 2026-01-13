@@ -229,3 +229,27 @@ export const siteSettings = pgTable('site_settings', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// Security Logs table (for tracking login attempts and security events)
+export const securityLogs = pgTable('security_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id),
+  type: varchar('type', { length: 50 }).notNull(), // login, failed_login, logout, role_change, password_change
+  email: varchar('email', { length: 255 }),
+  ip: varchar('ip', { length: 45 }),
+  userAgent: text('user_agent'),
+  location: varchar('location', { length: 255 }),
+  details: text('details'),
+  status: varchar('status', { length: 20 }).notNull().default('success'), // success, failed
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Blocked IPs table
+export const blockedIps = pgTable('blocked_ips', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  ip: varchar('ip', { length: 45 }).notNull().unique(),
+  reason: text('reason'),
+  blockedBy: uuid('blocked_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  expiresAt: timestamp('expires_at'),
+});
