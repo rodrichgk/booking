@@ -1,7 +1,7 @@
 'use client';
 
 import { Link } from '@/routing';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Star, MapPin, Clock, Heart } from 'lucide-react';
 
 const featuredShops = [
@@ -40,19 +40,39 @@ const featuredShops = [
   },
 ];
 
+const translations = {
+  fr: {
+    title: 'Salons en Vedette',
+    subtitle: 'Découvrez les meilleurs salons de votre région, spécialisés dans les soins capillaires afro et naturels',
+    open: 'Ouvert',
+    closed: 'Fermé',
+    more: 'autres',
+    viewAll: 'Voir Tous les Salons',
+  },
+  en: {
+    title: 'Featured Salons',
+    subtitle: 'Discover the best salons in your area, specializing in afro and natural hair care',
+    open: 'Open',
+    closed: 'Closed',
+    more: 'more',
+    viewAll: 'View All Salons',
+  },
+};
+
 export function FeaturedBarbershops() {
   const t = useTranslations('barbershop');
-  const tCommon = useTranslations('common');
-  
+  const locale = useLocale() as 'fr' | 'en';
+  const text = translations[locale] || translations.fr;
+
   return (
     <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
-            Salons en Vedette
+            {text.title}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Découvrez les meilleurs salons de votre région, spécialisés dans les soins capillaires afro et naturels
+            {text.subtitle}
           </p>
         </div>
 
@@ -69,12 +89,11 @@ export function FeaturedBarbershops() {
                   <Heart className="w-5 h-5 text-gray-600 hover:text-red-500" />
                 </button>
                 <div className="absolute bottom-4 left-4">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    shop.openNow 
-                      ? 'bg-green-100 text-green-800' 
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${shop.openNow
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                  }`}>
-                    {shop.openNow ? 'Ouvert' : 'Fermé'}
+                    }`}>
+                    {shop.openNow ? text.open : text.closed}
                   </span>
                 </div>
               </div>
@@ -111,7 +130,7 @@ export function FeaturedBarbershops() {
                     ))}
                     {shop.specialties.length > 2 && (
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                        +{shop.specialties.length - 2} autres
+                        +{shop.specialties.length - 2} {text.more}
                       </span>
                     )}
                   </div>
@@ -141,7 +160,7 @@ export function FeaturedBarbershops() {
             href="/barbershops"
             className="inline-flex items-center space-x-2 bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200"
           >
-            <span>Voir Tous les Salons</span>
+            <span>{text.viewAll}</span>
           </Link>
         </div>
       </div>

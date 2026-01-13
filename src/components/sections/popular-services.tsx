@@ -1,65 +1,127 @@
 'use client';
 
 import { Link } from '@/routing';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Scissors, Sparkles, Palette, Zap } from 'lucide-react';
 
-const services = [
-  {
-    id: '1',
-    name: 'Coupes Cheveux Naturels',
-    description: 'Coupes expertes pour toutes les textures et types de boucles',
-    icon: Scissors,
-    price: 'À partir de 45€',
-    duration: '45-60 min',
-    image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    popular: true,
+const servicesData = {
+  fr: [
+    {
+      id: '1',
+      name: 'Coupes Cheveux Naturels',
+      description: 'Coupes expertes pour toutes les textures et types de boucles',
+      icon: Scissors,
+      price: 'À partir de 45€',
+      duration: '45-60 min',
+      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      popular: true,
+    },
+    {
+      id: '2',
+      name: 'Coiffures Protectrices',
+      description: 'Tresses, twists et styles qui protègent vos cheveux naturels',
+      icon: Sparkles,
+      price: 'À partir de 80€',
+      duration: '2-4 heures',
+      image: 'https://s.abcnews.com/images/GMA/jordan-dunn-file-gty-jef-220713_1657746177062_hpMain.jpg',
+      popular: true,
+    },
+    {
+      id: '3',
+      name: 'Entretien Locks',
+      description: 'Soins professionnels pour locks à chaque étape de développement',
+      icon: Zap,
+      price: 'À partir de 60€',
+      duration: '1-2 heures',
+      image: 'https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      popular: false,
+    },
+    {
+      id: '4',
+      name: 'Coloration & Mèches',
+      description: 'Techniques de coloration sûres pour cheveux texturés et naturels',
+      icon: Palette,
+      price: 'À partir de 120€',
+      duration: '2-3 heures',
+      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      popular: false,
+    },
+  ],
+  en: [
+    {
+      id: '1',
+      name: 'Natural Hair Cuts',
+      description: 'Expert cuts for all textures and curl types',
+      icon: Scissors,
+      price: 'From €45',
+      duration: '45-60 min',
+      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      popular: true,
+    },
+    {
+      id: '2',
+      name: 'Protective Styles',
+      description: 'Braids, twists and styles that protect your natural hair',
+      icon: Sparkles,
+      price: 'From €80',
+      duration: '2-4 hours',
+      image: 'https://s.abcnews.com/images/GMA/jordan-dunn-file-gty-jef-220713_1657746177062_hpMain.jpg',
+      popular: true,
+    },
+    {
+      id: '3',
+      name: 'Locs Maintenance',
+      description: 'Professional care for locs at every stage of development',
+      icon: Zap,
+      price: 'From €60',
+      duration: '1-2 hours',
+      image: 'https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      popular: false,
+    },
+    {
+      id: '4',
+      name: 'Color & Highlights',
+      description: 'Safe coloring techniques for textured and natural hair',
+      icon: Palette,
+      price: 'From €120',
+      duration: '2-3 hours',
+      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      popular: false,
+    },
+  ],
+};
+
+const translations = {
+  fr: {
+    title: 'Services Populaires',
+    subtitle: "De l'entretien quotidien aux coiffures d'occasion spéciale, trouvez le service parfait pour vos cheveux",
+    popular: 'Populaire',
+    book: 'Réserver',
+    viewAll: 'Voir Tous les Services',
   },
-  {
-    id: '2',
-    name: 'Coiffures Protectrices',
-    description: 'Tresses, twists et styles qui protègent vos cheveux naturels',
-    icon: Sparkles,
-    price: 'À partir de 80€',
-    duration: '2-4 heures',
-    image: 'https://s.abcnews.com/images/GMA/jordan-dunn-file-gty-jef-220713_1657746177062_hpMain.jpg',
-    popular: true,
+  en: {
+    title: 'Popular Services',
+    subtitle: 'From daily maintenance to special occasion styles, find the perfect service for your hair',
+    popular: 'Popular',
+    book: 'Book Now',
+    viewAll: 'View All Services',
   },
-  {
-    id: '3',
-    name: 'Entretien Locks',
-    description: 'Soins professionnels pour locks à chaque étape de développement',
-    icon: Zap,
-    price: 'À partir de 60€',
-    duration: '1-2 heures',
-    image: 'https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    popular: false,
-  },
-  {
-    id: '4',
-    name: 'Coloration & Mèches',
-    description: 'Techniques de coloration sûres pour cheveux texturés et naturels',
-    icon: Palette,
-    price: 'À partir de 120€',
-    duration: '2-3 heures',
-    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    popular: false,
-  },
-];
+};
 
 export function PopularServices() {
-  const t = useTranslations('services');
-  const tCommon = useTranslations('common');
+  const locale = useLocale() as 'fr' | 'en';
+  const services = servicesData[locale] || servicesData.fr;
+  const t = translations[locale] || translations.fr;
 
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
-            Services Populaires
+            {t.title}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            De l'entretien quotidien aux coiffures d'occasion spéciale, trouvez le service parfait pour vos cheveux
+            {t.subtitle}
           </p>
         </div>
 
@@ -78,7 +140,7 @@ export function PopularServices() {
                     {service.popular && (
                       <div className="absolute top-4 left-4">
                         <span className="bg-accent-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                          Populaire
+                          {t.popular}
                         </span>
                       </div>
                     )}
@@ -108,7 +170,7 @@ export function PopularServices() {
                       href={`/services/${service.id}`}
                       className="w-full bg-gray-50 hover:bg-primary-50 text-gray-900 hover:text-primary-700 text-center py-2 px-4 rounded-lg font-medium transition-all duration-200 block"
                     >
-                      Réserver
+                      {t.book}
                     </Link>
                   </div>
                 </div>
@@ -122,7 +184,7 @@ export function PopularServices() {
             href="/services"
             className="inline-flex items-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
           >
-            <span>Voir Tous les Services</span>
+            <span>{t.viewAll}</span>
           </Link>
         </div>
       </div>
