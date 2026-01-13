@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { barbershops } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getSubscriptionPriceCents, getSetting } from '@/lib/settings';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
@@ -67,21 +68,26 @@ export async function POST(request: Request) {
         .where(eq(barbershops.id, shopId));
     }
 
+    // Get dynamic subscription price from settings
+    const priceInCents = await getSubscriptionPriceCents();
+    const paymentSettings = await getSetting('payment');
+    const currency = paymentSettings.currency.toLowerCase();
+
     // Create checkout session with subscription mode
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
-          currency: 'eur',
+          currency: currency,
           product_data: {
-            name: 'AfroBook - Barbershop Professional Plan',
-            description: 'Monthly subscription for barbershop listing and booking management',
+            name: 'Orphelia - Abonnement Salon Professionnel',
+            description: 'Abonnement mensuel pour la gestion de salon et réservations',
           },
           recurring: {
             interval: 'month',
           },
-          unit_amount: 2990, // €29.90 in cents
+          unit_amount: priceInCents,
         },
         quantity: 1,
       }],
