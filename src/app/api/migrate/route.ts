@@ -40,6 +40,28 @@ export async function POST(request: NextRequest) {
         `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255)`,
         `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'inactive'`,
         `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMP`,
+        // Security logs table
+        `CREATE TABLE IF NOT EXISTS security_logs (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          user_id UUID REFERENCES "user"(id),
+          type VARCHAR(50) NOT NULL,
+          email VARCHAR(255),
+          ip VARCHAR(45),
+          user_agent TEXT,
+          location VARCHAR(255),
+          details TEXT,
+          status VARCHAR(20) NOT NULL DEFAULT 'success',
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )`,
+        // Blocked IPs table
+        `CREATE TABLE IF NOT EXISTS blocked_ips (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          ip VARCHAR(45) NOT NULL UNIQUE,
+          reason TEXT,
+          blocked_by UUID REFERENCES "user"(id),
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          expires_at TIMESTAMP
+        )`,
       ];
 
       const results = [];
