@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { siteSettings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { clearSettingsCache } from '@/lib/settings';
 
 // GET - Fetch site settings
 export async function GET(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
         .from(siteSettings)
         .where(eq(siteSettings.key, key))
         .limit(1);
-      
+
       return NextResponse.json({ setting });
     }
 
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Non autorisé' },
@@ -95,6 +96,9 @@ export async function POST(request: NextRequest) {
         })
         .returning();
     }
+
+    // Clear settings cache so changes take effect immediately
+    clearSettingsCache();
 
     return NextResponse.json({
       success: true,
