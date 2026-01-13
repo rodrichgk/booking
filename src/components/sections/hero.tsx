@@ -2,13 +2,38 @@
 
 import { useState } from 'react';
 import { Link } from '@/routing';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Search, MapPin, Calendar, Star } from 'lucide-react';
+
+const translations = {
+  fr: {
+    locationPlaceholder: 'Ville ou code postal',
+    verifiedSalons: 'Salons Vérifiés',
+    happyClients: 'Clients Satisfaits',
+    avgRating: 'Note Moyenne',
+    easyBooking: 'Réservation Facile',
+    onlineAlways: '24h/24 En Ligne',
+    topRated: 'Très Bien Noté',
+    expertStylists: 'Coiffeurs Experts',
+  },
+  en: {
+    locationPlaceholder: 'City or zip code',
+    verifiedSalons: 'Verified Salons',
+    happyClients: 'Happy Clients',
+    avgRating: 'Avg Rating',
+    easyBooking: 'Easy Booking',
+    onlineAlways: 'Online 24/7',
+    topRated: 'Top Rated',
+    expertStylists: 'Expert Stylists',
+  },
+};
 
 export function Hero() {
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
   const t = useTranslations('hero');
+  const locale = useLocale() as 'fr' | 'en';
+  const text = translations[locale] || translations.fr;
 
   return (
     <section className="relative bg-gradient-to-br from-primary-50 via-white to-accent-50 pt-16 pb-24">
@@ -42,7 +67,7 @@ export function Hero() {
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Ville ou code postal"
+                    placeholder={text.locationPlaceholder}
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-body"
@@ -62,15 +87,15 @@ export function Hero() {
             <div className="grid grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary-600 font-sans">500+</div>
-                <div className="text-sm text-gray-600 font-body">Salons Vérifiés</div>
+                <div className="text-sm text-gray-600 font-body">{text.verifiedSalons}</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary-600 font-sans">10K+</div>
-                <div className="text-sm text-gray-600 font-body">Clients Satisfaits</div>
+                <div className="text-sm text-gray-600 font-body">{text.happyClients}</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary-600 font-sans">4.8★</div>
-                <div className="text-sm text-gray-600 font-body">Note Moyenne</div>
+                <div className="text-sm text-gray-600 font-body">{text.avgRating}</div>
               </div>
             </div>
           </div>
@@ -85,7 +110,7 @@ export function Hero() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
             </div>
-            
+
             {/* Floating Cards */}
             <div className="absolute -top-4 -left-4 bg-white rounded-xl shadow-lg p-4 border border-gray-100">
               <div className="flex items-center space-x-3">
@@ -93,20 +118,20 @@ export function Hero() {
                   <Calendar className="w-6 h-6 text-primary-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900 font-body">Réservation Facile</div>
-                  <div className="text-sm text-gray-600 font-body">24h/24 En Ligne</div>
+                  <div className="font-semibold text-gray-900 font-body">{text.easyBooking}</div>
+                  <div className="text-sm text-gray-600 font-body">{text.onlineAlways}</div>
                 </div>
               </div>
             </div>
-            
+
             <div className="absolute -bottom-4 -right-4 bg-white rounded-xl shadow-lg p-4 border border-gray-100">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center">
                   <Star className="w-6 h-6 text-accent-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900 font-body">Très Bien Noté</div>
-                  <div className="text-sm text-gray-600 font-body">Coiffeurs Experts</div>
+                  <div className="font-semibold text-gray-900 font-body">{text.topRated}</div>
+                  <div className="text-sm text-gray-600 font-body">{text.expertStylists}</div>
                 </div>
               </div>
             </div>

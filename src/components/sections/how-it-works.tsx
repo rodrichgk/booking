@@ -1,52 +1,106 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { Search, Calendar, Scissors, Star } from 'lucide-react';
 
-const getSteps = (t: any) => [
-  {
-    id: 1,
-    title: 'Trouvez Votre Match Parfait',
-    description: 'Recherchez des salons spécialisés dans votre type de cheveux et services préférés dans votre région.',
-    icon: Search,
-    color: 'bg-blue-500',
+const stepsData = {
+  fr: [
+    {
+      id: 1,
+      title: 'Trouvez Votre Match Parfait',
+      description: 'Recherchez des salons spécialisés dans votre type de cheveux et services préférés dans votre région.',
+      icon: Search,
+      color: 'bg-blue-500',
+    },
+    {
+      id: 2,
+      title: 'Réservez Votre Rendez-vous',
+      description: 'Choisissez votre date, heure et coiffeur préférés. Consultez la disponibilité réelle et réservez instantanément.',
+      icon: Calendar,
+      color: 'bg-green-500',
+    },
+    {
+      id: 3,
+      title: 'Obtenez Votre Coupe Parfaite',
+      description: "Arrivez à votre rendez-vous et profitez d'un service professionnel de coiffeurs experts vérifiés.",
+      icon: Scissors,
+      color: 'bg-purple-500',
+    },
+    {
+      id: 4,
+      title: 'Partagez Votre Expérience',
+      description: "Évaluez votre expérience et aidez d'autres clients à trouver les meilleurs salons de la communauté.",
+      icon: Star,
+      color: 'bg-yellow-500',
+    },
+  ],
+  en: [
+    {
+      id: 1,
+      title: 'Find Your Perfect Match',
+      description: 'Search for salons specializing in your hair type and preferred services in your area.',
+      icon: Search,
+      color: 'bg-blue-500',
+    },
+    {
+      id: 2,
+      title: 'Book Your Appointment',
+      description: 'Choose your preferred date, time and stylist. See real-time availability and book instantly.',
+      icon: Calendar,
+      color: 'bg-green-500',
+    },
+    {
+      id: 3,
+      title: 'Get Your Perfect Cut',
+      description: 'Arrive at your appointment and enjoy professional service from verified expert stylists.',
+      icon: Scissors,
+      color: 'bg-purple-500',
+    },
+    {
+      id: 4,
+      title: 'Share Your Experience',
+      description: 'Rate your experience and help other clients find the best salons in the community.',
+      icon: Star,
+      color: 'bg-yellow-500',
+    },
+  ],
+};
+
+const translations = {
+  fr: {
+    title: 'Comment Ça Marche',
+    subtitle: "Obtenir votre coupe parfaite n'a jamais été aussi facile. Suivez ces étapes simples pour réserver en toute confiance.",
+    step: 'Étape',
+    readyToStart: 'Prêt à Commencer ?',
+    joinThousands: 'Rejoignez des milliers de clients satisfaits qui font confiance à Orphelia pour leurs besoins capillaires.',
+    findSalons: 'Trouver des Salons',
+    learnMore: 'En Savoir Plus',
   },
-  {
-    id: 2,
-    title: 'Réservez Votre Rendez-vous',
-    description: 'Choisissez votre date, heure et coiffeur préférés. Consultez la disponibilité réelle et réservez instantanément.',
-    icon: Calendar,
-    color: 'bg-green-500',
+  en: {
+    title: 'How It Works',
+    subtitle: 'Getting your perfect cut has never been easier. Follow these simple steps to book with confidence.',
+    step: 'Step',
+    readyToStart: 'Ready to Get Started?',
+    joinThousands: 'Join thousands of satisfied clients who trust Orphelia for their hair care needs.',
+    findSalons: 'Find Salons',
+    learnMore: 'Learn More',
   },
-  {
-    id: 3,
-    title: 'Obtenez Votre Coupe Parfaite',
-    description: 'Arrivez à votre rendez-vous et profitez d\'un service professionnel de coiffeurs experts vérifiés.',
-    icon: Scissors,
-    color: 'bg-purple-500',
-  },
-  {
-    id: 4,
-    title: 'Partagez Votre Expérience',
-    description: 'Évaluez votre expérience et aidez d\'autres clients à trouver les meilleurs salons de la communauté.',
-    icon: Star,
-    color: 'bg-yellow-500',
-  },
-];
+};
 
 export function HowItWorks() {
-  const t = useTranslations('howItWorks');
-  const steps = getSteps(t);
-  
+  const locale = useLocale() as 'fr' | 'en';
+  const steps = stepsData[locale] || stepsData.fr;
+  const t = translations[locale] || translations.fr;
+
   return (
     <section className="py-16 bg-gradient-to-br from-gray-50 to-primary-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
-            Comment Ça Marche
+            {t.title}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Obtenir votre coupe parfaite n'a jamais été aussi facile. Suivez ces étapes simples pour réserver en toute confiance.
+            {t.subtitle}
           </p>
         </div>
 
@@ -59,10 +113,10 @@ export function HowItWorks() {
                   <div className={`w-16 h-16 ${step.color} rounded-2xl flex items-center justify-center mx-auto mb-6`}>
                     <IconComponent className="w-8 h-8 text-white" />
                   </div>
-                  
+
                   <div className="mb-4">
                     <div className="text-sm font-semibold text-primary-600 mb-2">
-                      Étape {step.id}
+                      {t.step} {step.id}
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-3">
                       {step.title}
@@ -90,17 +144,17 @@ export function HowItWorks() {
         <div className="text-center mt-12">
           <div className="bg-white rounded-2xl p-8 shadow-sm max-w-2xl mx-auto">
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-              Prêt à Commencer ?
+              {t.readyToStart}
             </h3>
             <p className="text-gray-600 mb-6">
-              Rejoignez des milliers de clients satisfaits qui font confiance à AfroBook pour leurs besoins capillaires.
+              {t.joinThousands}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200">
-                Trouver des Salons
+                {t.findSalons}
               </button>
               <button className="bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-3 px-8 rounded-lg transition-colors duration-200">
-                En Savoir Plus
+                {t.learnMore}
               </button>
             </div>
           </div>
