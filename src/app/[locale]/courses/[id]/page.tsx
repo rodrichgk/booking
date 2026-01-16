@@ -137,11 +137,11 @@ export default async function CourseDetailPage({
             <Header />
             <main className="flex-1">
                 {/* Course Header */}
-                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
+                <div className="bg-gradient-to-br from-primary-600 to-primary-700 text-white">
                     <div className="max-w-6xl mx-auto px-4 py-8">
                         <Link
                             href={`/${locale}/courses`}
-                            className="inline-flex items-center gap-2 text-indigo-200 hover:text-white mb-6 transition-colors"
+                            className="inline-flex items-center gap-2 text-primary-200 hover:text-white mb-6 transition-colors"
                         >
                             <ArrowLeft className="w-4 h-4" />
                             {t.backToCourses}
@@ -152,7 +152,7 @@ export default async function CourseDetailPage({
                             <div className="md:col-span-2">
                                 <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
                                 {course.description && (
-                                    <p className="text-lg text-indigo-100 mb-6">{course.description}</p>
+                                    <p className="text-lg text-primary-100 mb-6">{course.description}</p>
                                 )}
 
                                 <div className="flex flex-wrap gap-4 text-sm">
@@ -211,7 +211,7 @@ export default async function CourseDetailPage({
                                         key={video.id}
                                         className={`flex items-center gap-4 p-4 ${index !== videos.length - 1 ? 'border-b border-gray-100' : ''}`}
                                     >
-                                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-medium text-sm">
+                                        <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-medium text-sm">
                                             {index + 1}
                                         </div>
                                         <div className="flex-1">
@@ -223,7 +223,7 @@ export default async function CourseDetailPage({
                                             )}
                                         </div>
                                         {hasAccess ? (
-                                            <Play className="w-5 h-5 text-indigo-600" />
+                                            <Play className="w-5 h-5 text-primary-600" />
                                         ) : (
                                             <Lock className="w-5 h-5 text-gray-400" />
                                         )}

@@ -51,7 +51,7 @@ export default async function CourseCancelPage({
 
                     <Link
                         href={`/${locale}/courses`}
-                        className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                        className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         {t.backToCourses}

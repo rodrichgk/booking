@@ -169,12 +169,12 @@ export default async function WatchCoursePage({
                                 key={video.id}
                                 href={`/${locale}/courses/${id}/watch?video=${video.id}`}
                                 className={`flex items-center gap-3 p-4 border-b border-gray-700 transition-colors ${video.id === currentVideo.id
-                                    ? 'bg-indigo-600/20 border-l-2 border-l-indigo-500'
+                                    ? 'bg-primary-600/20 border-l-2 border-l-primary-500'
                                     : 'hover:bg-gray-700/50'
                                     }`}
                             >
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${video.id === currentVideo.id
-                                    ? 'bg-indigo-600 text-white'
+                                    ? 'bg-primary-600 text-white'
                                     : 'bg-gray-700 text-gray-300'
                                     }`}>
                                     {video.id === currentVideo.id ? (

@@ -111,7 +111,7 @@ export function CourseDetailClient({
             <div className="space-y-3">
                 <button
                     onClick={handleWatch}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
                 >
                     <Play className="w-5 h-5" />
                     {t.watchNow}
@@ -131,7 +131,7 @@ export function CourseDetailClient({
             <div className="space-y-3">
                 <button
                     onClick={() => router.push(`/${locale}/auth/signin`)}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
                 >
                     <LogIn className="w-5 h-5" />
                     {t.signIn}
@@ -147,7 +147,7 @@ export function CourseDetailClient({
             <button
                 onClick={handlePurchase}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50"
             >
                 {loading ? (
                     <>
