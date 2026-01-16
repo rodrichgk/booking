@@ -143,10 +143,10 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
             <Header />
             <main className="flex-1">
                 {/* Page Header */}
-                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white py-12 px-4">
+                <div className="bg-gradient-to-br from-primary-600 to-primary-700 text-white py-12 px-4">
                     <div className="max-w-6xl mx-auto">
                         <h1 className="text-3xl md:text-4xl font-bold mb-2">{t.title}</h1>
-                        <p className="text-indigo-100">{t.subtitle}</p>
+                        <p className="text-primary-100">{t.subtitle}</p>
                     </div>
                 </div>
 
@@ -158,7 +158,7 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
                             <p className="text-gray-500 mb-6">{t.noCourses}</p>
                             <Link
                                 href={`/${locale}/courses`}
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                             >
                                 {t.exploreCourses}
                                 <ArrowRight className="w-5 h-5" />
@@ -180,8 +180,8 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                                                <Video className="w-12 h-12 text-indigo-300" />
+                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200">
+                                                <Video className="w-12 h-12 text-primary-300" />
                                             </div>
                                         )}
                                     </div>
@@ -203,13 +203,13 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
                                                 </span>
                                             )}
                                             {isAdmin && (
-                                                <span className="text-xs text-indigo-600">{t.adminAccess}</span>
+                                                <span className="text-xs text-primary-600">{t.adminAccess}</span>
                                             )}
                                         </div>
 
                                         <Link
                                             href={`/${locale}/courses/${course.id}/watch`}
-                                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                                         >
                                             <Play className="w-4 h-4" />
                                             {t.continueWatching}

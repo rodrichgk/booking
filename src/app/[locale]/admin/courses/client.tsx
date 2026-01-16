@@ -311,7 +311,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                 <h1 className="text-3xl font-bold text-gray-900">{t.title}</h1>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
                     <Plus className="w-5 h-5" />
                     {t.addCourse}
@@ -325,7 +325,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                     <p className="text-gray-500 mb-4">{t.noCourses}</p>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
                     >
                         {t.createFirstCourse}
                     </button>
@@ -381,7 +381,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         <Video className="w-4 h-4" />
                                         {course.videoCount} {t.videos}
                                     </span>
-                                    <span className="font-semibold text-indigo-600">
+                                    <span className="font-semibold text-primary-600">
                                         {formatPrice(course.priceInCents, course.currency)}
                                     </span>
                                 </div>
@@ -397,7 +397,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                     </button>
                                     <button
                                         onClick={() => openEditModal(course)}
-                                        className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200"
+                                        className="px-3 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200"
                                     >
                                         <Pencil className="w-4 h-4" />
                                     </button>
@@ -444,7 +444,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="text"
                                         value={formData.title}
                                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                                         required
                                     />
                                 </div>
@@ -457,7 +457,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                                     />
                                 </div>
 
@@ -469,7 +469,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="url"
                                         value={formData.thumbnail}
                                         onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                                         placeholder="https://..."
                                     />
                                 </div>
@@ -483,7 +483,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                             type="number"
                                             value={formData.priceInCents}
                                             onChange={(e) => setFormData({ ...formData, priceInCents: parseInt(e.target.value) || 0 })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                                             min="0"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
@@ -498,7 +498,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         <select
                                             value={formData.currency}
                                             onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                                         >
                                             <option value="EUR">EUR (€)</option>
                                             <option value="USD">USD ($)</option>
@@ -513,7 +513,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                             type="checkbox"
                                             checked={formData.isActive}
                                             onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                                            className="w-4 h-4 text-indigo-600 rounded"
+                                            className="w-4 h-4 text-primary-600 rounded"
                                         />
                                         <span className="text-sm text-gray-700">{t.isActive}</span>
                                     </label>
@@ -523,7 +523,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                             type="checkbox"
                                             checked={formData.isFeatured}
                                             onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
-                                            className="w-4 h-4 text-indigo-600 rounded"
+                                            className="w-4 h-4 text-primary-600 rounded"
                                         />
                                         <span className="text-sm text-gray-700">{t.isFeatured}</span>
                                     </label>
@@ -544,7 +544,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                 <button
                                     onClick={showCreateModal ? handleCreateCourse : handleUpdateCourse}
                                     disabled={loading || !formData.title}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     <Save className="w-4 h-4" />
                                     {t.save}
@@ -578,7 +578,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                 </div>
                                 <button
                                     onClick={() => setShowVideoModal(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
                                 >
                                     <Plus className="w-4 h-4" />
                                     {t.addVideo}
@@ -651,7 +651,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="text"
                                         value={videoFormData.title}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, title: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
                                         required
                                     />
                                 </div>
@@ -664,7 +664,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="text"
                                         value={videoFormData.youtubeVideoId}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, youtubeVideoId: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
                                         placeholder="dQw4w9WgXcQ"
                                         required
                                     />
@@ -681,7 +681,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         value={videoFormData.description}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, description: e.target.value })}
                                         rows={2}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
                                     />
                                 </div>
 
@@ -693,7 +693,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="number"
                                         value={videoFormData.duration}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, duration: parseInt(e.target.value) || 0 })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
                                         min="0"
                                     />
                                 </div>
@@ -712,7 +712,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                 <button
                                     onClick={handleAddVideo}
                                     disabled={loading || !videoFormData.title || !videoFormData.youtubeVideoId}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
                                 >
                                     {t.save}
                                 </button>
