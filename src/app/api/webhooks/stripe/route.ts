@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { barbershops } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { barbershops, coursePurchases } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
     apiVersion: '2023-10-16',
@@ -36,7 +36,12 @@ export async function POST(request: Request) {
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
-                await handleCheckoutCompleted(session);
+                // Route to appropriate handler based on metadata
+                if (session.metadata?.type === 'course_purchase' || session.metadata?.courseId) {
+                    await handleCoursePurchaseCompleted(session);
+                } else {
+                    await handleCheckoutCompleted(session);
+                }
                 break;
             }
 
@@ -342,5 +347,62 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
             console.log(`Payment intent failed for shop ${shop.id} (${shop.name})`);
             // Log for monitoring - actual status change is handled by invoice.payment_failed
         }
+    }
+}
+
+/**
+ * Handle course purchase checkout.session.completed
+ */
+async function handleCoursePurchaseCompleted(session: Stripe.Checkout.Session) {
+    const courseId = session.metadata?.courseId;
+    const userId = session.metadata?.userId;
+    const paymentIntentId = session.payment_intent as string;
+
+    if (!courseId || !userId) {
+        console.error('Missing courseId or userId in course purchase session metadata');
+        return;
+    }
+
+    console.log(`Course purchase completed for course ${courseId}, user ${userId}`);
+
+    // Find the pending purchase by session ID and update it
+    const [existingPurchase] = await db
+        .select()
+        .from(coursePurchases)
+        .where(
+            and(
+                eq(coursePurchases.stripeSessionId, session.id),
+                eq(coursePurchases.status, 'pending')
+            )
+        );
+
+    if (existingPurchase) {
+        // Update the existing pending purchase
+        await db
+            .update(coursePurchases)
+            .set({
+                stripePaymentIntentId: paymentIntentId,
+                status: 'completed',
+                purchasedAt: new Date(),
+            })
+            .where(eq(coursePurchases.id, existingPurchase.id));
+
+        console.log(`Course purchase ${existingPurchase.id} marked as completed`);
+    } else {
+        // Create a new completed purchase record (fallback)
+        await db
+            .insert(coursePurchases)
+            .values({
+                userId: userId,
+                courseId: courseId,
+                stripePaymentIntentId: paymentIntentId,
+                stripeSessionId: session.id,
+                amountPaid: session.amount_total || 0,
+                currency: session.currency?.toUpperCase() || 'EUR',
+                status: 'completed',
+                purchasedAt: new Date(),
+            });
+
+        console.log(`New course purchase created for course ${courseId}, user ${userId}`);
     }
 }
