@@ -6,6 +6,8 @@ import { courses, courseVideos, coursePurchases } from '@/lib/db/schema';
 import { eq, and, or, desc } from 'drizzle-orm';
 import Link from 'next/link';
 import { Video, Play, Clock, ArrowRight } from 'lucide-react';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
@@ -137,85 +139,89 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white py-12 px-4">
-                <div className="max-w-6xl mx-auto">
-                    <h1 className="text-3xl md:text-4xl font-bold mb-2">{t.title}</h1>
-                    <p className="text-indigo-100">{t.subtitle}</p>
-                </div>
-            </div>
-
-            {/* Courses Grid */}
-            <div className="max-w-6xl mx-auto px-4 py-12">
-                {userCourses.length === 0 ? (
-                    <div className="text-center py-16">
-                        <Video className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                        <p className="text-gray-500 mb-6">{t.noCourses}</p>
-                        <Link
-                            href={`/${locale}/courses`}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                        >
-                            {t.exploreCourses}
-                            <ArrowRight className="w-5 h-5" />
-                        </Link>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            <Header />
+            <main className="flex-1">
+                {/* Page Header */}
+                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white py-12 px-4">
+                    <div className="max-w-6xl mx-auto">
+                        <h1 className="text-3xl md:text-4xl font-bold mb-2">{t.title}</h1>
+                        <p className="text-indigo-100">{t.subtitle}</p>
                     </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {userCourses.map(({ course, purchase, videoCount, isAdmin }) => (
-                            <div
-                                key={course.id}
-                                className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow"
+                </div>
+
+                {/* Courses Grid */}
+                <div className="max-w-6xl mx-auto px-4 py-12">
+                    {userCourses.length === 0 ? (
+                        <div className="text-center py-16">
+                            <Video className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                            <p className="text-gray-500 mb-6">{t.noCourses}</p>
+                            <Link
+                                href={`/${locale}/courses`}
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                             >
-                                {/* Thumbnail */}
-                                <div className="aspect-video bg-gray-100 relative">
-                                    {course.thumbnail ? (
-                                        <img
-                                            src={course.thumbnail}
-                                            alt={course.title}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                                            <Video className="w-12 h-12 text-indigo-300" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Content */}
-                                <div className="p-5">
-                                    <h3 className="font-semibold text-lg text-gray-900 mb-2">
-                                        {course.title}
-                                    </h3>
-
-                                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                                        <span className="flex items-center gap-1">
-                                            <Video className="w-4 h-4" />
-                                            {videoCount} {videoCount === 1 ? t.video : t.videos}
-                                        </span>
-                                        {purchase?.purchasedAt && (
-                                            <span className="text-xs">
-                                                {t.purchasedOn} {formatDate(new Date(purchase.purchasedAt))}
-                                            </span>
-                                        )}
-                                        {isAdmin && (
-                                            <span className="text-xs text-indigo-600">{t.adminAccess}</span>
+                                {t.exploreCourses}
+                                <ArrowRight className="w-5 h-5" />
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {userCourses.map(({ course, purchase, videoCount, isAdmin }) => (
+                                <div
+                                    key={course.id}
+                                    className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow"
+                                >
+                                    {/* Thumbnail */}
+                                    <div className="aspect-video bg-gray-100 relative">
+                                        {course.thumbnail ? (
+                                            <img
+                                                src={course.thumbnail}
+                                                alt={course.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+                                                <Video className="w-12 h-12 text-indigo-300" />
+                                            </div>
                                         )}
                                     </div>
 
-                                    <Link
-                                        href={`/${locale}/courses/${course.id}/watch`}
-                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                                    >
-                                        <Play className="w-4 h-4" />
-                                        {t.continueWatching}
-                                    </Link>
+                                    {/* Content */}
+                                    <div className="p-5">
+                                        <h3 className="font-semibold text-lg text-gray-900 mb-2">
+                                            {course.title}
+                                        </h3>
+
+                                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                                            <span className="flex items-center gap-1">
+                                                <Video className="w-4 h-4" />
+                                                {videoCount} {videoCount === 1 ? t.video : t.videos}
+                                            </span>
+                                            {purchase?.purchasedAt && (
+                                                <span className="text-xs">
+                                                    {t.purchasedOn} {formatDate(new Date(purchase.purchasedAt))}
+                                                </span>
+                                            )}
+                                            {isAdmin && (
+                                                <span className="text-xs text-indigo-600">{t.adminAccess}</span>
+                                            )}
+                                        </div>
+
+                                        <Link
+                                            href={`/${locale}/courses/${course.id}/watch`}
+                                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                        >
+                                            <Play className="w-4 h-4" />
+                                            {t.continueWatching}
+                                        </Link>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </main>
+            <Footer />
         </div>
     );
 }
