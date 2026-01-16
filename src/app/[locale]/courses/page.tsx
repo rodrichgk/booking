@@ -111,10 +111,10 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
             <Header />
             <main className="flex-1">
                 {/* Hero Section */}
-                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white py-16 px-4">
+                <div className="bg-gradient-to-br from-primary-600 to-primary-700 text-white py-16 px-4">
                     <div className="max-w-6xl mx-auto text-center">
                         <h1 className="text-4xl md:text-5xl font-bold mb-4">{t.title}</h1>
-                        <p className="text-xl text-indigo-100">{t.subtitle}</p>
+                        <p className="text-xl text-primary-100">{t.subtitle}</p>
                     </div>
                 </div>
 
@@ -145,8 +145,8 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                 />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                                                    <Video className="w-12 h-12 text-indigo-300" />
+                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200">
+                                                    <Video className="w-12 h-12 text-primary-300" />
                                                 </div>
                                             )}
 
@@ -168,14 +168,14 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                                             {/* Play overlay */}
                                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                                                 <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity transform scale-90 group-hover:scale-100">
-                                                    <Play className="w-6 h-6 text-indigo-600 ml-1" fill="currentColor" />
+                                                    <Play className="w-6 h-6 text-primary-600 ml-1" fill="currentColor" />
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Content */}
                                         <div className="p-5">
-                                            <h3 className="font-semibold text-lg text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                                            <h3 className="font-semibold text-lg text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
                                                 {course.title}
                                             </h3>
 
@@ -191,7 +191,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                                                     {course.videoCount} {course.videoCount === 1 ? t.video : t.videos}
                                                 </span>
 
-                                                <span className={`font-bold ${course.priceInCents === 0 ? 'text-green-600' : 'text-indigo-600'}`}>
+                                                <span className={`font-bold ${course.priceInCents === 0 ? 'text-green-600' : 'text-primary-600'}`}>
                                                     {formatPrice(course.priceInCents, course.currency)}
                                                 </span>
                                             </div>

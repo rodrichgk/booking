@@ -66,7 +66,7 @@ export default async function CourseSuccessPage({
                         {courseId && (
                             <Link
                                 href={`/${locale}/courses/${courseId}/watch`}
-                                className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                                className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
                             >
                                 <Play className="w-5 h-5" />
                                 {t.watchNow}
@@ -83,7 +83,7 @@ export default async function CourseSuccessPage({
 
                         <Link
                             href={`/${locale}/courses`}
-                            className="block text-indigo-600 hover:text-indigo-700 text-sm mt-4"
+                            className="block text-primary-600 hover:text-primary-700 text-sm mt-4"
                         >
                             {t.backToCourses}
                         </Link>
