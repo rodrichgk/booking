@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp, AlertCircle, Mail } from 'lucide-react';
+import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp, AlertCircle, Mail, Video } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { db } from '@/lib/db';
@@ -17,7 +17,7 @@ import { EmailVerificationBanner } from '@/components/email-verification-banner'
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'mySpace' });
-  
+
   return {
     title: t('title'),
     description: t('description'),
@@ -70,7 +70,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     const totalUsers = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
     const totalBarbershops = await db.select({ count: sql<number>`COUNT(*)` }).from(barbershops);
     const totalBarbers = await db.select({ count: sql<number>`COUNT(*)` }).from(barbers).where(sql`user_id != '00000000-0000-0000-0000-000000000000'`);
-    
+
     // Bookings today
     const bookingsToday = await db
       .select({ count: sql<number>`COUNT(*)` })
@@ -154,7 +154,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
 
   // Fetch customer bookings ONLY if user is a customer
   let userBookings: any[] = [];
-  
+
   if (userRole === 'customer') {
     const customerUser = await db
       .select({ id: users.id })
@@ -194,7 +194,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
 
   if (userRole === 'barber' && barberProfile.length > 0) {
     const barberId = barberProfile[0].id;
-    
+
     // Today's bookings
     const todayBookings = await db
       .select({ count: sql<number>`COUNT(*)` })
@@ -204,13 +204,13 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
         gte(bookings.startTime, today),
         lt(bookings.startTime, new Date(today.getTime() + 24 * 60 * 60 * 1000))
       ));
-    
+
     barberBookingsToday = parseInt(String(todayBookings[0]?.count || 0));
 
     // This week's bookings
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
-    
+
     const weekBookings = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(bookings)
@@ -218,12 +218,12 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
         eq(bookings.barberId, barberId),
         gte(bookings.startTime, weekStart)
       ));
-    
+
     barberBookingsWeek = parseInt(String(weekBookings[0]?.count || 0));
 
     // Monthly earnings
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    
+
     const monthEarnings = await db
       .select({ total: sql<number>`SUM(CAST(${bookings.totalPrice} AS DECIMAL))` })
       .from(bookings)
@@ -232,7 +232,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
         gte(bookings.startTime, monthStart),
         eq(bookings.status, 'completed')
       ));
-    
+
     barberMonthlyEarnings = parseFloat(String(monthEarnings[0]?.total || 0));
     barberRating = parseFloat(String(barberProfile[0].rating || 0));
   }
@@ -243,7 +243,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
 
   if (userRole === 'barber' && barberProfile.length > 0) {
     const barberId = barberProfile[0].id;
-    
+
     // Get barbershop info
     if (barberProfile[0].barbershopId) {
       const shopInfo = await db
@@ -256,7 +256,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
         .from(barbershops)
         .where(eq(barbershops.id, barberProfile[0].barbershopId))
         .limit(1);
-      
+
       barberBarbershop = shopInfo[0] || null;
     }
 
@@ -294,7 +294,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
   return (
     <div className="min-h-screen bg-white">
       <Header />
-      
+
       <div className="bg-gradient-to-br from-gray-50 to-gray-100">
         {/* User Header */}
         <div className="bg-white border-b border-gray-200">
@@ -349,7 +349,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
             />
           )}
           {userRole === 'customer' && (
-            <MySpaceClient 
+            <MySpaceClient
               barbershops={userBarbershops as any}
               barberProfile={barberProfile[0] as any}
               bookings={userBookings as any}
@@ -380,7 +380,7 @@ interface DashboardStats {
 
 async function DevDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
   const t = await getTranslations({ locale, namespace: 'mySpace' });
-  
+
   const stats = [
     { label: t('totalUsers'), value: realStats.totalUsers.toString(), icon: Users, color: 'blue' },
     { label: t('barbershops'), value: realStats.totalBarbershops.toString(), icon: Store, color: 'green' },
@@ -430,6 +430,13 @@ async function DevDashboard({ locale, stats: realStats }: { locale: string; stat
       icon: Shield,
       color: 'red',
       link: `/${locale}/admin/security`,
+    },
+    {
+      title: locale === 'fr' ? 'Cours Vidéo' : 'Video Courses',
+      description: locale === 'fr' ? 'Gérer les cours vidéo et les tarifs' : 'Manage video courses and pricing',
+      icon: Video,
+      color: 'indigo',
+      link: `/${locale}/admin/courses`,
     },
   ];
 
@@ -482,7 +489,7 @@ async function DevDashboard({ locale, stats: realStats }: { locale: string; stat
 // Admin/Owner Dashboard - Business management
 async function AdminDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
   const t = await getTranslations({ locale, namespace: 'mySpace' });
-  
+
   const stats = [
     { label: t('totalBookingsAdmin'), value: realStats.totalBookings.toString(), icon: Calendar, color: 'blue' },
     { label: t('activeBarbers'), value: realStats.totalBarbers.toString(), icon: Scissors, color: 'green' },

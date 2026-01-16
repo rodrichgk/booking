@@ -62,6 +62,44 @@ export async function POST(request: NextRequest) {
           created_at TIMESTAMP DEFAULT NOW() NOT NULL,
           expires_at TIMESTAMP
         )`,
+        // Courses table (for video courses)
+        `CREATE TABLE IF NOT EXISTS courses (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          thumbnail TEXT,
+          price_in_cents INTEGER NOT NULL DEFAULT 0,
+          currency VARCHAR(10) NOT NULL DEFAULT 'EUR',
+          is_active BOOLEAN DEFAULT true,
+          is_featured BOOLEAN DEFAULT false,
+          created_by UUID REFERENCES "user"(id),
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )`,
+        // Course Videos table
+        `CREATE TABLE IF NOT EXISTS course_videos (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          youtube_video_id VARCHAR(20) NOT NULL,
+          "order" INTEGER DEFAULT 0,
+          duration INTEGER,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )`,
+        // Course Purchases table
+        `CREATE TABLE IF NOT EXISTS course_purchases (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          user_id UUID NOT NULL REFERENCES "user"(id),
+          course_id UUID NOT NULL REFERENCES courses(id),
+          stripe_payment_intent_id VARCHAR(255),
+          stripe_session_id VARCHAR(255),
+          amount_paid INTEGER NOT NULL,
+          currency VARCHAR(10) NOT NULL,
+          status VARCHAR(50) NOT NULL DEFAULT 'pending',
+          purchased_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )`,
       ];
 
       const results = [];
