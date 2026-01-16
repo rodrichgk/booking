@@ -444,7 +444,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="text"
                                         value={formData.title}
                                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                                         required
                                     />
                                 </div>
@@ -457,7 +457,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                                     />
                                 </div>
 
@@ -469,7 +469,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="url"
                                         value={formData.thumbnail}
                                         onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                                         placeholder="https://..."
                                     />
                                 </div>
@@ -483,7 +483,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                             type="number"
                                             value={formData.priceInCents}
                                             onChange={(e) => setFormData({ ...formData, priceInCents: parseInt(e.target.value) || 0 })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                                             min="0"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
@@ -498,7 +498,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         <select
                                             value={formData.currency}
                                             onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                                         >
                                             <option value="EUR">EUR (€)</option>
                                             <option value="USD">USD ($)</option>
@@ -651,7 +651,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="text"
                                         value={videoFormData.title}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, title: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
                                         required
                                     />
                                 </div>
@@ -664,7 +664,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="text"
                                         value={videoFormData.youtubeVideoId}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, youtubeVideoId: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
                                         placeholder="dQw4w9WgXcQ"
                                         required
                                     />
@@ -681,7 +681,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         value={videoFormData.description}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, description: e.target.value })}
                                         rows={2}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
                                     />
                                 </div>
 
@@ -693,7 +693,7 @@ export function CoursesClient({ initialCourses, locale, currentUserRole }: Cours
                                         type="number"
                                         value={videoFormData.duration}
                                         onChange={(e) => setVideoFormData({ ...videoFormData, duration: parseInt(e.target.value) || 0 })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
                                         min="0"
                                     />
                                 </div>
