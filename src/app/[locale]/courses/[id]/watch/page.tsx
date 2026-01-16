@@ -7,6 +7,7 @@ import { eq, and, or } from 'drizzle-orm';
 import Link from 'next/link';
 import { ArrowLeft, Video, Play, CheckCircle } from 'lucide-react';
 import { WatchPageClient } from './watch-client';
+import { Header } from '@/components/ui/header';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string, id: string }> }) {
     const { id } = await params;
@@ -122,8 +123,9 @@ export default async function WatchCoursePage({
     };
 
     return (
-        <div className="min-h-screen bg-gray-900">
-            {/* Header */}
+        <div className="min-h-screen bg-gray-900 flex flex-col">
+            <Header />
+            {/* Course navigation bar */}
             <div className="bg-gray-800 border-b border-gray-700">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
                     <Link
@@ -167,13 +169,13 @@ export default async function WatchCoursePage({
                                 key={video.id}
                                 href={`/${locale}/courses/${id}/watch?video=${video.id}`}
                                 className={`flex items-center gap-3 p-4 border-b border-gray-700 transition-colors ${video.id === currentVideo.id
-                                        ? 'bg-indigo-600/20 border-l-2 border-l-indigo-500'
-                                        : 'hover:bg-gray-700/50'
+                                    ? 'bg-indigo-600/20 border-l-2 border-l-indigo-500'
+                                    : 'hover:bg-gray-700/50'
                                     }`}
                             >
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${video.id === currentVideo.id
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'bg-gray-700 text-gray-300'
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-gray-700 text-gray-300'
                                     }`}>
                                     {video.id === currentVideo.id ? (
                                         <Play className="w-4 h-4" fill="currentColor" />

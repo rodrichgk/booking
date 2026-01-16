@@ -4,8 +4,10 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { db } from '@/lib/db';
 import { courses, courseVideos } from '@/lib/db/schema';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { CoursesClient } from './client';
+import { Header } from '@/components/ui/header';
+import { Footer } from '@/components/ui/footer';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
@@ -43,7 +45,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                 const videos = await db
                     .select()
                     .from(courseVideos)
-                    .where(require('drizzle-orm').eq(courseVideos.courseId, course.id));
+                    .where(eq(courseVideos.courseId, course.id));
                 return {
                     ...course,
                     videoCount: videos.length,
@@ -55,12 +57,17 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
     }
 
     return (
-        <div className="min-h-screen bg-white">
-            <CoursesClient
-                initialCourses={allCourses}
-                locale={locale}
-                currentUserRole={userRole}
-            />
+        <div className="min-h-screen bg-white flex flex-col">
+            <Header />
+            <main className="flex-1">
+                <CoursesClient
+                    initialCourses={allCourses}
+                    locale={locale}
+                    currentUserRole={userRole}
+                />
+            </main>
+            <Footer />
         </div>
     );
 }
+
