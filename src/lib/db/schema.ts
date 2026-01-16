@@ -253,3 +253,72 @@ export const blockedIps = pgTable('blocked_ips', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   expiresAt: timestamp('expires_at'),
 });
+
+// Courses table (for video courses)
+export const courses = pgTable('courses', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  thumbnail: text('thumbnail'),
+  priceInCents: integer('price_in_cents').notNull().default(0), // Price in cents (e.g., 2990 = €29.90)
+  currency: varchar('currency', { length: 10 }).notNull().default('EUR'),
+  isActive: boolean('is_active').default(true),
+  isFeatured: boolean('is_featured').default(false),
+  createdBy: uuid('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Course Videos table
+export const courseVideos = pgTable('course_videos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  courseId: uuid('course_id').references(() => courses.id, { onDelete: 'cascade' }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  youtubeVideoId: varchar('youtube_video_id', { length: 20 }).notNull(),
+  order: integer('order').default(0),
+  duration: integer('duration'), // Duration in seconds
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Course Purchases table
+export const coursePurchases = pgTable('course_purchases', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  courseId: uuid('course_id').references(() => courses.id).notNull(),
+  stripePaymentIntentId: varchar('stripe_payment_intent_id', { length: 255 }),
+  stripeSessionId: varchar('stripe_session_id', { length: 255 }),
+  amountPaid: integer('amount_paid').notNull(), // Amount in cents
+  currency: varchar('currency', { length: 10 }).notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, completed, refunded, bypassed
+  purchasedAt: timestamp('purchased_at').defaultNow().notNull(),
+});
+
+// Course Relations
+export const coursesRelations = relations(courses, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [courses.createdBy],
+    references: [users.id],
+  }),
+  videos: many(courseVideos),
+  purchases: many(coursePurchases),
+}));
+
+export const courseVideosRelations = relations(courseVideos, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseVideos.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const coursePurchasesRelations = relations(coursePurchases, ({ one }) => ({
+  user: one(users, {
+    fields: [coursePurchases.userId],
+    references: [users.id],
+  }),
+  course: one(courses, {
+    fields: [coursePurchases.courseId],
+    references: [courses.id],
+  }),
+}));

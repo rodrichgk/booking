@@ -13,7 +13,7 @@ const servicesData = {
       icon: Scissors,
       price: 'À partir de 45€',
       duration: '45-60 min',
-      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      image: 'https://rjsdptqywa.ufs.sh/f/3xsySC4yxUigOKJYSiN6bWcEI2YNrl6jDPfphUoMHGy8veLV',
       popular: true,
     },
     {
@@ -55,7 +55,7 @@ const servicesData = {
       icon: Scissors,
       price: 'From €45',
       duration: '45-60 min',
-      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      image: 'https://rjsdptqywa.ufs.sh/f/3xsySC4yxUigOKJYSiN6bWcEI2YNrl6jDPfphUoMHGy8veLV',
       popular: true,
     },
     {
