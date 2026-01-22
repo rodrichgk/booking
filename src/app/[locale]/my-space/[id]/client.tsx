@@ -11,6 +11,7 @@ import {
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
+import { useUploadThing } from '@/lib/uploadthing';
 
 interface Barbershop {
   id: string;
@@ -115,6 +116,21 @@ export function ManageBarbershopClient({
   const [shopEmail, setShopEmail] = useState(shop.email || '');
   const [shopWebsite, setShopWebsite] = useState(shop.website || '');
   const [shopDescription, setShopDescription] = useState(shop.description || '');
+
+  // UploadThing hook for service images
+  const { startUpload: startServiceImageUpload } = useUploadThing('serviceImage', {
+    onUploadError: (error) => {
+      toast({ variant: 'error', title: 'Erreur', description: error.message || 'Erreur lors du téléchargement' });
+      setIsUploadingServiceImage(false);
+    },
+  });
+
+  // UploadThing hook for barber profile images
+  const { startUpload: startBarberImageUpload } = useUploadThing('barberImage', {
+    onUploadError: (error) => {
+      toast({ variant: 'error', title: 'Erreur', description: error.message || 'Erreur lors du téléchargement' });
+    },
+  });
 
   // Calculate stats
   const totalBarbers = barbers.length;
@@ -399,31 +415,24 @@ export function ManageBarbershopClient({
     }
   };
 
-  const handleImageUpload = async (file: File, type: 'service' | 'barber') => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Erreur lors du téléchargement');
-    }
-    return data.url;
-  };
-
   const handleServiceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 4 * 1024 * 1024) {
+      toast({ variant: 'error', title: 'Erreur', description: 'Image trop volumineuse (max 4MB)' });
+      return;
+    }
+
     setIsUploadingServiceImage(true);
     try {
-      const url = await handleImageUpload(file, 'service');
-      setServiceImage(url);
+      const uploadResult = await startServiceImageUpload([file]);
+
+      if (!uploadResult || uploadResult.length === 0) {
+        throw new Error('Échec du téléchargement');
+      }
+
+      setServiceImage(uploadResult[0].url);
       toast({
         variant: 'success',
         title: 'Image téléchargée',
@@ -846,11 +855,14 @@ export function ManageBarbershopClient({
                                 const file = e.target.files?.[0];
                                 if (!file) return;
                                 try {
-                                  const url = await handleImageUpload(file, 'barber');
+                                  const uploadResult = await startBarberImageUpload([file]);
+                                  if (!uploadResult || uploadResult.length === 0) {
+                                    throw new Error('Échec du téléchargement');
+                                  }
                                   await fetch(`/api/barbers/${barber.id}/update`, {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ profileImage: url }),
+                                    body: JSON.stringify({ profileImage: uploadResult[0].url }),
                                   });
                                   toast({ variant: 'success', title: 'Photo mise à jour' });
                                   setTimeout(() => window.location.reload(), 1000);

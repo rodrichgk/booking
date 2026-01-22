@@ -40,6 +40,18 @@ export const ourFileRouter = {
       console.log("Gallery image uploaded:", file.url);
       return { url: file.url };
     }),
+
+  // Service image uploader
+  serviceImage: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.email) throw new Error("Unauthorized");
+      return { userEmail: session.user.email };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Service image uploaded:", file.url);
+      return { url: file.url };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;
