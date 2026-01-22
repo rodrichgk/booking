@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Calendar, Clock, DollarSign, Star, Users, Camera, Loader2, MapPin, Phone, Scissors, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUploadThing } from '@/lib/uploadthing';
 
 interface BarberProfile {
   id: string;
@@ -62,6 +63,13 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
   const [bookingsList, setBookingsList] = useState(bookings);
 
+  const { startUpload } = useUploadThing('barberImage', {
+    onUploadError: (error) => {
+      toast({ variant: 'error', title: 'Erreur', description: error.message || 'Erreur lors du téléchargement' });
+      setIsUploadingImage(false);
+    },
+  });
+
   const statsDisplay = [
     { label: "Rendez-vous aujourd'hui", value: stats.bookingsToday.toString(), icon: Calendar, color: 'bg-slate-100 text-slate-700' },
     { label: 'Cette semaine', value: stats.bookingsWeek.toString(), icon: Clock, color: 'bg-slate-100 text-slate-700' },
@@ -78,30 +86,30 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ variant: 'error', title: 'Erreur', description: 'Image trop volumineuse (max 5MB)' });
+    if (file.size > 4 * 1024 * 1024) {
+      toast({ variant: 'error', title: 'Erreur', description: 'Image trop volumineuse (max 4MB)' });
       return;
     }
 
     setIsUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const uploadResult = await startUpload([file]);
 
-      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-      const uploadData = await uploadRes.json();
+      if (!uploadResult || uploadResult.length === 0) {
+        throw new Error('Échec du téléchargement');
+      }
 
-      if (!uploadRes.ok) throw new Error(uploadData.error);
+      const uploadedUrl = uploadResult[0].url;
 
       const updateRes = await fetch(`/api/barbers/${profile.id}/update`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileImage: uploadData.url }),
+        body: JSON.stringify({ profileImage: uploadedUrl }),
       });
 
       if (!updateRes.ok) throw new Error('Erreur lors de la mise à jour');
 
-      setProfileImage(uploadData.url);
+      setProfileImage(uploadedUrl);
       toast({ variant: 'success', title: 'Succès', description: 'Photo de profil mise à jour' });
     } catch (error: any) {
       toast({ variant: 'error', title: 'Erreur', description: error.message || 'Une erreur est survenue' });
@@ -112,7 +120,7 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
 
   const handleSaveBio = async () => {
     if (!profile) return;
-    
+
     setIsSavingBio(true);
     try {
       const res = await fetch(`/api/barbers/${profile.id}/update`, {
@@ -145,7 +153,7 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
 
       if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'annulation');
 
-      setBookingsList(prev => prev.map(b => 
+      setBookingsList(prev => prev.map(b =>
         b.id === bookingId ? { ...b, status: 'cancelled' } : b
       ));
       toast({ variant: 'success', title: 'Succès', description: 'Rendez-vous annulé' });
@@ -238,7 +246,7 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
           {/* Profile Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Mon Profil</h3>
-            
+
             {/* Profile Image */}
             <div className="flex flex-col items-center mb-6">
               <div className="relative group">
@@ -347,7 +355,7 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Mes Rendez-vous</h3>
-            
+
             {bookingsList.length === 0 ? (
               <div className="text-center py-8">
                 <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
