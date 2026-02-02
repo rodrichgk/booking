@@ -7,6 +7,7 @@ import { users, barbershops, bookings, reviews, barbers } from '@/lib/db/schema'
 import { sql, desc, and, gte, lte, eq } from 'drizzle-orm';
 import { BarChart3, TrendingUp, Users, Store, Calendar, DollarSign, Star, Activity } from 'lucide-react';
 import { AnalyticsClient } from './client';
+import { getSubscriptionPrice } from '@/lib/settings';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -73,8 +74,9 @@ export default async function SystemAnalyticsPage({ params }: { params: Promise<
     .from(bookings)
     .where(gte(bookings.createdAt, yesterday));
 
-  // Revenue analytics (based on active barbershops * €29.9)
-  const monthlyRevenue = (activeBarbershops[0]?.count || 0) * 29.9;
+  // Revenue analytics (based on active barbershops * subscription price)
+  const subscriptionPrice = await getSubscriptionPrice();
+  const monthlyRevenue = (activeBarbershops[0]?.count || 0) * subscriptionPrice;
   const yearlyRevenue = monthlyRevenue * 12;
 
   // Review analytics
