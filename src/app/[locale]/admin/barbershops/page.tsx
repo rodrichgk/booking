@@ -7,6 +7,7 @@ import { barbershops, users, barbers } from '@/lib/db/schema';
 import { eq, desc, and, ilike, sql } from 'drizzle-orm';
 import { Store, Search, Filter, DollarSign, CheckCircle, XCircle, Clock, Star } from 'lucide-react';
 import { BarbershopManagementClient } from './client';
+import { getSubscriptionPrice } from '@/lib/settings';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -92,7 +93,8 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
   const avgRating = allBarbershops.reduce((acc, b) => acc + (parseFloat(b.rating as string) || 0), 0) / totalBarbershops || 0;
   // Get accurate barber count
   const totalBarbers = Math.max(0, allBarbershops.reduce((acc, b) => acc + (parseInt(String(b.barberCount)) || 0), 0));
-  const monthlyRevenue = activeBarbershops * 29.9;
+  const subscriptionPrice = await getSubscriptionPrice();
+  const monthlyRevenue = activeBarbershops * subscriptionPrice;
 
   const t = await getTranslations({ locale, namespace: 'admin' });
 
@@ -113,6 +115,7 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
         initialStats={stats as any}
         locale={locale}
         currentUserRole={userRole}
+        subscriptionPrice={subscriptionPrice}
       />
     </div>
   );

@@ -44,6 +44,7 @@ interface BarbershopManagementClientProps {
   initialStats: Stat[];
   locale: string;
   currentUserRole: string;
+  subscriptionPrice: number;
 }
 
 const renderIcon = (iconName: string, className: string) => {
@@ -75,7 +76,8 @@ export function BarbershopManagementClient({
   initialBarbershops,
   initialStats,
   locale,
-  currentUserRole
+  currentUserRole,
+  subscriptionPrice
 }: BarbershopManagementClientProps) {
   const t = useTranslations('admin');
   const [barbershops, setBarbershops] = useState(initialBarbershops);
@@ -228,7 +230,7 @@ export function BarbershopManagementClient({
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Gestion des Salons</h1>
-                <p className="text-gray-600 mt-1">Gérer les salons et abonnements €29.9/mois</p>
+                <p className="text-gray-600 mt-1">Gérer les salons et abonnements €{subscriptionPrice.toFixed(2)}/mois</p>
               </div>
               <Link
                 href={`/${locale}/admin/barbershops/new`}
@@ -362,7 +364,7 @@ export function BarbershopManagementClient({
                             {t('expires')}: {formatDate(barbershop.subscriptionExpiry)}
                           </div>
                           <div className="text-xs font-medium text-primary-600">
-                            €29.9/mois
+                            €{subscriptionPrice.toFixed(2)}/mois
                           </div>
                         </div>
                       </td>
