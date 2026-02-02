@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { barbershops, barbers, users, services, bookings } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { ManageBarbershopClient } from './client';
+import { getSubscriptionPrice } from '@/lib/settings';
 
 export default async function ManageBarbershopPage({
   params
@@ -134,6 +135,9 @@ export default async function ManageBarbershopPage({
     subscriptionStatus = daysSinceCreation > 30 ? 'expired' : 'active';
   }
 
+  // Fetch subscription price from settings
+  const subscriptionPrice = await getSubscriptionPrice();
+
   return (
     <ManageBarbershopClient
       shop={shop as any}
@@ -142,6 +146,7 @@ export default async function ManageBarbershopPage({
       bookings={shopBookings as any}
       subscriptionStatus={subscriptionStatus}
       locale={locale}
+      subscriptionPrice={subscriptionPrice}
     />
   );
 }

@@ -13,6 +13,7 @@ import { eq, sql, and, gte, desc, lt } from 'drizzle-orm';
 import { MySpaceClient } from './client';
 import { BarberSpaceClient } from './barber-client';
 import { EmailVerificationBanner } from '@/components/email-verification-banner';
+import { getSubscriptionPrice } from '@/lib/settings';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -64,6 +65,9 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     avgRating: '0.0',
   };
 
+  // Fetch subscription price (needed for all roles)
+  const subscriptionPrice = await getSubscriptionPrice();
+
   // ONLY fetch admin/dev statistics if user has admin or dev role
   if (userRole === 'admin' || userRole === 'dev') {
     // Fetch real statistics for admin/dev ONLY
@@ -86,8 +90,8 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
       .from(barbershops)
       .where(eq(barbershops.isActive, true));
 
-    // Calculate monthly revenue (active shops * €29.90)
-    const monthlyRevenue = (parseInt(String(activeBarbershops[0]?.count || 0)) * 29.9).toFixed(2);
+    // Calculate monthly revenue (active shops * subscription price)
+    const monthlyRevenue = (parseInt(String(activeBarbershops[0]?.count || 0)) * subscriptionPrice).toFixed(2);
 
     // Average rating
     const avgRatingResult = await db
@@ -356,6 +360,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
               locale={locale}
               userRole={userRole}
               userName={session.user.name || ''}
+              subscriptionPrice={subscriptionPrice}
             />
           )}
         </div>

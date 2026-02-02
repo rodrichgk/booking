@@ -54,6 +54,7 @@ interface MySpaceClientProps {
   locale: string;
   userRole: string;
   userName: string;
+  subscriptionPrice: number;
 }
 
 export function MySpaceClient({ 
@@ -62,7 +63,8 @@ export function MySpaceClient({
   bookings = [],
   locale, 
   userRole,
-  userName 
+  userName,
+  subscriptionPrice
 }: MySpaceClientProps) {
   const t = useTranslations('mySpace');
   const tCommon = useTranslations('common');
@@ -480,7 +482,7 @@ export function MySpaceClient({
                 <div>
                   <p className="text-sm font-medium text-purple-600">{t('monthlyCost')}</p>
                   <p className="text-3xl font-bold text-purple-900 mt-2">
-                    €{(barbershops.filter(b => b.subscriptionStatus === 'active').length * 29.90).toFixed(2)}
+                    €{(barbershops.filter(b => b.subscriptionStatus === 'active').length * subscriptionPrice).toFixed(2)}
                   </p>
                 </div>
                 <Settings className="w-12 h-12 text-purple-600 opacity-50" />

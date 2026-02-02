@@ -6,6 +6,7 @@ import { SubscriptionClient } from './client';
 import { db } from '@/lib/db';
 import { barbershops } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getSubscriptionPrice } from '@/lib/settings';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -34,6 +35,9 @@ export default async function SubscriptionPage({
 
   const userRole = (session.user as any).role;
   const userEmail = session.user.email;
+
+  // Fetch subscription price from settings
+  const subscriptionPrice = await getSubscriptionPrice();
 
   // Fetch shop data if shopId is provided
   let shopData = null;
@@ -72,6 +76,7 @@ export default async function SubscriptionPage({
         userRole={userRole}
         shopId={shopId}
         shopData={shopData}
+        subscriptionPrice={subscriptionPrice}
       />
     </div>
   );
