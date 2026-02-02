@@ -308,7 +308,7 @@ export function BarbershopDetailClient({ shop, barbers, locale, isAuthenticated 
                       onChange={(e) => setReviewComment(e.target.value)}
                       rows={3}
                       placeholder="Partagez votre expérience..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 resize-none"
                     />
                   </div>
                   <button

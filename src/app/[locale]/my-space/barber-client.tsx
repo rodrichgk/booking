@@ -313,7 +313,7 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
                   <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm text-gray-900"
                     rows={4}
                     placeholder="Décrivez votre expérience, vos spécialités..."
                   />

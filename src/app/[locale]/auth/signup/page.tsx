@@ -229,7 +229,7 @@ export default function SignUpPage() {
                 name="role"
                 value={formData.role}
                 onChange={handleInputChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
               >
                 <option value="customer">{t('customer')}</option>
                 <option value="barber">{t('barber')}</option>

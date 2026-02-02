@@ -92,7 +92,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                 value={formData.ownerEmail}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 placeholder="owner@example.com"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -111,7 +111,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 placeholder="Elite Barber Shop"
               />
             </div>
@@ -126,7 +126,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 placeholder="Professional barbershop specializing in modern cuts and traditional styles..."
               />
             </div>
@@ -143,7 +143,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                   value={formData.address}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   placeholder="123 Main Street"
                 />
               </div>
@@ -157,7 +157,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                   value={formData.city}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   placeholder="Paris"
                 />
               </div>
@@ -174,7 +174,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   placeholder="+33 1 23 45 67 89"
                 />
               </div>
@@ -187,7 +187,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   placeholder="contact@barbershop.com"
                 />
               </div>
@@ -203,7 +203,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
                 name="website"
                 value={formData.website}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 placeholder="https://www.barbershop.com"
               />
             </div>
