@@ -91,7 +91,7 @@ export function SubscriptionClient({
           router.push(data.checkoutUrl);
         }
       } else {
-        alert('Error creating checkout session. Please try again.');
+        alert(data.error || 'Error creating checkout session. Please try again.');
       }
     } catch (error) {
       console.error('Subscription error:', error);

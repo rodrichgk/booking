@@ -11,7 +11,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Non autorisé' },
@@ -66,6 +66,84 @@ export async function PUT(
         description,
         updatedAt: new Date(),
       })
+      .where(eq(barbershops.id, id))
+      .returning();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Informations mises à jour avec succès',
+      shop: updatedShop,
+    });
+  } catch (error) {
+    console.error('Error updating barbershop:', error);
+    return NextResponse.json(
+      { error: 'Une erreur est survenue lors de la mise à jour' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Non autorisé' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+    const { name, address, city, phone, email, website, description, images } = body;
+
+    // Verify the user owns this barbershop
+    const [shop] = await db
+      .select()
+      .from(barbershops)
+      .where(eq(barbershops.id, id))
+      .limit(1);
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Salon non trouvé' },
+        { status: 404 }
+      );
+    }
+
+    const userId = (session.user as any).id;
+    if (shop.ownerId !== userId) {
+      const userRole = (session.user as any).role;
+      if (userRole !== 'admin' && userRole !== 'dev') {
+        return NextResponse.json(
+          { error: 'Vous n\'êtes pas autorisé à modifier ce salon' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Build update object dynamically
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    if (name) updateData.name = name;
+    if (address) updateData.address = address;
+    if (city) updateData.city = city;
+    if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) updateData.email = email;
+    if (website !== undefined) updateData.website = website;
+    if (description !== undefined) updateData.description = description;
+    if (images !== undefined) updateData.images = images;
+
+    // Update the barbershop
+    const [updatedShop] = await db
+      .update(barbershops)
+      .set(updateData)
       .where(eq(barbershops.id, id))
       .returning();
 

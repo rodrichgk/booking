@@ -37,6 +37,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No Stripe customer found for this shop' }, { status: 404 });
         }
 
+        // Verify customer exists in current Stripe mode (test vs live)
+        try {
+            await stripe.customers.retrieve(shop.stripeCustomerId);
+        } catch (customerError: any) {
+            return NextResponse.json({ 
+                error: 'Stripe customer not found. This may happen if you switched from test to live mode. Please create a new subscription.' 
+            }, { status: 404 });
+        }
+
         // Create Stripe Customer Portal session
         const portalSession = await stripe.billingPortal.sessions.create({
             customer: shop.stripeCustomerId,
