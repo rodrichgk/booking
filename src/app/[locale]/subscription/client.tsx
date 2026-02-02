@@ -27,6 +27,7 @@ interface SubscriptionClientProps {
   userRole: string;
   shopId?: string;
   shopData?: ShopData | null;
+  subscriptionPrice: number;
 }
 
 const renderIcon = (iconName: string, className: string) => {
@@ -57,7 +58,8 @@ export function SubscriptionClient({
   userEmail,
   userRole,
   shopId,
-  shopData
+  shopData,
+  subscriptionPrice
 }: SubscriptionClientProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -375,7 +377,7 @@ export function SubscriptionClient({
                   <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-8 py-12 text-center text-white">
                     <h2 className="text-3xl font-bold mb-4">Plan Professionnel</h2>
                     <div className="flex items-center justify-center mb-4">
-                      <span className="text-6xl font-bold">€29.90</span>
+                      <span className="text-6xl font-bold">€{subscriptionPrice.toFixed(2)}</span>
                       <span className="text-2xl ml-2">/mois</span>
                     </div>
                     <p className="text-primary-100 text-lg">
@@ -467,7 +469,7 @@ export function SubscriptionClient({
                       Comment fonctionne l'abonnement ?
                     </h3>
                     <p className="text-gray-600">
-                      Vous payez €29.90 par mois par salon. Cela vous donne accès à notre plateforme
+                      Vous payez €{subscriptionPrice.toFixed(2)} par mois par salon. Cela vous donne accès à notre plateforme
                       complète incluant les réservations en ligne, la gestion du personnel et les statistiques.
                     </p>
                   </div>

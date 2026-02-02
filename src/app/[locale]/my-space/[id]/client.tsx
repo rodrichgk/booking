@@ -68,6 +68,7 @@ interface ManageBarbershopClientProps {
   bookings: Booking[];
   subscriptionStatus: 'active' | 'expired' | 'inactive' | 'past_due' | 'canceled';
   locale: string;
+  subscriptionPrice: number;
 }
 
 export function ManageBarbershopClient({
@@ -76,7 +77,8 @@ export function ManageBarbershopClient({
   services,
   bookings,
   subscriptionStatus,
-  locale
+  locale,
+  subscriptionPrice
 }: ManageBarbershopClientProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'gallery' | 'settings'>('overview');
@@ -1249,7 +1251,7 @@ export function ManageBarbershopClient({
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Abonnement</h3>
-                    <p className="text-sm text-gray-600">€29.90/mois</p>
+                    <p className="text-sm text-gray-600">€{subscriptionPrice.toFixed(2)}/mois</p>
                   </div>
                 </div>
                 <div className={`px-4 py-2 rounded-lg font-semibold ${subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
