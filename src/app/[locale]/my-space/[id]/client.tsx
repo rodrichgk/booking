@@ -1374,7 +1374,7 @@ export function ManageBarbershopClient({
                   value={shopName}
                   onChange={(e) => setShopName(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
               </div>
               <div className="grid md:grid-cols-2 gap-4">
@@ -1387,7 +1387,7 @@ export function ManageBarbershopClient({
                     value={shopAddress}
                     onChange={(e) => setShopAddress(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                   />
                 </div>
                 <div>
@@ -1399,7 +1399,7 @@ export function ManageBarbershopClient({
                     value={shopCity}
                     onChange={(e) => setShopCity(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                   />
                 </div>
               </div>
@@ -1411,7 +1411,7 @@ export function ManageBarbershopClient({
                     value={shopPhone}
                     onChange={(e) => setShopPhone(e.target.value)}
                     placeholder="+33612345678"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                   />
                 </div>
                 <div>
@@ -1421,7 +1421,7 @@ export function ManageBarbershopClient({
                     value={shopEmail}
                     onChange={(e) => setShopEmail(e.target.value)}
                     placeholder="contact@salon.com"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                   />
                 </div>
               </div>
@@ -1432,7 +1432,7 @@ export function ManageBarbershopClient({
                   value={shopWebsite}
                   onChange={(e) => setShopWebsite(e.target.value)}
                   placeholder="https://www.monsalon.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
               </div>
               <div>
@@ -1442,7 +1442,7 @@ export function ManageBarbershopClient({
                   onChange={(e) => setShopDescription(e.target.value)}
                   rows={4}
                   placeholder="Décrivez votre salon..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 resize-none"
                 />
               </div>
               <div className="flex space-x-3 pt-4">
@@ -1489,7 +1489,7 @@ export function ManageBarbershopClient({
                   onChange={(e) => setBarberName(e.target.value)}
                   placeholder="Ex: Jean Dupont"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
               </div>
               <div>
@@ -1502,7 +1502,7 @@ export function ManageBarbershopClient({
                   onChange={(e) => setBarberEmail(e.target.value)}
                   placeholder="jean.dupont@example.com"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
               </div>
               <div>
@@ -1514,7 +1514,7 @@ export function ManageBarbershopClient({
                   value={barberPhone}
                   onChange={(e) => setBarberPhone(e.target.value)}
                   placeholder="+33 6 12 34 56 78"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
               </div>
               <div>
@@ -1528,7 +1528,7 @@ export function ManageBarbershopClient({
                   placeholder="Minimum 6 caractères"
                   required
                   minLength={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
                 <p className="text-xs text-gray-500 mt-1">Le coiffeur pourra se connecter avec cet email et ce mot de passe</p>
               </div>
@@ -1578,7 +1578,7 @@ export function ManageBarbershopClient({
                   onChange={(e) => setServiceName(e.target.value)}
                   placeholder="Ex: Coupe Homme"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
               </div>
               <div>
@@ -1590,7 +1590,7 @@ export function ManageBarbershopClient({
                   onChange={(e) => setServiceDescription(e.target.value)}
                   placeholder="Description du service..."
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1606,7 +1606,7 @@ export function ManageBarbershopClient({
                     onChange={(e) => setServicePrice(e.target.value)}
                     placeholder="29.90"
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                   />
                 </div>
                 <div>
@@ -1621,7 +1621,7 @@ export function ManageBarbershopClient({
                     onChange={(e) => setServiceDuration(e.target.value)}
                     placeholder="30"
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                   />
                 </div>
               </div>
@@ -1633,7 +1633,7 @@ export function ManageBarbershopClient({
                   value={serviceCategory}
                   onChange={(e) => setServiceCategory(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900">
                   <option value="haircut">💇 Coupes</option>
                   <option value="beard">🧔 Barbe</option>
                   <option value="styling">✨ Coiffure</option>

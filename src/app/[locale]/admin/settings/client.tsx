@@ -167,7 +167,7 @@ export function SettingsClient({
                     ...settings,
                     general: { ...settings.general, siteName: e.target.value }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -179,7 +179,7 @@ export function SettingsClient({
                     ...settings,
                     general: { ...settings.general, siteUrl: e.target.value }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -190,7 +190,7 @@ export function SettingsClient({
                     ...settings,
                     general: { ...settings.general, defaultLanguage: e.target.value }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 >
                   <option value="fr">Français</option>
                   <option value="en">Anglais</option>
@@ -204,7 +204,7 @@ export function SettingsClient({
                     ...settings,
                     general: { ...settings.general, timezone: e.target.value }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 >
                   <option value="Europe/Paris">Europe/Paris</option>
                   <option value="Europe/London">Europe/London</option>
@@ -248,7 +248,7 @@ export function SettingsClient({
                     ...settings,
                     payment: { ...settings.payment, subscriptionPrice: parseFloat(e.target.value) }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -259,7 +259,7 @@ export function SettingsClient({
                     ...settings,
                     payment: { ...settings.payment, currency: e.target.value }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 >
                   <option value="EUR">EUR (€)</option>
                   <option value="USD">USD ($)</option>
@@ -304,7 +304,7 @@ export function SettingsClient({
                     ...settings,
                     security: { ...settings.security, sessionTimeout: parseInt(e.target.value) }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -316,7 +316,7 @@ export function SettingsClient({
                     ...settings,
                     security: { ...settings.security, maxLoginAttempts: parseInt(e.target.value) }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -328,7 +328,7 @@ export function SettingsClient({
                     ...settings,
                     security: { ...settings.security, passwordMinLength: parseInt(e.target.value) }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
             </div>
@@ -375,7 +375,7 @@ export function SettingsClient({
                       ...settings,
                       appearance: { ...settings.appearance, featuredMode: e.target.value as 'manual' | 'popularity' | 'rating' }
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   >
                     <option value="manual">Manuel / Manual - Sélection manuelle des salons</option>
                     <option value="popularity">Popularité / Popularity - Par nombre de réservations</option>
@@ -446,7 +446,7 @@ export function SettingsClient({
                           }
                           e.target.value = '';
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                         defaultValue=""
                       >
                         <option value="" disabled>Sélectionner un salon...</option>
@@ -572,7 +572,7 @@ export function SettingsClient({
                     ...settings,
                     email: { ...settings.email, senderEmail: e.target.value }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
                 <p className="text-xs text-gray-500 mt-1">Doit être vérifié dans Resend</p>
               </div>
@@ -585,7 +585,7 @@ export function SettingsClient({
                     ...settings,
                     email: { ...settings.email, senderName: e.target.value }
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
             </div>
@@ -599,7 +599,7 @@ export function SettingsClient({
                     type="email"
                     placeholder="test@example.com"
                     id="test-email-input"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   />
                 </div>
                 <button

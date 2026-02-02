@@ -117,7 +117,7 @@ export function AnalyticsClient({
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
               >
                 <option value="day">{t('last24Hours')}</option>
                 <option value="week">{t('lastWeek')}</option>
