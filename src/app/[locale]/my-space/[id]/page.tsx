@@ -39,6 +39,7 @@ export default async function ManageBarbershopPage({
       createdAt: barbershops.createdAt,
       subscriptionStatus: barbershops.subscriptionStatus,
       currentPeriodEnd: barbershops.currentPeriodEnd,
+      images: barbershops.images,
     })
     .from(barbershops)
     .where(eq(barbershops.id, id))

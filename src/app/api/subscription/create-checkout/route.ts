@@ -51,6 +51,18 @@ export async function POST(request: Request) {
     // Create or retrieve Stripe customer
     let customerId = shop.stripeCustomerId;
 
+    // Check if existing customer ID is valid for current Stripe mode (test vs live)
+    // Test customer IDs won't work with live keys and vice versa
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+      } catch (customerError: any) {
+        // Customer doesn't exist in current Stripe mode, need to create new one
+        console.log('Existing customer ID invalid for current Stripe mode, creating new customer');
+        customerId = null;
+      }
+    }
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: email,
@@ -111,10 +123,19 @@ export async function POST(request: Request) {
       shopId: shopId
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Checkout error:', error);
+    
+    // Provide more detailed error message for debugging
+    let errorMessage = 'Failed to create checkout session';
+    if (error?.type === 'StripeInvalidRequestError') {
+      errorMessage = `Stripe error: ${error.message}`;
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

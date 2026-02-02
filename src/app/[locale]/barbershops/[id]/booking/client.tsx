@@ -481,7 +481,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                         : 'border-gray-200 hover:border-primary-300'
                     }`}
                   >
-                    <p className="text-center font-semibold">{time}</p>
+                    <p className="text-center font-semibold text-gray-900">{time}</p>
                   </button>
                 ))}
               </div>
@@ -524,7 +524,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                     placeholder="Votre nom"
                     disabled={!!userInfo?.name}
                   />
@@ -538,7 +538,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                     type="email"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                     placeholder="votre@email.com"
                     disabled={!!userInfo?.email}
                   />
@@ -552,7 +552,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                     placeholder="+33 6 12 34 56 78"
                     disabled={!!userInfo?.phone}
                   />
@@ -566,7 +566,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                     placeholder="Des demandes particulières?"
                   />
                 </div>

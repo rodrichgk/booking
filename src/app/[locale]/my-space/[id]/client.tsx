@@ -21,6 +21,7 @@ interface Barbershop {
   city: string;
   phone: string | null;
   email: string | null;
+  images: string[] | null;
   website: string | null;
   rating: string | null;
   reviewCount: number | null;
@@ -131,6 +132,86 @@ export function ManageBarbershopClient({
       toast({ variant: 'error', title: 'Erreur', description: error.message || 'Erreur lors du téléchargement' });
     },
   });
+
+  // Shop gallery state and uploader
+  const [shopImages, setShopImages] = useState<string[]>(shop.images || []);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [isDeletingGalleryImage, setIsDeletingGalleryImage] = useState<string | null>(null);
+
+  const { startUpload: startGalleryUpload } = useUploadThing('shopGallery', {
+    onUploadError: (error) => {
+      toast({ variant: 'error', title: 'Erreur', description: error.message || 'Erreur lors du téléchargement' });
+      setIsUploadingGallery(false);
+    },
+  });
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (shopImages.length + files.length > 10) {
+      toast({ variant: 'warning', title: 'Limite atteinte', description: 'Vous ne pouvez avoir que 10 images maximum dans votre galerie.' });
+      return;
+    }
+
+    setIsUploadingGallery(true);
+    try {
+      const uploadResult = await startGalleryUpload(Array.from(files));
+
+      if (!uploadResult || uploadResult.length === 0) {
+        throw new Error('Échec du téléchargement');
+      }
+
+      const newImageUrls = uploadResult.map(res => res.url);
+      const updatedImages = [...shopImages, ...newImageUrls];
+
+      // Update shop images in database
+      const res = await fetch(`/api/barbershops/${shop.id}/update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: updatedImages }),
+      });
+
+      if (!res.ok) throw new Error('Erreur lors de la sauvegarde des images');
+
+      setShopImages(updatedImages);
+      toast({
+        variant: 'success',
+        title: 'Succès',
+        description: `${newImageUrls.length} image(s) ajoutée(s) à la galerie`
+      });
+    } catch (error: any) {
+      console.error('Gallery upload error:', error);
+      toast({ variant: 'error', title: 'Erreur', description: error.message || 'Une erreur est survenue' });
+    } finally {
+      setIsUploadingGallery(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteGalleryImage = async (urlToDelete: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) return;
+
+    setIsDeletingGalleryImage(urlToDelete);
+    try {
+      const updatedImages = shopImages.filter(url => url !== urlToDelete);
+
+      const res = await fetch(`/api/barbershops/${shop.id}/update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: updatedImages }),
+      });
+
+      if (!res.ok) throw new Error('Erreur lors de la suppression');
+
+      setShopImages(updatedImages);
+      toast({ variant: 'success', title: 'Succès', description: 'Image supprimée de la galerie' });
+    } catch (error: any) {
+      toast({ variant: 'error', title: 'Erreur', description: error.message || 'Une erreur est survenue' });
+    } finally {
+      setIsDeletingGalleryImage(null);
+    }
+  };
 
   // Calculate stats
   const totalBarbers = barbers.length;
@@ -1070,23 +1151,70 @@ export function ManageBarbershopClient({
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                {/* Placeholder for existing images */}
-                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <span className="text-gray-400 text-sm">{t('gallery.noImages')}</span>
-                </div>
+                {shopImages.map((url, index) => (
+                  <div key={index} className="relative aspect-square group rounded-lg overflow-hidden border border-gray-200">
+                    <img
+                      src={url}
+                      alt={`Gallery ${index + 1}`}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        onClick={() => handleDeleteGalleryImage(url)}
+                        disabled={isDeletingGalleryImage === url}
+                        className="p-2 bg-white text-red-600 rounded-full hover:bg-red-50 transition-colors"
+                        title="Supprimer">
+                        {isDeletingGalleryImage === url ? (
+                          <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {shopImages.length === 0 && (
+                  <div className="col-span-full py-8 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                    <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">{t('gallery.noImages')}</p>
+                  </div>
+                )}
               </div>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 transition-colors cursor-pointer">
-                <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-700">{t('gallery.uploadTitle')}</p>
-                <p className="text-xs text-gray-500 mt-1">{t('gallery.uploadFormats')}</p>
-                <button className="mt-4 px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                  {t('gallery.uploadButton')}
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-3">
-                {t('gallery.uploadNote')}
-              </p>
+              {shopImages.length < 10 && (
+                <>
+                  <label className={`block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors cursor-pointer ${isUploadingGallery ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary-500 hover:bg-primary-50'
+                    }`}>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleGalleryUpload}
+                      className="hidden"
+                      disabled={isUploadingGallery}
+                    />
+                    {isUploadingGallery ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-3"></div>
+                        <p className="text-sm font-medium text-gray-700">Téléchargement en cours...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-sm font-medium text-gray-700">{t('gallery.uploadTitle')}</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('gallery.uploadFormats')}</p>
+                        <div className="mt-4 px-6 py-2 bg-primary-600 text-white rounded-lg font-medium inline-block">
+                          {t('gallery.uploadButton')}
+                        </div>
+                      </>
+                    )}
+                  </label>
+                  <p className="text-xs text-gray-500 mt-3 text-center">
+                    {t('gallery.uploadNote')} ({shopImages.length}/10 images)
+                  </p>
+                </>
+              )}
             </div>
           </div>
         )}
