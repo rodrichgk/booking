@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, description, address, city, phone, email } = body;
+    const { name, description, address, city, state, zipCode, phone, email, website } = body;
 
     // Validate required fields
     if (!name || !address || !city) {
@@ -47,8 +47,11 @@ export async function POST(request: Request) {
         description: description || null,
         address,
         city,
+        state: state || null,
+        zipCode: zipCode || null,
         phone: phone || null,
         email: email || null,
+        website: website || null,
         ownerId: user.id,
         isActive: false,
         subscriptionStatus: 'inactive',
