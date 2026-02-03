@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Store, MapPin, Phone, Mail, Globe, AlertCircle, CheckCircle, XCircle, ArrowRight, Settings, User, Image as ImageIcon, Video, Calendar, Clock, Heart, Star, Sparkles, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 
 interface Barbershop {
   id: string;
@@ -70,43 +68,6 @@ export function MySpaceClient({
 }: MySpaceClientProps) {
   const t = useTranslations('mySpace');
   const tCommon = useTranslations('common');
-  const router = useRouter();
-
-  // Add shop form state
-  const [showAddShopForm, setShowAddShopForm] = useState(false);
-  const [isCreatingShop, setIsCreatingShop] = useState(false);
-  const [shopFormData, setShopFormData] = useState({
-    name: '',
-    description: '',
-    address: '',
-    city: '',
-    phone: '',
-    email: '',
-  });
-
-  const handleCreateShop = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsCreatingShop(true);
-    try {
-      const response = await fetch('/api/barbershops/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(shopFormData),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create shop');
-      }
-
-      const data = await response.json();
-      // Redirect to subscription page for the new shop
-      router.push(`/${locale}/subscription?shopId=${data.barbershopId}`);
-    } catch (error: any) {
-      alert(error.message || t('createShopError'));
-      setIsCreatingShop(false);
-    }
-  };
 
   // Determine user type
   const isBarber = !!barberProfile;
@@ -314,9 +275,9 @@ export function MySpaceClient({
                       </div>
                     </Link>
 
-                    <button
-                      onClick={() => setShowAddShopForm(true)}
-                      className="w-full p-4 border-2 border-dashed border-amber-300 rounded-lg hover:border-amber-500 hover:bg-amber-50 transition-all group text-left"
+                    <Link
+                      href={`/${locale}/my-space/add-shop`}
+                      className="block p-4 border-2 border-dashed border-amber-300 rounded-lg hover:border-amber-500 hover:bg-amber-50 transition-all group"
                     >
                       <div className="flex items-center">
                         <div className="p-3 bg-amber-100 rounded-lg mr-4 group-hover:bg-amber-200 transition-colors">
@@ -327,113 +288,11 @@ export function MySpaceClient({
                           <p className="text-sm text-gray-600">{t('createYourBarbershop')}</p>
                         </div>
                       </div>
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Add Shop Modal */}
-            {showAddShopForm && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-                  <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-white">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-bold text-gray-900">{t('createBarbershop')}</h2>
-                      <button
-                        onClick={() => setShowAddShopForm(false)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <XCircle className="w-6 h-6" />
-                      </button>
-                    </div>
-                  </div>
-                  <form onSubmit={handleCreateShop} className="p-6 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('shopName')} *</label>
-                      <input
-                        type="text"
-                        required
-                        value={shopFormData.name}
-                        onChange={(e) => setShopFormData({ ...shopFormData, name: e.target.value })}
-                        placeholder={t('shopNamePlaceholder')}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('shopDescription')}</label>
-                      <textarea
-                        value={shopFormData.description}
-                        onChange={(e) => setShopFormData({ ...shopFormData, description: e.target.value })}
-                        placeholder={t('shopDescriptionPlaceholder')}
-                        rows={3}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('shopAddress')} *</label>
-                      <input
-                        type="text"
-                        required
-                        value={shopFormData.address}
-                        onChange={(e) => setShopFormData({ ...shopFormData, address: e.target.value })}
-                        placeholder={t('shopAddressPlaceholder')}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('shopCity')} *</label>
-                      <input
-                        type="text"
-                        required
-                        value={shopFormData.city}
-                        onChange={(e) => setShopFormData({ ...shopFormData, city: e.target.value })}
-                        placeholder={t('shopCityPlaceholder')}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('shopPhone')}</label>
-                        <input
-                          type="tel"
-                          value={shopFormData.phone}
-                          onChange={(e) => setShopFormData({ ...shopFormData, phone: e.target.value })}
-                          placeholder={t('shopPhonePlaceholder')}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('shopEmail')}</label>
-                        <input
-                          type="email"
-                          value={shopFormData.email}
-                          onChange={(e) => setShopFormData({ ...shopFormData, email: e.target.value })}
-                          placeholder={t('shopEmailPlaceholder')}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-                    <div className="pt-4 flex space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowAddShopForm(false)}
-                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-                      >
-                        {tCommon('cancel')}
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isCreatingShop}
-                        className="flex-1 px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50"
-                      >
-                        {isCreatingShop ? t('creatingShop') : t('createBarbershop')}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
           </div>
         </div>
     );
