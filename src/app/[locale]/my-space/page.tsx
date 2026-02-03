@@ -129,8 +129,8 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     .where(eq(users.email, userEmail || ''))
     .limit(1) : [];
 
-  // Check if user owns barbershops - ONLY fetch for shop owners, admins, devs
-  const userBarbershops = (userRole === 'admin' || userRole === 'dev' || userRole === 'barber') ? await db
+  // Check if user owns barbershops - fetch for ALL users (any user can be a shop owner)
+  const userBarbershops = await db
     .select({
       id: barbershops.id,
       name: barbershops.name,
@@ -154,7 +154,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     })
     .from(barbershops)
     .leftJoin(users, eq(barbershops.ownerId, users.id))
-    .where(eq(users.email, userEmail || '')) : [];
+    .where(eq(users.email, userEmail || ''));
 
   // Fetch customer bookings ONLY if user is a customer
   let userBookings: any[] = [];
