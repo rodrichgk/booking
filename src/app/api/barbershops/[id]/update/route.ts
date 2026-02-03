@@ -31,7 +31,7 @@ export async function PUT(
       );
     }
 
-    // Verify the user owns this barbershop
+    // Verify the user owns this barbershop or is admin/dev
     const [shop] = await db
       .select()
       .from(barbershops)
@@ -45,8 +45,11 @@ export async function PUT(
       );
     }
 
+    const userRole = (session.user as any).role;
     const userId = (session.user as any).id;
-    if (shop.ownerId !== userId) {
+    
+    // Allow admin/dev to update any shop, otherwise check ownership
+    if (userRole !== 'admin' && userRole !== 'dev' && shop.ownerId !== userId) {
       return NextResponse.json(
         { error: 'Vous n\'êtes pas autorisé à modifier ce salon' },
         { status: 403 }
