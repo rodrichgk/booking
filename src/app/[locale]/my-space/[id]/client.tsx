@@ -13,6 +13,10 @@ import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
 import { useUploadThing } from '@/lib/uploadthing';
 
+interface OpeningHours {
+  [key: string]: { open: string; close: string; closed: boolean };
+}
+
 interface Barbershop {
   id: string;
   name: string;
@@ -28,6 +32,7 @@ interface Barbershop {
   isActive: boolean;
   ownerId: string;
   createdAt: Date;
+  openingHours: OpeningHours | null;
 }
 
 interface Barber {
@@ -81,7 +86,7 @@ export function ManageBarbershopClient({
   subscriptionPrice
 }: ManageBarbershopClientProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'gallery' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'gallery' | 'schedule' | 'settings'>('overview');
   const t = useTranslations('barbershopManagement');
   const [isAddingService, setIsAddingService] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -119,6 +124,21 @@ export function ManageBarbershopClient({
   const [shopEmail, setShopEmail] = useState(shop.email || '');
   const [shopWebsite, setShopWebsite] = useState(shop.website || '');
   const [shopDescription, setShopDescription] = useState(shop.description || '');
+
+  // Opening hours state
+  const defaultOpeningHours: OpeningHours = {
+    monday: { open: '09:00', close: '19:00', closed: false },
+    tuesday: { open: '09:00', close: '19:00', closed: false },
+    wednesday: { open: '09:00', close: '19:00', closed: false },
+    thursday: { open: '09:00', close: '19:00', closed: false },
+    friday: { open: '09:00', close: '19:00', closed: false },
+    saturday: { open: '09:00', close: '18:00', closed: false },
+    sunday: { open: '09:00', close: '18:00', closed: true },
+  };
+  const [openingHours, setOpeningHours] = useState<OpeningHours>(shop.openingHours || defaultOpeningHours);
+  const [isSavingHours, setIsSavingHours] = useState(false);
+  const [closedDates, setClosedDates] = useState<string[]>([]);
+  const [newClosedDate, setNewClosedDate] = useState('');
 
   // UploadThing hook for service images
   const { startUpload: startServiceImageUpload } = useUploadThing('serviceImage', {
@@ -672,11 +692,63 @@ export function ManageBarbershopClient({
     setServiceCategory('haircut');
   };
 
+  // Opening hours handlers
+  const handleOpeningHoursChange = (day: string, field: 'open' | 'close' | 'closed', value: string | boolean) => {
+    setOpeningHours(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSaveOpeningHours = async () => {
+    setIsSavingHours(true);
+    try {
+      const response = await fetch(`/api/barbershops/${shop.id}/opening-hours`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openingHours }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save opening hours');
+
+      toast({ variant: 'success', title: 'Succès', description: 'Horaires mis à jour avec succès' });
+    } catch (error) {
+      toast({ variant: 'error', title: 'Erreur', description: 'Erreur lors de la mise à jour des horaires' });
+    } finally {
+      setIsSavingHours(false);
+    }
+  };
+
+  const handleAddClosedDate = () => {
+    if (newClosedDate && !closedDates.includes(newClosedDate)) {
+      setClosedDates(prev => [...prev, newClosedDate].sort());
+      setNewClosedDate('');
+    }
+  };
+
+  const handleRemoveClosedDate = (date: string) => {
+    setClosedDates(prev => prev.filter(d => d !== date));
+  };
+
+  const dayNames: { [key: string]: string } = {
+    monday: 'Lundi',
+    tuesday: 'Mardi',
+    wednesday: 'Mercredi',
+    thursday: 'Jeudi',
+    friday: 'Vendredi',
+    saturday: 'Samedi',
+    sunday: 'Dimanche',
+  };
+
   const tabs = [
     { id: 'overview' as const, label: t('tabs.overview'), icon: TrendingUp },
     { id: 'barbers' as const, label: t('tabs.team'), icon: Users },
     { id: 'services' as const, label: t('tabs.services'), icon: Scissors },
     { id: 'gallery' as const, label: t('tabs.gallery'), icon: ImageIcon },
+    { id: 'schedule' as const, label: 'Horaires', icon: Clock },
     { id: 'settings' as const, label: t('tabs.settings'), icon: Settings },
   ];
 
@@ -1216,6 +1288,120 @@ export function ManageBarbershopClient({
                     {t('gallery.uploadNote')} ({shopImages.length}/10 images)
                   </p>
                 </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'schedule' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Horaires d'ouverture</h2>
+              <p className="text-gray-600 mt-1">Gérez les horaires d'ouverture et les jours de fermeture</p>
+            </div>
+
+            {/* Opening Hours */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-primary-600" />
+                Horaires hebdomadaires
+              </h3>
+              <div className="space-y-4">
+                {Object.entries(dayNames).map(([dayKey, dayLabel]) => (
+                  <div key={dayKey} className="flex items-center space-x-4 py-3 border-b border-gray-100 last:border-0">
+                    <div className="w-28 font-medium text-gray-700">{dayLabel}</div>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={!openingHours[dayKey]?.closed}
+                        onChange={(e) => handleOpeningHoursChange(dayKey, 'closed', !e.target.checked)}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-600">Ouvert</span>
+                    </label>
+                    {!openingHours[dayKey]?.closed && (
+                      <>
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm text-gray-500">De</label>
+                          <input
+                            type="time"
+                            value={openingHours[dayKey]?.open || '09:00'}
+                            onChange={(e) => handleOpeningHoursChange(dayKey, 'open', e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-primary-500"
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm text-gray-500">à</label>
+                          <input
+                            type="time"
+                            value={openingHours[dayKey]?.close || '19:00'}
+                            onChange={(e) => handleOpeningHoursChange(dayKey, 'close', e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-primary-500"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {openingHours[dayKey]?.closed && (
+                      <span className="text-sm text-red-600 font-medium">Fermé</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={handleSaveOpeningHours}
+                  disabled={isSavingHours}
+                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {isSavingHours ? 'Enregistrement...' : 'Enregistrer les horaires'}
+                </button>
+              </div>
+            </div>
+
+            {/* Closed Dates */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-red-600" />
+                Jours de fermeture exceptionnelle
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Ajoutez des dates spécifiques où le salon sera fermé (vacances, jours fériés, etc.)
+              </p>
+              <div className="flex items-center space-x-3 mb-4">
+                <input
+                  type="date"
+                  value={newClosedDate}
+                  onChange={(e) => setNewClosedDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500"
+                />
+                <button
+                  onClick={handleAddClosedDate}
+                  disabled={!newClosedDate}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Ajouter
+                </button>
+              </div>
+              {closedDates.length > 0 ? (
+                <div className="space-y-2">
+                  {closedDates.map((date) => (
+                    <div key={date} className="flex items-center justify-between py-2 px-4 bg-red-50 rounded-lg">
+                      <span className="text-gray-900">
+                        {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveClosedDate(date)}
+                        className="text-red-600 hover:text-red-800 p-1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">Aucun jour de fermeture exceptionnelle programmé</p>
               )}
             </div>
           </div>
