@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Scissors, Sparkles, Palette, Zap, Crown, Heart, Star, Clock } from 'lucide-react';
+import { Scissors, Sparkles, Palette, Zap, Crown, Heart, Star, Clock, Gift } from 'lucide-react';
 import Link from 'next/link';
 
 interface Service {
@@ -38,7 +38,8 @@ const iconMap = {
   Crown,
   Heart,
   Star,
-  Clock
+  Clock,
+  Gift
 };
 
 export function ServicesGrid({ services, categories }: ServicesGridProps) {
