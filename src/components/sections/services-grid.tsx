@@ -28,6 +28,7 @@ interface Category {
 interface ServicesGridProps {
   services: Service[];
   categories: Category[];
+  locale?: string;
 }
 
 const iconMap = {
@@ -42,7 +43,7 @@ const iconMap = {
   Gift
 };
 
-export function ServicesGrid({ services, categories }: ServicesGridProps) {
+export function ServicesGrid({ services, categories, locale = 'fr' }: ServicesGridProps) {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const filteredServices = selectedCategory === 'all' 
@@ -151,7 +152,7 @@ export function ServicesGrid({ services, categories }: ServicesGridProps) {
                     )}
 
                     <Link
-                      href={service.barbershopId ? `/barbershops/${service.barbershopId}` : `/barbershops`}
+                      href={service.barbershopId ? `/${locale}/barbershops/${service.barbershopId}/booking?serviceId=${service.id}` : `/${locale}/barbershops`}
                       className="w-full bg-primary-600 hover:bg-primary-700 text-white text-center py-3 px-4 rounded-lg font-medium transition-colors duration-200 block"
                     >
                       Réserver ce Service

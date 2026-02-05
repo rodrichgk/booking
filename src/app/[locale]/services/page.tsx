@@ -130,7 +130,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
           </div>
         </section>
 
-        <ServicesGrid services={services} categories={categories} />
+        <ServicesGrid services={services} categories={categories} locale={locale} />
 
         {/* CTA Section */}
         <section className="py-16 bg-gradient-to-r from-primary-600 to-accent-600">
