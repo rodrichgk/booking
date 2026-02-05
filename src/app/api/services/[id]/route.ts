@@ -17,7 +17,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const { name, description, price, duration, category } = await request.json();
+    const { name, description, image, price, duration, category } = await request.json();
 
     if (!name || !price || !duration) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -62,6 +62,7 @@ export async function PATCH(
       .set({
         name,
         description: description || null,
+        image: image || null,
         price: price.toString(),
         duration,
         category: category || null,
