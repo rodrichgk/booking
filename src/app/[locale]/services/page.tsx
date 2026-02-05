@@ -9,30 +9,27 @@ import { eq, and } from 'drizzle-orm';
 
 const categories = [
   { id: 'all', name: 'Tous les Services', icon: 'Star' },
-  { id: 'cuts', name: 'Coupes', icon: 'Scissors' },
-  { id: 'styling', name: 'Coiffage', icon: 'Sparkles' },
+  { id: 'haircut', name: 'Coupes', icon: 'Scissors' },
+  { id: 'beard', name: 'Barbe', icon: 'Scissors' },
+  { id: 'styling', name: 'Coiffure', icon: 'Sparkles' },
+  { id: 'coloring', name: 'Coloration', icon: 'Palette' },
   { id: 'treatment', name: 'Soins', icon: 'Heart' },
-  { id: 'color', name: 'Coloration', icon: 'Palette' },
-  { id: 'maintenance', name: 'Entretien', icon: 'Zap' }
+  { id: 'combo', name: 'Forfaits', icon: 'Crown' }
 ];
 
 function getCategoryIcon(category: string | null): string {
   switch (category?.toLowerCase()) {
-    case 'cuts':
-    case 'coupe':
+    case 'haircut':
+    case 'beard':
       return 'Scissors';
     case 'styling':
-    case 'coiffage':
       return 'Sparkles';
     case 'treatment':
-    case 'soins':
       return 'Heart';
-    case 'color':
-    case 'coloration':
+    case 'coloring':
       return 'Palette';
-    case 'maintenance':
-    case 'entretien':
-      return 'Zap';
+    case 'combo':
+      return 'Crown';
     default:
       return 'Star';
   }
@@ -52,18 +49,18 @@ function formatDuration(minutes: number): string {
 
 function getDefaultImage(category: string | null): string {
   switch (category?.toLowerCase()) {
-    case 'cuts':
-    case 'coupe':
+    case 'haircut':
       return 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+    case 'beard':
+      return 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
     case 'styling':
-    case 'coiffage':
       return 'https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
     case 'treatment':
-    case 'soins':
       return 'https://images.unsplash.com/photo-1559599101-f09722fb4948?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
-    case 'color':
-    case 'coloration':
+    case 'coloring':
       return 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+    case 'combo':
+      return 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
     default:
       return 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
   }

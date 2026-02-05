@@ -633,6 +633,7 @@ export function ManageBarbershopClient({
         body: JSON.stringify({
           name: serviceName,
           description: serviceDescription || null,
+          image: serviceImage || null,
           price: parseFloat(servicePrice),
           duration: parseInt(serviceDuration),
           category: serviceCategory,
@@ -680,6 +681,7 @@ export function ManageBarbershopClient({
     setServicePrice(service.price);
     setServiceDuration(service.duration.toString());
     setServiceCategory(service.category || 'haircut');
+    setServiceImage(service.image || '');
   };
 
   const closeServiceModal = () => {
@@ -690,6 +692,7 @@ export function ManageBarbershopClient({
     setServicePrice('');
     setServiceDuration('');
     setServiceCategory('haircut');
+    setServiceImage('');
   };
 
   // Opening hours handlers
