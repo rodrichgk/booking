@@ -1,114 +1,11 @@
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
-import { Scissors, Sparkles, Palette, Zap, Crown, Heart, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { ServicesGrid } from '@/components/sections/services-grid';
-
-const getServices = (t: any) => [
-  {
-    id: 'natural-cuts',
-    name: 'Coupes Naturelles',
-    description: 'Coupes expertes pour toutes les textures de cheveux naturels et motifs de boucles',
-    icon: 'Scissors',
-    price: 'À partir de 45€',
-    duration: '45-60 min',
-    image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    popular: true,
-    category: 'cuts',
-    features: [
-      'Consultation personnalisée',
-      'Coupe adaptée à votre texture',
-      'Conseils d\'entretien',
-      'Produits naturels'
-    ]
-  },
-  {
-    id: 'protective-styles',
-    name: 'Coiffures Protectrices',
-    description: 'Tresses, twists et styles qui protègent vos cheveux naturels',
-    icon: 'Sparkles',
-    price: 'À partir de 80€',
-    duration: '2-4 heures',
-    image: 'https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    popular: true,
-    category: 'styling',
-    features: [
-      'Tresses classiques et modernes',
-      'Twists et vanilles',
-      'Chignons protecteurs',
-      'Durée 4-8 semaines'
-    ]
-  },
-  {
-    id: 'loc-maintenance',
-    name: 'Entretien des Locks',
-    description: 'Soins professionnels pour locks à chaque étape de développement',
-    icon: 'Zap',
-    price: 'À partir de 60€',
-    duration: '1-2 heures',
-    image: 'https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    popular: false,
-    category: 'maintenance',
-    features: [
-      'Retouche des racines',
-      'Nettoyage en profondeur',
-      'Hydratation des locks',
-      'Conseils de croissance'
-    ]
-  },
-  {
-    id: 'color-highlights',
-    name: 'Coloration & Mèches',
-    description: 'Techniques de coloration sûres pour cheveux texturés et naturels',
-    icon: 'Palette',
-    price: 'À partir de 120€',
-    duration: '2-3 heures',
-    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    popular: false,
-    category: 'color',
-    features: [
-      'Coloration sans ammoniaque',
-      'Mèches naturelles',
-      'Soins post-coloration',
-      'Couleurs tendance'
-    ]
-  },
-  {
-    id: 'treatments',
-    name: 'Soins Capillaires',
-    description: 'Traitements profonds pour nourrir et réparer vos cheveux',
-    icon: 'Heart',
-    price: 'À partir de 50€',
-    duration: '1-1.5 heures',
-    image: 'https://images.unsplash.com/photo-1559599101-f09722fb4948?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    popular: true,
-    category: 'treatment',
-    features: [
-      'Masques hydratants',
-      'Soins protéinés',
-      'Traitements à l\'huile chaude',
-      'Produits bio et naturels'
-    ]
-  },
-  {
-    id: 'styling-special',
-    name: 'Coiffage Événementiel',
-    description: 'Coiffures élégantes pour occasions spéciales',
-    icon: 'Crown',
-    price: 'À partir de 90€',
-    duration: '1.5-2.5 heures',
-    image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    popular: false,
-    category: 'styling',
-    features: [
-      'Chignons sophistiqués',
-      'Coiffures de mariage',
-      'Styles de soirée',
-      'Accessoires inclus'
-    ]
-  }
-];
+import { db } from '@/lib/db';
+import { services as servicesTable, barbershops } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 const categories = [
   { id: 'all', name: 'Tous les Services', icon: 'Star' },
@@ -119,10 +16,102 @@ const categories = [
   { id: 'maintenance', name: 'Entretien', icon: 'Zap' }
 ];
 
-export default function ServicesPage() {
-  const t = useTranslations('services');
-  const tCommon = useTranslations('common');
-  const services = getServices(t);
+function getCategoryIcon(category: string | null): string {
+  switch (category?.toLowerCase()) {
+    case 'cuts':
+    case 'coupe':
+      return 'Scissors';
+    case 'styling':
+    case 'coiffage':
+      return 'Sparkles';
+    case 'treatment':
+    case 'soins':
+      return 'Heart';
+    case 'color':
+    case 'coloration':
+      return 'Palette';
+    case 'maintenance':
+    case 'entretien':
+      return 'Zap';
+    default:
+      return 'Star';
+  }
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  return `${hours}h${remainingMinutes}`;
+}
+
+function getDefaultImage(category: string | null): string {
+  switch (category?.toLowerCase()) {
+    case 'cuts':
+    case 'coupe':
+      return 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+    case 'styling':
+    case 'coiffage':
+      return 'https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+    case 'treatment':
+    case 'soins':
+      return 'https://images.unsplash.com/photo-1559599101-f09722fb4948?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+    case 'color':
+    case 'coloration':
+      return 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+    default:
+      return 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+  }
+}
+
+export default async function ServicesPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'services' });
+  const tCommon = await getTranslations({ locale, namespace: 'common' });
+
+  // Fetch real services from the database (only from active barbershops)
+  const dbServices = await db
+    .select({
+      id: servicesTable.id,
+      name: servicesTable.name,
+      description: servicesTable.description,
+      image: servicesTable.image,
+      price: servicesTable.price,
+      duration: servicesTable.duration,
+      category: servicesTable.category,
+      isActive: servicesTable.isActive,
+      barbershopId: servicesTable.barbershopId,
+      barbershopName: barbershops.name,
+    })
+    .from(servicesTable)
+    .innerJoin(barbershops, eq(servicesTable.barbershopId, barbershops.id))
+    .where(
+      and(
+        eq(servicesTable.isActive, true),
+        eq(barbershops.isActive, true)
+      )
+    );
+
+  // Transform database services to the format expected by ServicesGrid
+  const services = dbServices.map((service, index) => ({
+    id: service.id,
+    name: service.name,
+    description: service.description || '',
+    icon: getCategoryIcon(service.category),
+    price: `€${parseFloat(service.price).toFixed(2)}`,
+    duration: formatDuration(service.duration),
+    image: service.image || getDefaultImage(service.category),
+    popular: index < 3, // Mark first 3 as popular
+    category: service.category || 'other',
+    barbershopName: service.barbershopName,
+    barbershopId: service.barbershopId,
+    features: [],
+  }));
 
   return (
     <div className="min-h-screen bg-white">

@@ -15,6 +15,8 @@ interface Service {
   popular: boolean;
   category: string;
   features: string[];
+  barbershopName?: string;
+  barbershopId?: string;
 }
 
 interface Category {
@@ -76,6 +78,12 @@ export function ServicesGrid({ services, categories }: ServicesGridProps) {
       {/* Services Grid */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {filteredServices.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">Aucun service disponible pour le moment.</p>
+              <p className="text-gray-400 mt-2">Les salons actifs ajouteront bientôt leurs services.</p>
+            </div>
+          ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredServices.map((service) => {
               const IconComponent = iconMap[service.icon as keyof typeof iconMap];
@@ -103,6 +111,11 @@ export function ServicesGrid({ services, categories }: ServicesGridProps) {
                     <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
                       {service.name}
                     </h3>
+                    {service.barbershopName && (
+                      <p className="text-sm text-primary-600 font-medium mb-2">
+                        {service.barbershopName}
+                      </p>
+                    )}
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                       {service.description}
                     </p>
@@ -117,25 +130,27 @@ export function ServicesGrid({ services, categories }: ServicesGridProps) {
                       </div>
                     </div>
 
-                    <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Inclus :</h4>
-                      <ul className="text-sm text-gray-600 space-y-1">
-                        {service.features.slice(0, 2).map((feature, index) => (
-                          <li key={index} className="flex items-center">
-                            <div className="w-1.5 h-1.5 bg-primary-500 rounded-full mr-2"></div>
-                            {feature}
-                          </li>
-                        ))}
-                        {service.features.length > 2 && (
-                          <li className="text-primary-600 font-medium">
-                            +{service.features.length - 2} autres avantages
-                          </li>
-                        )}
-                      </ul>
-                    </div>
+                    {service.features.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Inclus :</h4>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                          {service.features.slice(0, 2).map((feature, index) => (
+                            <li key={index} className="flex items-center">
+                              <div className="w-1.5 h-1.5 bg-primary-500 rounded-full mr-2"></div>
+                              {feature}
+                            </li>
+                          ))}
+                          {service.features.length > 2 && (
+                            <li className="text-primary-600 font-medium">
+                              +{service.features.length - 2} autres avantages
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
 
                     <Link
-                      href={`/services/${service.id}/book`}
+                      href={service.barbershopId ? `/barbershops/${service.barbershopId}` : `/barbershops`}
                       className="w-full bg-primary-600 hover:bg-primary-700 text-white text-center py-3 px-4 rounded-lg font-medium transition-colors duration-200 block"
                     >
                       Réserver ce Service
@@ -145,6 +160,7 @@ export function ServicesGrid({ services, categories }: ServicesGridProps) {
               );
             })}
           </div>
+          )}
         </div>
       </section>
     </>
