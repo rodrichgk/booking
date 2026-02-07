@@ -45,6 +45,7 @@ interface Barber {
   specialties: string[] | null;
   experience: number | null;
   rating: string | null;
+  bio: string | null;
   isActive: boolean;
   createdAt: Date;
 }
@@ -109,10 +110,12 @@ export function ManageBarbershopClient({
 
   // Barber form states
   const [isAddingBarber, setIsAddingBarber] = useState(false);
+  const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
   const [barberName, setBarberName] = useState('');
   const [barberEmail, setBarberEmail] = useState('');
   const [barberPhone, setBarberPhone] = useState('');
   const [barberPassword, setBarberPassword] = useState('');
+  const [barberBio, setBarberBio] = useState('');
 
   // Shop edit states
   const [isEditingShop, setIsEditingShop] = useState(false);
@@ -518,6 +521,73 @@ export function ManageBarbershopClient({
     }
   };
 
+  const openEditBarberModal = (barber: Barber) => {
+    setEditingBarber(barber);
+    setBarberName(barber.name || '');
+    setBarberBio(barber.bio || '');
+  };
+
+  const closeBarberModal = () => {
+    setIsAddingBarber(false);
+    setEditingBarber(null);
+    setBarberName('');
+    setBarberEmail('');
+    setBarberPhone('');
+    setBarberPassword('');
+    setBarberBio('');
+  };
+
+  const handleEditBarber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBarber || !barberName.trim()) {
+      toast({
+        variant: 'warning',
+        title: 'Attention',
+        description: 'Le nom est obligatoire',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/barbers/${editingBarber.id}/update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: barberName,
+          bio: barberBio || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast({
+          variant: 'success',
+          title: 'Succès',
+          description: 'Coiffeur modifié avec succès!',
+        });
+        closeBarberModal();
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast({
+          variant: 'error',
+          title: 'Erreur',
+          description: data.error || 'Une erreur est survenue',
+        });
+      }
+    } catch (error) {
+      console.error('Error editing barber:', error);
+      toast({
+        variant: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleServiceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -798,13 +868,13 @@ export function ManageBarbershopClient({
             </div>
           </div>
 
-          <div className="flex space-x-1 mt-6 border-b border-gray-200">
+          <div className="flex overflow-x-auto scrollbar-hide mt-6 border-b border-gray-200 -mx-4 px-4 sm:mx-0 sm:px-0">
             {tabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-colors ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'
+                className={`flex items-center space-x-2 px-3 sm:px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'
                   }`}>
                 <tab.icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                <span className="text-sm sm:text-base">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -1082,14 +1152,18 @@ export function ManageBarbershopClient({
                       )}
                     </div>
 
-                    <div className="flex items-center space-x-2 ml-4">
-                      <button className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                    <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-100">
+                      <button 
+                        onClick={() => openEditBarberModal(barber)}
+                        className="flex-1 flex items-center justify-center space-x-1 p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                         <Edit2 className="w-4 h-4" />
+                        <span className="text-sm">Modifier</span>
                       </button>
                       <button
                         onClick={() => handleDeleteBarber(barber.id, barber.name || 'ce coiffeur')}
-                        className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        className="flex-1 flex items-center justify-center space-x-1 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4" />
+                        <span className="text-sm">Supprimer</span>
                       </button>
                     </div>
                   </div>
@@ -1735,6 +1809,65 @@ export function ManageBarbershopClient({
                   disabled={isSubmitting}
                   className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSubmitting ? 'Ajout...' : 'Ajouter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Barber Modal */}
+      {editingBarber && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900">Modifier le Coiffeur</h3>
+                <button
+                  onClick={closeBarberModal}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleEditBarber} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom complet <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={barberName}
+                  onChange={(e) => setBarberName(e.target.value)}
+                  placeholder="Ex: Jean Dupont"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Biographie
+                </label>
+                <textarea
+                  value={barberBio}
+                  onChange={(e) => setBarberBio(e.target.value)}
+                  placeholder="Décrivez l'expérience et les spécialités du coiffeur..."
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closeBarberModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
               </div>
             </form>
