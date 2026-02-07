@@ -79,6 +79,7 @@ export const barbers = pgTable('barbers', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id).notNull(),
   barbershopId: uuid('barbershop_id').references(() => barbershops.id).notNull(),
+  name: varchar('name', { length: 255 }),
   profileImage: text('profile_image'),
   galleryImages: jsonb('gallery_images').$type<string[]>().default([]),
   youtubeLinks: jsonb('youtube_links').$type<string[]>().default([]),

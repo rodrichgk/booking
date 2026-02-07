@@ -69,23 +69,31 @@ export default async function ManageBarbershopPage({
   }
 
   // Fetch barbers for this barbershop
-  const shopBarbers = await db
+  const shopBarbersRaw = await db
     .select({
       id: barbers.id,
       userId: barbers.userId,
-      name: users.name,
+      barberName: barbers.name,
+      userName: users.name,
       email: users.email,
       phone: users.phone,
       profileImage: barbers.profileImage,
       specialties: barbers.specialties,
       experience: barbers.experience,
       rating: barbers.rating,
+      bio: barbers.bio,
       isActive: barbers.isActive,
       createdAt: barbers.createdAt,
     })
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))
     .where(eq(barbers.barbershopId, id));
+
+  // Use barber's custom name if set, otherwise fall back to user's name
+  const shopBarbers = shopBarbersRaw.map(b => ({
+    ...b,
+    name: b.barberName || b.userName,
+  }));
 
   // Fetch services for this barbershop
   const shopServices = await db

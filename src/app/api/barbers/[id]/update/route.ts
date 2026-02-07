@@ -58,6 +58,9 @@ export async function PATCH(
       updatedAt: new Date(),
     };
 
+    if (body.name !== undefined) {
+      updateData.name = body.name;
+    }
     if (body.profileImage !== undefined) {
       updateData.profileImage = body.profileImage;
     }
