@@ -100,6 +100,8 @@ export async function POST(request: NextRequest) {
           status VARCHAR(50) NOT NULL DEFAULT 'pending',
           purchased_at TIMESTAMP DEFAULT NOW() NOT NULL
         )`,
+        // Add name column to barbers table for editable display name
+        `ALTER TABLE barbers ADD COLUMN IF NOT EXISTS name VARCHAR(255)`,
       ];
 
       const results = [];
