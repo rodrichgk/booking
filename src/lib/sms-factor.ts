@@ -138,10 +138,15 @@ export async function sendMarketingCampaign(
       sender,
     });
 
+    console.log('SMS Factor API response:', JSON.stringify(result));
+
+    // SMS Factor returns status 1 for success, but also check for sent count
+    const isSuccess = result.status === 1 || (result.sent !== undefined && result.sent > 0);
+
     return {
-      success: result.status === 1,
-      sent: result.sent || validNumbers.length,
-      failed: (result.invalid || 0) + (result.blacklisted || 0),
+      success: Boolean(isSuccess),
+      sent: result.sent || (isSuccess ? validNumbers.length : 0),
+      failed: (result.invalid || 0) + (result.blacklisted || 0) + (result.duplicated || 0),
       cost: result.cost || 0,
       ticket: result.ticket,
     };
