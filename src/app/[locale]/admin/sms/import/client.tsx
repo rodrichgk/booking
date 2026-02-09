@@ -24,6 +24,7 @@ interface FieldMapping {
   gender: string;
   phone1: string;
   phone2: string;
+  phone3: string;
 }
 
 interface MappedContact {
@@ -32,6 +33,7 @@ interface MappedContact {
   gender: string;
   phone1: string;
   phone2: string;
+  phone3: string;
 }
 
 const TARGET_FIELDS = [
@@ -40,10 +42,11 @@ const TARGET_FIELDS = [
   { key: 'gender', label: 'Genre', required: false },
   { key: 'phone1', label: 'Téléphone 1', required: true },
   { key: 'phone2', label: 'Téléphone 2', required: false },
+  { key: 'phone3', label: 'Téléphone 3', required: false },
 ];
 
 export function CSVImportClient({ locale }: CSVImportClientProps) {
-  const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'complete'>('upload');
+  const [step, setStep] = useState<'upload' | 'mapping' | 'filter' | 'preview' | 'complete'>('upload');
   const [fileName, setFileName] = useState('');
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [fieldMapping, setFieldMapping] = useState<FieldMapping>({
@@ -52,6 +55,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     gender: '',
     phone1: '',
     phone2: '',
+    phone3: '',
   });
   const [mappedContacts, setMappedContacts] = useState<MappedContact[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -146,6 +150,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           gender: '',
           phone1: '',
           phone2: '',
+          phone3: '',
         };
 
         const lowerHeaders = data.headers.map(h => h.toLowerCase().trim());
@@ -173,6 +178,10 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           // Phone 2 patterns
           if (/^(t[ée]l[ée]phone\s*2|phone\s*2|mobile\s*2|num[ée]ro\s*2|tel\s*2|portable\s*2)$/i.test(header)) {
             autoMapping.phone2 = originalHeader;
+          }
+          // Phone 3 patterns
+          if (/^(t[ée]l[ée]phone\s*3|phone\s*3|mobile\s*3|num[ée]ro\s*3|tel\s*3|portable\s*3)$/i.test(header)) {
+            autoMapping.phone3 = originalHeader;
           }
         });
 
@@ -208,21 +217,23 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
       gender: fieldMapping.gender ? (row[fieldMapping.gender] || '') : '',
       phone1: row[fieldMapping.phone1] || '',
       phone2: fieldMapping.phone2 ? (row[fieldMapping.phone2] || '') : '',
+      phone3: fieldMapping.phone3 ? (row[fieldMapping.phone3] || '') : '',
     })).filter(contact => contact.firstName || contact.lastName || contact.phone1);
 
     setMappedContacts(contacts);
-    setStep('preview');
+    setStep('filter');
   };
 
   // Export to CSV
   const exportCSV = () => {
-    const headers = ['Prénom', 'Nom', 'Genre', 'Téléphone 1', 'Téléphone 2'];
+    const headers = ['Prénom', 'Nom', 'Genre', 'Téléphone 1', 'Téléphone 2', 'Téléphone 3'];
     const rows = mappedContacts.map(c => [
       c.firstName,
       c.lastName,
       c.gender,
       c.phone1,
       c.phone2,
+      c.phone3,
     ]);
 
     const csvContent = [
@@ -249,9 +260,20 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     mappedContacts.forEach(c => {
       if (c.phone1) phones.push(c.phone1);
       if (c.phone2) phones.push(c.phone2);
+      if (c.phone3) phones.push(c.phone3);
     });
     return [...new Set(phones)].filter(p => p.length >= 10);
   };
+
+  // Filter contacts without any phone number
+  const filterContactsWithoutPhone = () => {
+    const filtered = mappedContacts.filter(c => c.phone1 || c.phone2 || c.phone3);
+    setMappedContacts(filtered);
+    setStep('preview');
+  };
+
+  // Get count of contacts without phone
+  const contactsWithoutPhone = mappedContacts.filter(c => !c.phone1 && !c.phone2 && !c.phone3).length;
 
   // Copy phone numbers to clipboard
   const copyPhoneNumbers = () => {
@@ -271,6 +293,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
       gender: '',
       phone1: '',
       phone2: '',
+      phone3: '',
     });
     setMappedContacts([]);
     setError(null);
@@ -299,16 +322,16 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
             </div>
 
             {/* Progress Steps */}
-            <div className="flex items-center mt-6 space-x-4">
-              {['upload', 'mapping', 'preview', 'complete'].map((s, index) => (
-                <div key={s} className="flex items-center">
+            <div className="flex items-center mt-6 space-x-4 overflow-x-auto">
+              {['upload', 'mapping', 'filter', 'preview', 'complete'].map((s, index) => (
+                <div key={s} className="flex items-center flex-shrink-0">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     step === s ? 'bg-primary-600 text-white' :
-                    ['upload', 'mapping', 'preview', 'complete'].indexOf(step) > index
+                    ['upload', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index
                       ? 'bg-green-500 text-white'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
-                    {['upload', 'mapping', 'preview', 'complete'].indexOf(step) > index ? (
+                    {['upload', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index ? (
                       <Check className="w-4 h-4" />
                     ) : (
                       index + 1
@@ -317,10 +340,11 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   <span className={`ml-2 text-sm ${step === s ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
                     {s === 'upload' && 'Upload'}
                     {s === 'mapping' && 'Mapping'}
+                    {s === 'filter' && 'Filtrer'}
                     {s === 'preview' && 'Aperçu'}
                     {s === 'complete' && 'Terminé'}
                   </span>
-                  {index < 3 && <ArrowRight className="w-4 h-4 mx-4 text-gray-300" />}
+                  {index < 4 && <ArrowRight className="w-4 h-4 mx-4 text-gray-300" />}
                 </div>
               ))}
             </div>
@@ -448,7 +472,133 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
             </div>
           )}
 
-          {/* Step 3: Preview */}
+          {/* Step 3: Filter */}
+          {step === 'filter' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Filtrer les contacts</h2>
+                    <p className="text-gray-600 mt-1">
+                      Supprimez les lignes sans numéro de téléphone
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setStep('mapping')}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    ← Modifier le mapping
+                  </button>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 bg-blue-50 rounded-lg text-center">
+                    <Users className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-blue-700">{mappedContacts.length}</p>
+                    <p className="text-sm text-blue-600">Contacts total</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg text-center">
+                    <Phone className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-green-700">
+                      {mappedContacts.length - contactsWithoutPhone}
+                    </p>
+                    <p className="text-sm text-green-600">Avec téléphone</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg text-center">
+                    <AlertCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-red-700">{contactsWithoutPhone}</p>
+                    <p className="text-sm text-red-600">Sans téléphone</p>
+                  </div>
+                </div>
+
+                {contactsWithoutPhone > 0 && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 mr-3" />
+                      <div>
+                        <p className="text-amber-800 font-medium">
+                          {contactsWithoutPhone} contact(s) n'ont aucun numéro de téléphone
+                        </p>
+                        <p className="text-amber-700 text-sm mt-1">
+                          Ces contacts ne pourront pas recevoir de SMS. Cliquez sur "Supprimer les lignes sans téléphone" pour les retirer.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview of contacts without phone */}
+                {contactsWithoutPhone > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">
+                      Contacts sans téléphone (aperçu)
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="bg-red-50">
+                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Prénom</th>
+                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Nom</th>
+                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Tél. 1</th>
+                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Tél. 2</th>
+                            <th className="px-3 py-2 text-left text-gray-700 font-medium">Tél. 3</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mappedContacts
+                            .filter(c => !c.phone1 && !c.phone2 && !c.phone3)
+                            .slice(0, 10)
+                            .map((contact, index) => (
+                              <tr key={index} className="border-b border-gray-100">
+                                <td className="px-3 py-2 text-gray-600">{contact.firstName || '-'}</td>
+                                <td className="px-3 py-2 text-gray-600">{contact.lastName || '-'}</td>
+                                <td className="px-3 py-2 text-gray-400">-</td>
+                                <td className="px-3 py-2 text-gray-400">-</td>
+                                <td className="px-3 py-2 text-gray-400">-</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                      {contactsWithoutPhone > 10 && (
+                        <p className="text-sm text-gray-500 mt-2">
+                          ... et {contactsWithoutPhone - 10} autres
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <button
+                    onClick={() => setStep('preview')}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Garder tous les contacts
+                  </button>
+                  {contactsWithoutPhone > 0 ? (
+                    <button
+                      onClick={filterContactsWithoutPhone}
+                      className="flex items-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Supprimer {contactsWithoutPhone} ligne(s) sans téléphone
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setStep('preview')}
+                      className="flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      Continuer
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Preview */}
           {step === 'preview' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -461,16 +611,16 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   </div>
                   <div className="flex items-center space-x-3">
                     <button
-                      onClick={() => setStep('mapping')}
+                      onClick={() => setStep('filter')}
                       className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
                     >
-                      ← Modifier le mapping
+                      ← Retour au filtre
                     </button>
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                   <div className="p-4 bg-blue-50 rounded-lg text-center">
                     <Users className="w-6 h-6 text-blue-600 mx-auto mb-2" />
                     <p className="text-2xl font-bold text-blue-700">{mappedContacts.length}</p>
@@ -479,10 +629,10 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   <div className="p-4 bg-green-50 rounded-lg text-center">
                     <Phone className="w-6 h-6 text-green-600 mx-auto mb-2" />
                     <p className="text-2xl font-bold text-green-700">{getPhoneNumbers().length}</p>
-                    <p className="text-sm text-green-600">Téléphones uniques</p>
+                    <p className="text-sm text-green-600">Tél. uniques</p>
                   </div>
                   <div className="p-4 bg-purple-50 rounded-lg text-center">
-                    <User className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                    <Phone className="w-6 h-6 text-purple-600 mx-auto mb-2" />
                     <p className="text-2xl font-bold text-purple-700">
                       {mappedContacts.filter(c => c.phone1).length}
                     </p>
@@ -494,6 +644,13 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                       {mappedContacts.filter(c => c.phone2).length}
                     </p>
                     <p className="text-sm text-amber-600">Avec Tél. 2</p>
+                  </div>
+                  <div className="p-4 bg-teal-50 rounded-lg text-center">
+                    <Phone className="w-6 h-6 text-teal-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-teal-700">
+                      {mappedContacts.filter(c => c.phone3).length}
+                    </p>
+                    <p className="text-sm text-teal-600">Avec Tél. 3</p>
                   </div>
                 </div>
 
@@ -508,6 +665,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                         <th className="px-3 py-2 text-left text-gray-700 font-medium">Genre</th>
                         <th className="px-3 py-2 text-left text-gray-700 font-medium">Téléphone 1</th>
                         <th className="px-3 py-2 text-left text-gray-700 font-medium">Téléphone 2</th>
+                        <th className="px-3 py-2 text-left text-gray-700 font-medium">Téléphone 3</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -519,6 +677,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                           <td className="px-3 py-2 text-gray-600">{contact.gender || '-'}</td>
                           <td className="px-3 py-2 text-gray-900 font-mono">{contact.phone1 || '-'}</td>
                           <td className="px-3 py-2 text-gray-600 font-mono">{contact.phone2 || '-'}</td>
+                          <td className="px-3 py-2 text-gray-600 font-mono">{contact.phone3 || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
