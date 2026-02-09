@@ -3,8 +3,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { sendMarketingCampaign, simulateSMS } from '@/lib/sms-factor';
+import { sendPersonalizedCampaign, simulatePersonalizedSMS } from '@/lib/sms-factor';
 import { isNotNull } from 'drizzle-orm';
+
+interface Recipient {
+  phone: string;
+  firstName?: string;
+  lastName?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +26,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { message, phoneNumbers, sender, simulate } = body;
+    const { message, recipients, sender, simulate } = body as {
+      message: string;
+      recipients: Recipient[];
+      sender?: string;
+      simulate?: boolean;
+    };
 
     if (!message || message.trim().length === 0) {
       return NextResponse.json(
@@ -29,30 +40,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!phoneNumbers || phoneNumbers.length === 0) {
+    if (!recipients || recipients.length === 0) {
       return NextResponse.json(
-        { error: 'Au moins un numéro de téléphone est requis' },
+        { error: 'Au moins un destinataire est requis' },
         { status: 400 }
       );
     }
 
     // If simulate mode, use simulation endpoint
     if (simulate) {
-      const result = await simulateSMS({
-        message,
-        recipients: phoneNumbers,
+      const result = await simulatePersonalizedSMS({
+        messageTemplate: message,
+        recipients,
         sender,
       });
 
       return NextResponse.json({
         success: true,
         simulated: true,
+        sent: result.sent,
+        failed: result.failed,
         result,
       });
     }
 
-    // Send actual campaign
-    const result = await sendMarketingCampaign(message, phoneNumbers, sender);
+    // Send actual personalized campaign
+    const result = await sendPersonalizedCampaign(message, recipients, sender);
 
     return NextResponse.json({
       success: result.success,
