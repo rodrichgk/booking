@@ -37,6 +37,7 @@ export default async function BarbershopsPage({ params }: { params: Promise<{ lo
       rating: barbershops.rating,
       reviewCount: barbershops.reviewCount,
       isActive: barbershops.isActive,
+      openingHours: barbershops.openingHours,
       subscriptionStatus: barbershops.subscriptionStatus,
       currentPeriodEnd: barbershops.currentPeriodEnd,
       createdAt: barbershops.createdAt,
