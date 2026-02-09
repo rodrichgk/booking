@@ -16,6 +16,17 @@ interface User {
   role: string;
 }
 
+interface Recipient {
+  phone: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+const TEMPLATE_VARIABLES = [
+  { key: '{Prénom}', label: 'Prénom', description: 'Prénom du contact' },
+  { key: '{Nom}', label: 'Nom', description: 'Nom du contact' },
+];
+
 interface SMSMarketingClientProps {
   locale: string;
 }
@@ -103,23 +114,53 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
     });
   };
 
-  const getSelectedPhoneNumbers = (): string[] => {
-    const userPhones = users
+  const getSelectedRecipients = (): Recipient[] => {
+    // Get recipients from selected users
+    const userRecipients: Recipient[] = users
       .filter(u => selectedUsers.includes(u.id) && u.phone)
-      .map(u => u.phone!);
+      .map(u => {
+        const nameParts = (u.name || '').split(' ');
+        return {
+          phone: u.phone!,
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+        };
+      });
     
-    const customPhones = customNumbers
-      .split(/[,\n;]/)
-      .map(p => p.trim())
-      .filter(p => p.length > 0);
+    // Parse custom numbers - support format: phone or phone,firstName,lastName
+    const customRecipients: Recipient[] = customNumbers
+      .split(/[\n;]/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => {
+        const parts = line.split(',').map(p => p.trim());
+        return {
+          phone: parts[0],
+          firstName: parts[1] || '',
+          lastName: parts[2] || '',
+        };
+      });
 
-    return [...new Set([...userPhones, ...customPhones])];
+    // Deduplicate by phone number, keeping first occurrence
+    const seen = new Set<string>();
+    const allRecipients: Recipient[] = [];
+    for (const r of [...userRecipients, ...customRecipients]) {
+      if (!seen.has(r.phone)) {
+        seen.add(r.phone);
+        allRecipients.push(r);
+      }
+    }
+    return allRecipients;
+  };
+
+  const insertVariable = (variable: string) => {
+    setMessage(prev => prev + variable);
   };
 
   const handleSend = async (simulate: boolean = false) => {
-    const phoneNumbers = getSelectedPhoneNumbers();
+    const recipients = getSelectedRecipients();
     
-    if (phoneNumbers.length === 0) {
+    if (recipients.length === 0) {
       setResult({ success: false, error: 'Sélectionnez au moins un destinataire' });
       return;
     }
@@ -142,7 +183,7 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
-          phoneNumbers,
+          recipients,
           sender: sender || 'Orphelia',
           simulate,
         }),
@@ -179,7 +220,7 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
 
   const messageLength = message.length;
   const smsCount = Math.ceil(messageLength / 160) || 1;
-  const totalRecipients = getSelectedPhoneNumbers().length;
+  const totalRecipients = getSelectedRecipients().length;
 
   return (
     <>
@@ -247,15 +288,29 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Message
                     </label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className="text-xs text-gray-500 self-center">Variables :</span>
+                      {TEMPLATE_VARIABLES.map((v) => (
+                        <button
+                          key={v.key}
+                          type="button"
+                          onClick={() => insertVariable(v.key)}
+                          className="px-2 py-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded font-mono transition-colors"
+                          title={v.description}
+                        >
+                          {v.key}
+                        </button>
+                      ))}
+                    </div>
                     <textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Votre message marketing..."
+                      placeholder="Salut {Prénom}, c'est Maggie ! Grande nouvelle..."
                       rows={6}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                     />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>{messageLength} caractères</span>
+                      <span>{messageLength} caractères (variables non remplacées)</span>
                       <span>{smsCount} SMS par destinataire</span>
                     </div>
                   </div>
@@ -267,10 +322,13 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
                     <textarea
                       value={customNumbers}
                       onChange={(e) => setCustomNumbers(e.target.value)}
-                      placeholder="Entrez des numéros séparés par des virgules ou retours à la ligne&#10;Ex: 0612345678, 0698765432"
+                      placeholder="Format: numéro,prénom,nom (un par ligne)&#10;Ex: 0612345678,Marie,Dupont&#10;0698765432,Jean,Martin"
                       rows={3}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Format: numéro,prénom,nom - Le prénom et nom sont utilisés pour les variables {'{Prénom}'} et {'{Nom}'}
+                    </p>
                   </div>
                 </div>
               </div>

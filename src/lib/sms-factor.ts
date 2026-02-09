@@ -37,6 +37,29 @@ interface CampaignResult {
   error?: string;
 }
 
+interface PersonalizedRecipient {
+  phone: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+interface PersonalizedSMSOptions {
+  messageTemplate: string;
+  recipients: PersonalizedRecipient[];
+  sender?: string;
+}
+
+/**
+ * Replace template variables in message with recipient data
+ */
+function personalizeMessage(template: string, recipient: PersonalizedRecipient): string {
+  return template
+    .replace(/\{Prénom\}/g, recipient.firstName || '')
+    .replace(/\{Nom\}/g, recipient.lastName || '')
+    .replace(/\{prenom\}/gi, recipient.firstName || '')
+    .replace(/\{nom\}/gi, recipient.lastName || '');
+}
+
 /**
  * Format phone number to SMS Factor format (remove + and spaces)
  */
@@ -252,5 +275,141 @@ export async function simulateSMS(options: SendSMSOptions): Promise<SMSFactorRes
     total: options.recipients.length,
     invalid: results.filter(r => r.status !== 1).length,
     ticket: results[0]?.ticket,
+  };
+}
+
+/**
+ * Send personalized SMS campaign with template variables
+ * Replaces {Prénom} and {Nom} with recipient data
+ */
+export async function sendPersonalizedCampaign(
+  messageTemplate: string,
+  recipients: PersonalizedRecipient[],
+  sender?: string
+): Promise<CampaignResult> {
+  const token = process.env.SMS_FACTOR_TOKEN;
+  
+  if (!token) {
+    throw new Error('SMS_FACTOR_TOKEN is not configured');
+  }
+
+  let totalSent = 0;
+  let totalFailed = 0;
+  let totalCost = 0;
+  let lastTicket: string | undefined;
+
+  for (const recipient of recipients) {
+    try {
+      const formattedPhone = formatPhoneNumber(recipient.phone);
+      if (formattedPhone.length < 10 || formattedPhone.length > 15) {
+        totalFailed++;
+        continue;
+      }
+
+      const personalizedMessage = personalizeMessage(messageTemplate, recipient);
+      
+      const params = new URLSearchParams({
+        text: personalizedMessage,
+        to: formattedPhone,
+      });
+      
+      if (sender) {
+        params.append('sender', sender);
+      }
+
+      const response = await fetch(`${SMS_FACTOR_API_URL}/send?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      console.log(`SMS Factor personalized response for ${formattedPhone}:`, JSON.stringify(data));
+
+      if (data.status === 1) {
+        totalSent++;
+        totalCost += data.cost || 0;
+        lastTicket = data.ticket;
+      } else {
+        totalFailed++;
+      }
+    } catch (error) {
+      console.error(`Error sending to ${recipient.phone}:`, error);
+      totalFailed++;
+    }
+  }
+
+  return {
+    success: totalSent > 0,
+    sent: totalSent,
+    failed: totalFailed,
+    cost: totalCost,
+    ticket: lastTicket,
+  };
+}
+
+/**
+ * Simulate personalized SMS sending (for testing without using credits)
+ */
+export async function simulatePersonalizedSMS(options: PersonalizedSMSOptions): Promise<CampaignResult> {
+  const token = process.env.SMS_FACTOR_TOKEN;
+  
+  if (!token) {
+    throw new Error('SMS_FACTOR_TOKEN is not configured');
+  }
+
+  let totalSent = 0;
+  let totalFailed = 0;
+  let totalCost = 0;
+
+  for (const recipient of options.recipients) {
+    try {
+      const formattedPhone = formatPhoneNumber(recipient.phone);
+      if (formattedPhone.length < 10 || formattedPhone.length > 15) {
+        totalFailed++;
+        continue;
+      }
+
+      const personalizedMessage = personalizeMessage(options.messageTemplate, recipient);
+      
+      const params = new URLSearchParams({
+        text: personalizedMessage,
+        to: formattedPhone,
+      });
+      
+      if (options.sender) {
+        params.append('sender', options.sender);
+      }
+
+      const response = await fetch(`${SMS_FACTOR_API_URL}/send/simulate?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      console.log(`SMS Factor simulate personalized for ${formattedPhone}:`, JSON.stringify(data));
+
+      if (data.status === 1) {
+        totalSent++;
+        totalCost += data.cost || 0;
+      } else {
+        totalFailed++;
+      }
+    } catch (error) {
+      console.error(`Error simulating for ${recipient.phone}:`, error);
+      totalFailed++;
+    }
+  }
+
+  return {
+    success: totalSent > 0,
+    sent: totalSent,
+    failed: totalFailed,
+    cost: totalCost,
   };
 }
