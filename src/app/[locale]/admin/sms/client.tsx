@@ -50,6 +50,22 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
     error?: string;
     simulated?: boolean;
   } | null>(null);
+  const [importedContacts, setImportedContacts] = useState<Recipient[]>([]);
+
+  // Load imported contacts from sessionStorage
+  useEffect(() => {
+    const stored = sessionStorage.getItem('smsImportedContacts');
+    if (stored) {
+      try {
+        const contacts = JSON.parse(stored);
+        setImportedContacts(contacts);
+        // Clear after loading
+        sessionStorage.removeItem('smsImportedContacts');
+      } catch (e) {
+        console.error('Error parsing imported contacts:', e);
+      }
+    }
+  }, []);
 
   // Fetch users with phone numbers
   useEffect(() => {
@@ -144,7 +160,8 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
     // Deduplicate by phone number, keeping first occurrence
     const seen = new Set<string>();
     const allRecipients: Recipient[] = [];
-    for (const r of [...userRecipients, ...customRecipients]) {
+    // Priority: imported contacts first, then users, then custom
+    for (const r of [...importedContacts, ...userRecipients, ...customRecipients]) {
       if (!seen.has(r.phone)) {
         seen.add(r.phone);
         allRecipients.push(r);
@@ -259,6 +276,30 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Imported contacts banner */}
+          {importedContacts.length > 0 && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                <div>
+                  <p className="text-green-800 font-medium">
+                    {importedContacts.length} contacts importés prêts à recevoir votre SMS
+                  </p>
+                  <p className="text-green-700 text-sm">
+                    Les variables {'{Prénom}'} et {'{Nom}'} seront remplacées automatiquement
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setImportedContacts([])}
+                className="text-green-600 hover:text-green-800 p-1"
+                title="Effacer les contacts importés"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Message Composer */}
             <div className="space-y-6">
