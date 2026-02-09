@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import {
   Upload, FileText, ArrowRight, Download, Check, X, AlertCircle,
-  ChevronDown, Users, Phone, User, RefreshCw
+  ChevronDown, Users, Phone, User, RefreshCw, Send
 } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/ui/header';
@@ -700,10 +700,28 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   </button>
                   <button
                     onClick={exportCSV}
-                    className="flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
+                    className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Exporter le CSV formaté
+                    Exporter CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Store contacts in sessionStorage for SMS page
+                      const smsContacts = mappedContacts.map(c => ({
+                        phone: c.phone1 || c.phone2 || c.phone3,
+                        firstName: c.firstName,
+                        lastName: c.lastName,
+                        phone2: c.phone2,
+                        phone3: c.phone3,
+                      })).filter(c => c.phone);
+                      sessionStorage.setItem('smsImportedContacts', JSON.stringify(smsContacts));
+                      window.location.href = `/${locale}/admin/sms?imported=true`;
+                    }}
+                    className="flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Envoyer SMS à ces contacts
                   </button>
                 </div>
               </div>
