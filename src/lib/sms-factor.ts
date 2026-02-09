@@ -63,7 +63,8 @@ function formatPhoneNumber(phone: string): string {
 }
 
 /**
- * Send SMS via SMS Factor API
+ * Send SMS via SMS Factor API (single message endpoint)
+ * Uses GET request with query parameters as per API docs
  */
 export async function sendSMS(options: SendSMSOptions): Promise<SMSFactorResponse> {
   const token = process.env.SMS_FACTOR_TOKEN;
@@ -72,39 +73,52 @@ export async function sendSMS(options: SendSMSOptions): Promise<SMSFactorRespons
     throw new Error('SMS_FACTOR_TOKEN is not configured');
   }
 
-  const recipients = options.recipients.map(phone => ({
-    value: formatPhoneNumber(phone)
-  }));
-
-  const payload = {
-    sms: {
-      message: {
-        text: options.message,
-        sender: options.sender || 'Orphelia',
-      },
-      recipients: {
-        gsm: recipients
-      }
-    }
-  };
-
-  const response = await fetch(`${SMS_FACTOR_API_URL}/send`, {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json();
+  // For single recipient, use the simple GET endpoint
+  // For multiple recipients, send one by one
+  const results: SMSFactorResponse[] = [];
   
-  if (!response.ok) {
-    throw new Error(data.message || 'SMS sending failed');
+  for (const phone of options.recipients) {
+    const formattedPhone = formatPhoneNumber(phone);
+    const params = new URLSearchParams({
+      text: options.message,
+      to: formattedPhone,
+    });
+    
+    if (options.sender) {
+      params.append('sender', options.sender);
+    }
+
+    const response = await fetch(`${SMS_FACTOR_API_URL}/send?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    console.log(`SMS Factor response for ${formattedPhone}:`, JSON.stringify(data));
+    
+    if (!response.ok) {
+      console.error(`SMS sending failed for ${formattedPhone}:`, data);
+    }
+    
+    results.push(data);
   }
 
-  return data;
+  // Aggregate results
+  const totalSent = results.filter(r => r.status === 1).length;
+  const totalCost = results.reduce((sum, r) => sum + (r.cost || 0), 0);
+  
+  return {
+    status: totalSent > 0 ? 1 : 0,
+    message: totalSent > 0 ? 'OK' : 'Failed',
+    sent: totalSent,
+    cost: totalCost,
+    total: options.recipients.length,
+    invalid: results.filter(r => r.status !== 1).length,
+    ticket: results[0]?.ticket,
+  };
 }
 
 /**
@@ -190,6 +204,7 @@ export async function getCreditsBalance(): Promise<{ credits: number }> {
 
 /**
  * Simulate SMS sending (for testing without using credits)
+ * Uses the simulate endpoint with GET request
  */
 export async function simulateSMS(options: SendSMSOptions): Promise<SMSFactorResponse> {
   const token = process.env.SMS_FACTOR_TOKEN;
@@ -198,37 +213,44 @@ export async function simulateSMS(options: SendSMSOptions): Promise<SMSFactorRes
     throw new Error('SMS_FACTOR_TOKEN is not configured');
   }
 
-  const recipients = options.recipients.map(phone => ({
-    value: formatPhoneNumber(phone)
-  }));
-
-  const payload = {
-    sms: {
-      message: {
-        text: options.message,
-        sender: options.sender || 'Orphelia',
-      },
-      recipients: {
-        gsm: recipients
-      }
-    }
-  };
-
-  const response = await fetch(`${SMS_FACTOR_API_URL}/send/simulate`, {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json();
+  // Simulate for each recipient
+  const results: SMSFactorResponse[] = [];
   
-  if (!response.ok) {
-    throw new Error(data.message || 'SMS simulation failed');
+  for (const phone of options.recipients) {
+    const formattedPhone = formatPhoneNumber(phone);
+    const params = new URLSearchParams({
+      text: options.message,
+      to: formattedPhone,
+    });
+    
+    if (options.sender) {
+      params.append('sender', options.sender);
+    }
+
+    const response = await fetch(`${SMS_FACTOR_API_URL}/send/simulate?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    console.log(`SMS Factor simulate response for ${formattedPhone}:`, JSON.stringify(data));
+    results.push(data);
   }
 
-  return data;
+  // Aggregate results
+  const totalSent = results.filter(r => r.status === 1).length;
+  const totalCost = results.reduce((sum, r) => sum + (r.cost || 0), 0);
+  
+  return {
+    status: totalSent > 0 ? 1 : 0,
+    message: totalSent > 0 ? 'OK' : 'Failed',
+    sent: totalSent,
+    cost: totalCost,
+    total: options.recipients.length,
+    invalid: results.filter(r => r.status !== 1).length,
+    ticket: results[0]?.ticket,
+  };
 }
