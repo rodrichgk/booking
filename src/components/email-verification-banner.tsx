@@ -51,13 +51,15 @@ export function EmailVerificationBanner({ email, userName }: EmailVerificationBa
             </div>
             <div className="flex-1">
               {isSent ? (
-                <p className="text-sm text-amber-800">
-                  <span className="font-medium">Email envoyé!</span> Vérifiez votre boîte de réception à {email}
-                </p>
+                <div className="text-sm text-amber-800">
+                  <p><span className="font-medium">✅ Email envoyé!</span> Vérifiez votre boîte de réception à <strong>{email}</strong></p>
+                  <p className="text-amber-700 mt-1">⚠️ Pensez à vérifier vos <strong>spams/courriers indésirables</strong> si vous ne le trouvez pas.</p>
+                </div>
               ) : (
-                <p className="text-sm text-amber-800">
-                  <span className="font-medium">Email non vérifié.</span> Veuillez vérifier votre adresse email pour accéder à toutes les fonctionnalités.
-                </p>
+                <div className="text-sm text-amber-800">
+                  <p><span className="font-medium">📧 Email non vérifié.</span> Vous devez vérifier votre email pour pouvoir réserver.</p>
+                  <p className="text-amber-700 mt-1">⚠️ Vérifiez vos <strong>spams/courriers indésirables</strong> - l'email peut s'y trouver!</p>
+                </div>
               )}
               {error && (
                 <p className="text-sm text-red-600 mt-1">{error}</p>
