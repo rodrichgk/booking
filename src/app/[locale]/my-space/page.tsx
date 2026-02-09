@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp, AlertCircle, Mail, Video } from 'lucide-react';
+import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp, AlertCircle, Mail, Video, MessageSquare } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { db } from '@/lib/db';
@@ -442,6 +442,13 @@ async function DevDashboard({ locale, stats: realStats }: { locale: string; stat
       icon: Video,
       color: 'indigo',
       link: `/${locale}/admin/courses`,
+    },
+    {
+      title: locale === 'fr' ? 'Marketing SMS' : 'SMS Marketing',
+      description: locale === 'fr' ? 'Envoyer des campagnes SMS aux clients' : 'Send SMS campaigns to customers',
+      icon: MessageSquare,
+      color: 'teal',
+      link: `/${locale}/admin/sms`,
     },
   ];
 

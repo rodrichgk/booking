@@ -7,12 +7,17 @@ import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
 
+interface OpeningHours {
+  [key: string]: { open: string; close: string; closed: boolean };
+}
+
 interface Barbershop {
   id: string;
   name: string;
   address: string;
   city: string;
   isActive: boolean;
+  openingHours: OpeningHours | null;
 }
 
 interface Barber {
@@ -59,11 +64,13 @@ const generateAvailableDates = () => {
   return dates;
 };
 
-// Generate time slots from 9am to 7pm, filtering past times if it's today
-const generateTimeSlots = (selectedDate: Date | null) => {
-  const slots = [];
+// Generate time slots based on shop's opening hours for the selected date
+const generateTimeSlots = (selectedDate: Date | null, openingHours: OpeningHours | null) => {
+  const slots: string[] = [];
+  if (!selectedDate) return slots;
+  
   const now = new Date();
-  const isToday = selectedDate && 
+  const isToday = 
     selectedDate.getDate() === now.getDate() &&
     selectedDate.getMonth() === now.getMonth() &&
     selectedDate.getFullYear() === now.getFullYear();
@@ -71,14 +78,33 @@ const generateTimeSlots = (selectedDate: Date | null) => {
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
   
-  for (let hour = 9; hour <= 19; hour++) {
+  // Get day name for opening hours lookup
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayName = days[selectedDate.getDay()];
+  
+  // Default hours if no opening hours set
+  let openHour = 9;
+  let closeHour = 19;
+  
+  if (openingHours && openingHours[dayName]) {
+    const dayHours = openingHours[dayName];
+    if (dayHours.closed) {
+      return slots; // Shop is closed this day
+    }
+    const [openH] = dayHours.open.split(':').map(Number);
+    const [closeH] = dayHours.close.split(':').map(Number);
+    openHour = openH;
+    closeHour = closeH;
+  }
+  
+  for (let hour = openHour; hour < closeHour; hour++) {
     // Add :00 slot
     if (!isToday || hour > currentHour || (hour === currentHour && currentMinutes < 0)) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
     }
     
     // Add :30 slot
-    if (hour < 19) {
+    if (hour < closeHour - 1 || (hour === closeHour - 1)) {
       if (!isToday || hour > currentHour || (hour === currentHour && currentMinutes < 30)) {
         slots.push(`${hour.toString().padStart(2, '0')}:30`);
       }
@@ -103,7 +129,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
   const [success, setSuccess] = useState(false);
 
   const availableDates = generateAvailableDates();
-  const availableTimeSlots = generateTimeSlots(selectedDate);
+  const availableTimeSlots = generateTimeSlots(selectedDate, shop.openingHours);
   const activeBarbers = barbers.filter(b => b.isActive);
 
   const formatDate = (date: Date) => {
