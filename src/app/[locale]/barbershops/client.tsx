@@ -7,6 +7,10 @@ import Image from 'next/image';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 
+interface OpeningHours {
+  [key: string]: { open: string; close: string; closed: boolean };
+}
+
 interface Barbershop {
   id: string;
   name: string;
@@ -20,6 +24,27 @@ interface Barbershop {
   rating: string | null;
   reviewCount: number | null;
   isActive: boolean;
+  openingHours: OpeningHours | null;
+}
+
+// Check if barbershop is currently open
+function isShopOpen(openingHours: OpeningHours | null): boolean {
+  if (!openingHours) return false;
+  
+  const now = new Date();
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const today = days[now.getDay()];
+  const todayHours = openingHours[today];
+  
+  if (!todayHours || todayHours.closed) return false;
+  
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+  const [openHour, openMin] = todayHours.open.split(':').map(Number);
+  const [closeHour, closeMin] = todayHours.close.split(':').map(Number);
+  const openTime = openHour * 60 + openMin;
+  const closeTime = closeHour * 60 + closeMin;
+  
+  return currentTime >= openTime && currentTime < closeTime;
 }
 
 interface BarbershopsClientProps {
@@ -190,9 +215,15 @@ export function BarbershopsClient({ barbershops, locale }: BarbershopsClientProp
                   </div>
                 )}
                 <div className="absolute top-4 right-4">
-                  <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-body font-semibold shadow-lg">
-                    Actif
-                  </span>
+                  {isShopOpen(shop.openingHours) ? (
+                    <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-body font-semibold shadow-lg">
+                      {locale === 'fr' ? 'Ouvert' : 'Open'}
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-gray-500 text-white rounded-full text-xs font-body font-semibold shadow-lg">
+                      {locale === 'fr' ? 'Fermé' : 'Closed'}
+                    </span>
+                  )}
                 </div>
               </div>
               
