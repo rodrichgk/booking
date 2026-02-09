@@ -201,6 +201,12 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
                   </div>
                 )}
                 <Link
+                  href={`/${locale}/admin/sms/import`}
+                  className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition-colors"
+                >
+                  📥 Import CSV
+                </Link>
+                <Link
                   href={`/${locale}/admin`}
                   className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
                 >
