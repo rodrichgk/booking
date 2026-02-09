@@ -113,7 +113,11 @@
     "total": "Total",
     "booking": "Booking",
     "continue": "Continue",
-    "step": "Step"
+    "step": "Step",
+    "chooseOnSite": "I will choose on site",
+    "chooseOnSiteService": "I will choose my service on site",
+    "chooseOnSiteBarber": "I will choose my barber on site",
+    "onSiteChoice": "To be chosen on site"
   },
   "barberProfile": {
     "title": "Barber Profile",

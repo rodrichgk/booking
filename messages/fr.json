@@ -113,7 +113,11 @@
     "total": "Total",
     "booking": "Réservation",
     "continue": "Continuer",
-    "step": "Étape"
+    "step": "Étape",
+    "chooseOnSite": "Je choisirai sur place",
+    "chooseOnSiteService": "Je choisirai mon service sur place",
+    "chooseOnSiteBarber": "Je choisirai mon coiffeur sur place",
+    "onSiteChoice": "À choisir sur place"
   },
   "barberProfile": {
     "title": "Profil du Coiffeur",
