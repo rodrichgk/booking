@@ -149,13 +149,15 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
           },
           body: JSON.stringify({
             barbershopId: shop.id,
-            barberId: selectedBarber,
-            serviceId: selectedService,
+            barberId: selectedBarber === 'on-site' ? null : selectedBarber,
+            serviceId: selectedService === 'on-site' ? null : selectedService,
             appointmentDate: appointmentDateTime.toISOString(),
             customerName,
             customerEmail,
             customerPhone,
-            notes,
+            notes: selectedService === 'on-site' || selectedBarber === 'on-site' 
+              ? `${notes ? notes + '\n' : ''}[À choisir sur place: ${selectedService === 'on-site' ? 'Service' : ''}${selectedService === 'on-site' && selectedBarber === 'on-site' ? ', ' : ''}${selectedBarber === 'on-site' ? 'Coiffeur' : ''}]`
+              : notes,
           }),
         });
 
@@ -283,12 +285,24 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
             <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
               <h3 className="font-semibold text-gray-900 mb-3">Détails de votre rendez-vous</h3>
               <div className="space-y-2 text-sm">
-                {selectedBarberData && (
-                  <div className="flex items-center text-gray-700">
-                    <User className="w-4 h-4 mr-2" />
-                    <span>{selectedBarberData.name}</span>
-                  </div>
-                )}
+                {/* Service */}
+                <div className="flex items-center text-gray-700">
+                  <Scissors className="w-4 h-4 mr-2" />
+                  <span>
+                    {selectedService === 'on-site' 
+                      ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
+                      : services.find(s => s.id === selectedService)?.name || 'Service'}
+                  </span>
+                </div>
+                {/* Barber */}
+                <div className="flex items-center text-gray-700">
+                  <User className="w-4 h-4 mr-2" />
+                  <span>
+                    {selectedBarber === 'on-site' 
+                      ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
+                      : selectedBarberData?.name || 'Coiffeur'}
+                  </span>
+                </div>
                 <div className="flex items-center text-gray-700">
                   <Calendar className="w-4 h-4 mr-2" />
                   <span>{selectedDate && formatDate(selectedDate)}</span>
@@ -333,6 +347,30 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
             {step === 'service' && (
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez un service</h2>
+                
+                {/* Choose on site option */}
+                <button
+                  onClick={() => setSelectedService('on-site')}
+                  className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${
+                    selectedService === 'on-site'
+                      ? 'border-amber-500 bg-amber-50'
+                      : 'border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-xl">🏠</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Je choisirai sur place</h4>
+                      <p className="text-sm text-gray-600">Je déciderai du service au salon</p>
+                    </div>
+                    {selectedService === 'on-site' && (
+                      <Check className="w-5 h-5 text-amber-600 ml-auto" />
+                    )}
+                  </div>
+                </button>
+
                 {services.length === 0 ? (
                   <div className="text-center py-8">
                     <Scissors className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -401,6 +439,30 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
             {step === 'barber' && (
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez votre coiffeur</h2>
+              
+              {/* Choose on site option */}
+              <button
+                onClick={() => setSelectedBarber('on-site')}
+                className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${
+                  selectedBarber === 'on-site'
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'
+                }`}
+              >
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-xl">🏠</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Je choisirai sur place</h4>
+                    <p className="text-sm text-gray-600">Je déciderai du coiffeur au salon</p>
+                  </div>
+                  {selectedBarber === 'on-site' && (
+                    <Check className="w-5 h-5 text-amber-600 ml-auto" />
+                  )}
+                </div>
+              </button>
+
               {activeBarbers.length === 0 ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -497,12 +559,24 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-gray-900 mb-3">Résumé</h3>
                 <div className="space-y-2 text-sm">
-                  {selectedBarberData && (
-                    <div className="flex items-center text-gray-700">
-                      <User className="w-4 h-4 mr-2" />
-                      <span>{selectedBarberData.name}</span>
-                    </div>
-                  )}
+                  {/* Service */}
+                  <div className="flex items-center text-gray-700">
+                    <Scissors className="w-4 h-4 mr-2" />
+                    <span>
+                      {selectedService === 'on-site' 
+                        ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
+                        : services.find(s => s.id === selectedService)?.name || 'Service'}
+                    </span>
+                  </div>
+                  {/* Barber */}
+                  <div className="flex items-center text-gray-700">
+                    <User className="w-4 h-4 mr-2" />
+                    <span>
+                      {selectedBarber === 'on-site' 
+                        ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
+                        : selectedBarberData?.name || 'Coiffeur'}
+                    </span>
+                  </div>
                   <div className="flex items-center text-gray-700">
                     <Calendar className="w-4 h-4 mr-2" />
                     <span>{selectedDate && formatDate(selectedDate)}</span>
