@@ -22,6 +22,7 @@ export default async function BookingPage({
       address: barbershops.address,
       city: barbershops.city,
       isActive: barbershops.isActive,
+      openingHours: barbershops.openingHours,
     })
     .from(barbershops)
     .where(eq(barbershops.id, id))
