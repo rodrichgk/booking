@@ -46,7 +46,7 @@ const TARGET_FIELDS = [
 ];
 
 export function CSVImportClient({ locale }: CSVImportClientProps) {
-  const [step, setStep] = useState<'upload' | 'mapping' | 'filter' | 'preview' | 'complete'>('upload');
+  const [step, setStep] = useState<'upload' | 'zero-filter' | 'mapping' | 'filter' | 'preview' | 'complete'>('upload');
   const [fileName, setFileName] = useState('');
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [fieldMapping, setFieldMapping] = useState<FieldMapping>({
@@ -187,7 +187,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
         });
 
         setFieldMapping(autoMapping);
-        setStep('mapping');
+        setStep('zero-filter');
       } catch (err: any) {
         setError(err.message || 'Erreur lors de la lecture du fichier');
       }
@@ -360,15 +360,15 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
 
             {/* Progress Steps */}
             <div className="flex items-center mt-6 space-x-4 overflow-x-auto">
-              {['upload', 'mapping', 'filter', 'preview', 'complete'].map((s, index) => (
+              {['upload', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].map((s, index) => (
                 <div key={s} className="flex items-center flex-shrink-0">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     step === s ? 'bg-primary-600 text-white' :
-                    ['upload', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index
+                    ['upload', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index
                       ? 'bg-green-500 text-white'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
-                    {['upload', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index ? (
+                    {['upload', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index ? (
                       <Check className="w-4 h-4" />
                     ) : (
                       index + 1
@@ -376,12 +376,13 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   </div>
                   <span className={`ml-2 text-sm ${step === s ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
                     {s === 'upload' && 'Upload'}
+                    {s === 'zero-filter' && 'Filtrer zéros'}
                     {s === 'mapping' && 'Mapping'}
-                    {s === 'filter' && 'Filtrer'}
+                    {s === 'filter' && 'Filtrer tél.'}
                     {s === 'preview' && 'Aperçu'}
                     {s === 'complete' && 'Terminé'}
                   </span>
-                  {index < 4 && <ArrowRight className="w-4 h-4 mx-4 text-gray-300" />}
+                  {index < 5 && <ArrowRight className="w-4 h-4 mx-4 text-gray-300" />}
                 </div>
               ))}
             </div>
@@ -424,7 +425,107 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
             </div>
           )}
 
-          {/* Step 2: Field Mapping */}
+          {/* Step 2: Zero-value Filter */}
+          {step === 'zero-filter' && parsedData && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Filtrer les lignes avec valeur "0"</h2>
+                    <p className="text-gray-600 mt-1">
+                      Fichier: <span className="font-medium">{fileName}</span> • {parsedData.rows.length} lignes
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setStep('upload')}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    ← Changer de fichier
+                  </button>
+                </div>
+
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg mb-6">
+                  <h3 className="text-sm font-medium text-purple-800 mb-3">
+                    Sélectionnez un champ pour supprimer les lignes où la valeur est "0"
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={zeroFilterField}
+                      onChange={(e) => setZeroFilterField(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-purple-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">-- Sélectionner un champ --</option>
+                      {parsedData.headers.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {zeroFilterField && getZeroValueCount() > 0 && (
+                      <button
+                        onClick={filterZeroValues}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
+                      >
+                        Supprimer {getZeroValueCount()} ligne(s)
+                      </button>
+                    )}
+                  </div>
+                  {zeroFilterField && (
+                    <p className="text-sm text-purple-700 mt-2">
+                      {getZeroValueCount() > 0
+                        ? `${getZeroValueCount()} ligne(s) ont la valeur "0" dans "${zeroFilterField}"`
+                        : `Aucune ligne avec "0" dans "${zeroFilterField}"`
+                      }
+                    </p>
+                  )}
+                </div>
+
+                {/* Preview of data */}
+                <div className="overflow-x-auto mb-6">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        {parsedData.headers.map(header => (
+                          <th key={header} className={`px-3 py-2 text-left text-gray-700 font-medium ${header === zeroFilterField ? 'bg-purple-100' : ''}`}>
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsedData.rows.slice(0, 10).map((row, index) => {
+                        const isZero = zeroFilterField && (row[zeroFilterField] === '0' || row[zeroFilterField] === '0.0' || row[zeroFilterField] === '0,0');
+                        return (
+                          <tr key={index} className={`border-b border-gray-100 ${isZero ? 'bg-red-50 line-through text-red-400' : ''}`}>
+                            {parsedData.headers.map(header => (
+                              <td key={header} className={`px-3 py-2 ${header === zeroFilterField ? 'font-medium' : ''}`}>
+                                {row[header] || '-'}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {parsedData.rows.length > 10 && (
+                    <p className="text-center text-gray-500 py-3 text-sm">
+                      ... et {parsedData.rows.length - 10} autres lignes
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setStep('mapping')}
+                    className="flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Continuer vers le mapping
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Field Mapping */}
           {step === 'mapping' && parsedData && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -436,10 +537,10 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     </p>
                   </div>
                   <button
-                    onClick={reset}
-                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setStep('zero-filter')}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
                   >
-                    <RefreshCw className="w-5 h-5" />
+                    ← Retour au filtre
                   </button>
                 </div>
 
@@ -509,7 +610,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
             </div>
           )}
 
-          {/* Step 3: Filter */}
+          {/* Step 4: Phone Filter */}
           {step === 'filter' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -547,41 +648,6 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     <p className="text-2xl font-bold text-red-700">{contactsWithoutPhone}</p>
                     <p className="text-sm text-red-600">Sans téléphone</p>
                   </div>
-                </div>
-
-                {/* Zero value filter */}
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg mb-6">
-                  <h3 className="text-sm font-medium text-purple-800 mb-3">
-                    Filtrer les lignes avec valeur "0"
-                  </h3>
-                  <div className="flex items-center gap-3">
-                    <select
-                      value={zeroFilterField}
-                      onChange={(e) => setZeroFilterField(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-purple-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="">-- Sélectionner un champ --</option>
-                      {parsedData?.headers.map(header => (
-                        <option key={header} value={header}>{header}</option>
-                      ))}
-                    </select>
-                    {zeroFilterField && getZeroValueCount() > 0 && (
-                      <button
-                        onClick={filterZeroValues}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-                      >
-                        Supprimer {getZeroValueCount()} ligne(s)
-                      </button>
-                    )}
-                  </div>
-                  {zeroFilterField && (
-                    <p className="text-sm text-purple-700 mt-2">
-                      {getZeroValueCount() > 0 
-                        ? `${getZeroValueCount()} ligne(s) ont la valeur "0" dans "${zeroFilterField}"`
-                        : `Aucune ligne avec "0" dans "${zeroFilterField}"`
-                      }
-                    </p>
-                  )}
                 </div>
 
                 {contactsWithoutPhone > 0 && (
