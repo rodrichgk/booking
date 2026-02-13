@@ -5,6 +5,7 @@ import { relations } from 'drizzle-orm';
 export const users = pgTable('user', {
   id: uuid('id').defaultRandom().primaryKey(),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  username: varchar('username', { length: 50 }).unique(), // Unique username for login (especially for barbers sharing an email)
   name: varchar('name', { length: 255 }).notNull(),
   password: varchar('password', { length: 255 }), // For credentials login
   phone: varchar('phone', { length: 20 }),
@@ -80,6 +81,7 @@ export const barbers = pgTable('barbers', {
   userId: uuid('user_id').references(() => users.id).notNull(),
   barbershopId: uuid('barbershop_id').references(() => barbershops.id).notNull(),
   name: varchar('name', { length: 255 }),
+  barberType: varchar('barber_type', { length: 100 }), // e.g. "Coiffeur Homme", "Coiffeuse Femme", "Tresses/Braids"
   profileImage: text('profile_image'),
   galleryImages: jsonb('gallery_images').$type<string[]>().default([]),
   youtubeLinks: jsonb('youtube_links').$type<string[]>().default([]),

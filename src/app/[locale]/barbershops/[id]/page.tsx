@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { barbershops, barbers, users } from '@/lib/db/schema';
+import { barbershops, barbers, users, services } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { BarbershopDetailClient } from './client';
 
@@ -45,6 +45,7 @@ export default async function BarbershopDetailsPage({
       id: barbers.id,
       name: users.name,
       email: users.email,
+      barberType: barbers.barberType,
       specialties: barbers.specialties,
       experience: barbers.experience,
       rating: barbers.rating,
@@ -54,5 +55,20 @@ export default async function BarbershopDetailsPage({
     .innerJoin(users, eq(barbers.userId, users.id))
     .where(eq(barbers.barbershopId, id));
 
-  return <BarbershopDetailClient shop={shop as any} barbers={shopBarbers as any} locale={locale} isAuthenticated={isAuthenticated} />;
+  // Fetch services for this barbershop
+  const shopServices = await db
+    .select({
+      id: services.id,
+      name: services.name,
+      description: services.description,
+      image: services.image,
+      price: services.price,
+      duration: services.duration,
+      category: services.category,
+      isActive: services.isActive,
+    })
+    .from(services)
+    .where(eq(services.barbershopId, id));
+
+  return <BarbershopDetailClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} isAuthenticated={isAuthenticated} />;
 }

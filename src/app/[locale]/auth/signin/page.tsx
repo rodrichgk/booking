@@ -19,10 +19,11 @@ export default function SignInPage() {
   const [formData, setFormData] = useState({
     email: '',
     phone: '',
+    username: '',
     password: '',
   });
-  const [loginType, setLoginType] = useState<'email' | 'phone'>('email');
-  const [errors, setErrors] = useState<{ email?: string; phone?: string; password?: string }>({});
+  const [loginType, setLoginType] = useState<'email' | 'phone' | 'username'>('email');
+  const [errors, setErrors] = useState<{ email?: string; phone?: string; username?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -38,7 +39,7 @@ export default function SignInPage() {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: { email?: string; phone?: string; password?: string } = {};
+    const newErrors: { email?: string; phone?: string; username?: string; password?: string } = {};
 
     if (loginType === 'email') {
       if (!formData.email.trim()) {
@@ -46,11 +47,15 @@ export default function SignInPage() {
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         newErrors.email = t('invalidEmail');
       }
-    } else {
+    } else if (loginType === 'phone') {
       if (!formData.phone.trim()) {
         newErrors.phone = t('phoneRequired');
       } else if (!/^[+]?[\d\s\-\(\)]+$/.test(formData.phone)) {
         newErrors.phone = t('invalidPhone');
+      }
+    } else {
+      if (!formData.username.trim()) {
+        newErrors.username = 'Nom d\'utilisateur requis';
       }
     }
 
@@ -76,6 +81,7 @@ export default function SignInPage() {
       const result = await signIn('credentials', {
         email: loginType === 'email' ? formData.email : undefined,
         phone: loginType === 'phone' ? formData.phone : undefined,
+        username: loginType === 'username' ? formData.username : undefined,
         password: formData.password,
         redirect: false,
       });
@@ -167,11 +173,11 @@ export default function SignInPage() {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
-              <div className="flex space-x-4">
+              <div className="flex space-x-2">
                 <button
                   type="button"
                   onClick={() => setLoginType('email')}
-                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-colors text-sm ${
                     loginType === 'email'
                       ? 'bg-amber-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -182,13 +188,24 @@ export default function SignInPage() {
                 <button
                   type="button"
                   onClick={() => setLoginType('phone')}
-                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-colors text-sm ${
                     loginType === 'phone'
                       ? 'bg-amber-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {t('phone')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('username')}
+                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-colors text-sm ${
+                    loginType === 'username'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Identifiant
                 </button>
               </div>
 
@@ -203,7 +220,7 @@ export default function SignInPage() {
                   placeholder={t('email')}
                   required
                 />
-              ) : (
+              ) : loginType === 'phone' ? (
                 <Input
                   label={t('phone')}
                   name="phone"
@@ -212,6 +229,17 @@ export default function SignInPage() {
                   onChange={handleInputChange}
                   error={errors.phone}
                   placeholder={t('phone')}
+                  required
+                />
+              ) : (
+                <Input
+                  label="Nom d'utilisateur"
+                  name="username"
+                  type="text"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  error={errors.username}
+                  placeholder="Votre identifiant"
                   required
                 />
               )}

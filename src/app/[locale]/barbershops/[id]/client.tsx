@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from '@/routing';
 import Image from 'next/image';
-import { Star, MapPin, Clock, Phone, Calendar, Heart, Share2, Mail, Globe, Store, Scissors, MessageSquare, Send } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Calendar, Heart, Share2, Mail, Globe, Store, Scissors, MessageSquare, Send, DollarSign } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
@@ -27,10 +27,22 @@ interface Barber {
   id: string;
   name: string | null;
   email: string | null;
+  barberType: string | null;
   specialties: string[] | null;
   experience: number | null;
   rating: string | null;
   isActive: boolean;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  image: string | null;
+  price: string;
+  duration: number;
+  category: string | null;
+  isActive: boolean | null;
 }
 
 interface Review {
@@ -45,11 +57,12 @@ interface Review {
 interface BarbershopDetailClientProps {
   shop: Barbershop;
   barbers: Barber[];
+  services: Service[];
   locale: string;
   isAuthenticated?: boolean;
 }
 
-export function BarbershopDetailClient({ shop, barbers, locale, isAuthenticated = false }: BarbershopDetailClientProps) {
+export function BarbershopDetailClient({ shop, barbers, services, locale, isAuthenticated = false }: BarbershopDetailClientProps) {
   const { toast } = useToast();
   const [isFavorite, setIsFavorite] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -218,6 +231,42 @@ export function BarbershopDetailClient({ shop, barbers, locale, isAuthenticated 
               </div>
             )}
 
+            {/* Services */}
+            {services.filter(s => s.isActive !== false).length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <div className="flex items-center space-x-3 mb-6">
+                  <Scissors className="w-6 h-6 text-primary-600" />
+                  <h2 className="text-2xl font-sans font-bold text-gray-900">Nos Services</h2>
+                </div>
+                <div className="grid gap-4">
+                  {services.filter(s => s.isActive !== false).map((service) => (
+                    <div key={service.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-body font-semibold text-gray-900">{service.name}</h3>
+                          {service.category && (
+                            <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">{service.category}</span>
+                          )}
+                        </div>
+                        {service.description && (
+                          <p className="text-sm text-gray-600 font-body mt-1">{service.description}</p>
+                        )}
+                        <div className="flex items-center space-x-3 mt-2">
+                          <div className="flex items-center space-x-1 text-gray-500">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span className="text-xs">{service.duration} min</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right ml-4 flex-shrink-0">
+                        <p className="text-lg font-bold text-primary-600">{parseFloat(service.price).toFixed(2)} €</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Team */}
             {barbers.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -232,6 +281,9 @@ export function BarbershopDetailClient({ shop, barbers, locale, isAuthenticated 
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-body font-semibold text-gray-900 truncate">{barber.name || 'Coiffeur'}</h3>
+                        {barber.barberType && (
+                          <span className="inline-block text-xs bg-accent-100 text-accent-700 px-2 py-0.5 rounded-full mt-1">{barber.barberType}</span>
+                        )}
                         {barber.specialties && barber.specialties.length > 0 && (
                           <p className="text-sm text-gray-600 font-body truncate">
                             {barber.specialties.join(', ')}
