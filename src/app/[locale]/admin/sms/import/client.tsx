@@ -280,7 +280,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     // We need to filter based on original CSV data, then re-map
     const filteredRows = parsedData.rows.filter(row => {
       const value = row[zeroFilterField];
-      return value !== '0' && value !== '0.0' && value !== '0,0';
+      return !(/^0([.,]0+)?$/.test((value || '').trim()));
     });
     
     // Update parsed data
@@ -304,7 +304,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     if (!zeroFilterField || !parsedData) return 0;
     return parsedData.rows.filter(row => {
       const value = row[zeroFilterField];
-      return value === '0' || value === '0.0' || value === '0,0';
+      return /^0([.,]0+)?$/.test((value || '').trim());
     }).length;
   };
 
@@ -492,7 +492,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     </thead>
                     <tbody>
                       {parsedData.rows.slice(0, 10).map((row, index) => {
-                        const isZero = zeroFilterField && (row[zeroFilterField] === '0' || row[zeroFilterField] === '0.0' || row[zeroFilterField] === '0,0');
+                        const isZero = zeroFilterField && /^0([.,]0+)?$/.test((row[zeroFilterField] || '').trim());
                         return (
                           <tr key={index} className={`border-b border-gray-100 ${isZero ? 'bg-red-50 line-through text-red-400' : ''}`}>
                             {parsedData.headers.map(header => (
