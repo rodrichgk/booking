@@ -106,6 +106,9 @@ export async function POST(request: NextRequest) {
         `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS username VARCHAR(50) UNIQUE`,
         // Add barber_type column to barbers table
         `ALTER TABLE barbers ADD COLUMN IF NOT EXISTS barber_type VARCHAR(100)`,
+        // Fix French labels: Coiffeur Homme -> Coiffeur, Coiffeuse Femme -> Coiffeuse
+        `UPDATE barbers SET barber_type = 'Coiffeur' WHERE barber_type = 'Coiffeur Homme'`,
+        `UPDATE barbers SET barber_type = 'Coiffeuse' WHERE barber_type = 'Coiffeuse Femme'`,
       ];
 
       const results = [];
