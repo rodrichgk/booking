@@ -46,7 +46,7 @@ const TARGET_FIELDS = [
 ];
 
 export function CSVImportClient({ locale }: CSVImportClientProps) {
-  const [step, setStep] = useState<'upload' | 'zero-filter' | 'mapping' | 'filter' | 'preview' | 'complete'>('upload');
+  const [step, setStep] = useState<'upload' | 'ranking' | 'zero-filter' | 'mapping' | 'filter' | 'preview' | 'complete'>('upload');
   const [fileName, setFileName] = useState('');
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [fieldMapping, setFieldMapping] = useState<FieldMapping>({
@@ -60,6 +60,8 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
   const [mappedContacts, setMappedContacts] = useState<MappedContact[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [zeroFilterField, setZeroFilterField] = useState<string>('');
+  const [rankField, setRankField] = useState<string>('');
+  const [rankLimit, setRankLimit] = useState<number>(500);
 
   // Parse CSV file
   const parseCSV = (text: string): ParsedData => {
@@ -187,7 +189,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
         });
 
         setFieldMapping(autoMapping);
-        setStep('zero-filter');
+        setStep('ranking');
       } catch (err: any) {
         setError(err.message || 'Erreur lors de la lecture du fichier');
       }
@@ -273,6 +275,21 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     setStep('preview');
   };
 
+  // Rank and limit rows by a selected field
+  const applyRanking = () => {
+    if (!parsedData || !rankField) return;
+    
+    const sorted = [...parsedData.rows].sort((a, b) => {
+      const valA = parseFloat((a[rankField] || '0').replace(',', '.')) || 0;
+      const valB = parseFloat((b[rankField] || '0').replace(',', '.')) || 0;
+      return valB - valA; // Descending (highest first)
+    });
+    
+    const limited = sorted.slice(0, rankLimit);
+    setParsedData({ ...parsedData, rows: limited });
+    setStep('zero-filter');
+  };
+
   // Filter rows where selected field has value "0"
   const filterZeroValues = () => {
     if (!zeroFilterField || !parsedData) return;
@@ -334,6 +351,8 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     setMappedContacts([]);
     setError(null);
     setZeroFilterField('');
+    setRankField('');
+    setRankLimit(500);
   };
 
   return (
@@ -360,15 +379,15 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
 
             {/* Progress Steps */}
             <div className="flex items-center mt-6 space-x-4 overflow-x-auto">
-              {['upload', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].map((s, index) => (
+              {['upload', 'ranking', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].map((s, index) => (
                 <div key={s} className="flex items-center flex-shrink-0">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     step === s ? 'bg-primary-600 text-white' :
-                    ['upload', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index
+                    ['upload', 'ranking', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index
                       ? 'bg-green-500 text-white'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
-                    {['upload', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index ? (
+                    {['upload', 'ranking', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index ? (
                       <Check className="w-4 h-4" />
                     ) : (
                       index + 1
@@ -376,13 +395,14 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   </div>
                   <span className={`ml-2 text-sm ${step === s ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
                     {s === 'upload' && 'Upload'}
+                    {s === 'ranking' && 'Classement'}
                     {s === 'zero-filter' && 'Filtrer zéros'}
                     {s === 'mapping' && 'Mapping'}
                     {s === 'filter' && 'Filtrer tél.'}
                     {s === 'preview' && 'Aperçu'}
                     {s === 'complete' && 'Terminé'}
                   </span>
-                  {index < 5 && <ArrowRight className="w-4 h-4 mx-4 text-gray-300" />}
+                  {index < 6 && <ArrowRight className="w-4 h-4 mx-4 text-gray-300" />}
                 </div>
               ))}
             </div>
@@ -425,7 +445,134 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
             </div>
           )}
 
-          {/* Step 2: Zero-value Filter */}
+          {/* Step 2: Ranking */}
+          {step === 'ranking' && parsedData && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Classer et limiter les contacts</h2>
+                    <p className="text-gray-600 mt-1">
+                      Fichier: <span className="font-medium">{fileName}</span> • {parsedData.rows.length} lignes
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setStep('upload')}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    ← Changer de fichier
+                  </button>
+                </div>
+
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
+                  <h3 className="text-sm font-medium text-orange-800 mb-3">
+                    Sélectionnez un champ pour classer les contacts par valeur décroissante et garder les meilleurs
+                  </h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <select
+                      value={rankField}
+                      onChange={(e) => setRankField(e.target.value)}
+                      className="flex-1 w-full sm:w-auto px-3 py-2 border border-orange-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">-- Sélectionner un champ --</option>
+                      {parsedData.headers.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-orange-800 whitespace-nowrap">Max :</label>
+                      <input
+                        type="number"
+                        value={rankLimit}
+                        onChange={(e) => setRankLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                        min={1}
+                        className="w-24 px-3 py-2 border border-orange-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    {rankField && (
+                      <button
+                        onClick={applyRanking}
+                        className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
+                      >
+                        Garder les top {rankLimit}
+                      </button>
+                    )}
+                  </div>
+                  {rankField && (
+                    <p className="text-sm text-orange-700 mt-2">
+                      {parsedData.rows.length > rankLimit
+                        ? `${parsedData.rows.length - rankLimit} ligne(s) seront supprimées (les ${rankLimit} avec la plus haute valeur dans "${rankField}" seront gardées)`
+                        : `Le fichier contient ${parsedData.rows.length} lignes, inférieur ou égal à la limite de ${rankLimit}`
+                      }
+                    </p>
+                  )}
+                </div>
+
+                {/* Preview of data sorted by rank field */}
+                {rankField && (
+                  <div className="overflow-x-auto mb-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Aperçu (trié par "{rankField}" décroissant)</h3>
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="px-3 py-2 text-left text-gray-700 font-medium">#</th>
+                          {parsedData.headers.map(header => (
+                            <th key={header} className={`px-3 py-2 text-left text-gray-700 font-medium ${header === rankField ? 'bg-orange-100' : ''}`}>
+                              {header}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...parsedData.rows]
+                          .sort((a, b) => {
+                            const valA = parseFloat((a[rankField] || '0').replace(',', '.')) || 0;
+                            const valB = parseFloat((b[rankField] || '0').replace(',', '.')) || 0;
+                            return valB - valA;
+                          })
+                          .slice(0, 10)
+                          .map((row, index) => (
+                            <tr key={index} className={`border-b border-gray-100 ${index >= rankLimit ? 'bg-red-50 text-red-400' : ''}`}>
+                              <td className="px-3 py-2 text-gray-500">{index + 1}</td>
+                              {parsedData.headers.map(header => (
+                                <td key={header} className={`px-3 py-2 ${header === rankField ? 'font-medium' : ''}`}>
+                                  {row[header] || '-'}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    {parsedData.rows.length > 10 && (
+                      <p className="text-center text-gray-500 py-3 text-sm">
+                        ... et {parsedData.rows.length - 10} autres lignes
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <button
+                    onClick={() => setStep('zero-filter')}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Passer cette étape
+                  </button>
+                  {rankField && (
+                    <button
+                      onClick={applyRanking}
+                      className="flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      Appliquer le classement
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Zero-value Filter */}
           {step === 'zero-filter' && parsedData && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -437,10 +584,10 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     </p>
                   </div>
                   <button
-                    onClick={() => setStep('upload')}
+                    onClick={() => setStep('ranking')}
                     className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
                   >
-                    ← Changer de fichier
+                    ← Retour au classement
                   </button>
                 </div>
 
