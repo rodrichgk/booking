@@ -19,6 +19,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         phone: { label: 'Phone', type: 'tel' },
+        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials, req) {
@@ -26,21 +27,32 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Allow login with either email or phone
-        const identifier = credentials.email || credentials.phone;
+        // Allow login with email, phone, or username
+        const identifier = credentials.email || credentials.phone || credentials.username;
         if (!identifier) {
           return null;
         }
 
-        const user = await db
-          .select()
-          .from(users)
-          .where(
-            credentials.email 
-              ? eq(users.email, credentials.email)
-              : eq(users.phone, credentials.phone!)
-          )
-          .limit(1);
+        let user;
+        if (credentials.username) {
+          user = await db
+            .select()
+            .from(users)
+            .where(eq(users.username, credentials.username))
+            .limit(1);
+        } else if (credentials.email) {
+          user = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, credentials.email))
+            .limit(1);
+        } else {
+          user = await db
+            .select()
+            .from(users)
+            .where(eq(users.phone, credentials.phone!))
+            .limit(1);
+        }
 
         if (!user.length) {
           return null;

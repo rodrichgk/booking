@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 interface SignUpFormData {
   name: string;
   email: string;
+  username: string;
   password: string;
   confirmPassword: string;
   phone: string;
@@ -28,6 +29,7 @@ export default function SignUpPage() {
   const [formData, setFormData] = useState<SignUpFormData>({
     name: '',
     email: '',
+    username: '',
     password: '',
     confirmPassword: '',
     phone: '',
@@ -59,6 +61,14 @@ export default function SignUpPage() {
       newErrors.email = t('invalidEmail');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = t('invalidEmail');
+    }
+
+    if (formData.username && formData.username.trim().length > 0) {
+      if (formData.username.trim().length < 3) {
+        newErrors.username = 'Minimum 3 caractères';
+      } else if (!/^[a-zA-Z0-9_.-]+$/.test(formData.username.trim())) {
+        newErrors.username = 'Lettres, chiffres, points, tirets et underscores uniquement';
+      }
     }
 
     if (!formData.password) {
@@ -96,6 +106,7 @@ export default function SignUpPage() {
         body: JSON.stringify({
           name: formData.name.trim(),
           email: formData.email.trim(),
+          username: formData.username.trim() || undefined,
           password: formData.password,
           phone: formData.phone.trim() || undefined,
           role: formData.role,
@@ -210,6 +221,17 @@ export default function SignUpPage() {
               error={errors.email}
               placeholder={t('email')}
               required
+            />
+
+            <Input
+              label="Nom d'utilisateur (optionnel)"
+              name="username"
+              type="text"
+              value={formData.username}
+              onChange={handleInputChange}
+              error={errors.username}
+              placeholder="ex: john.doe"
+              helperText="Utile pour les coiffeurs partageant un même email"
             />
 
             <Input

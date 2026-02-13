@@ -23,6 +23,7 @@ function getResend() {
 const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
+  username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_.-]+$/, 'Username can only contain letters, numbers, dots, hyphens and underscores').optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   phone: z.string().optional(),
   role: z.enum(['customer', 'barber']).default('customer'),
@@ -34,9 +35,9 @@ export async function POST(request: NextRequest) {
     
     // Validate input
     const validatedData = signUpSchema.parse(body);
-    const { name, email, password, phone, role } = validatedData;
+    const { name, email, username, password, phone, role } = validatedData;
 
-    // Check if user already exists
+    // Check if user already exists by email
     const existingUser = await db
       .select()
       .from(users)
@@ -45,9 +46,25 @@ export async function POST(request: NextRequest) {
 
     if (existingUser.length > 0) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
+        { error: 'Un compte avec cet email existe déjà' },
         { status: 400 }
       );
+    }
+
+    // Check if username already taken
+    if (username) {
+      const existingUsername = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (existingUsername.length > 0) {
+        return NextResponse.json(
+          { error: 'Ce nom d\'utilisateur est déjà pris' },
+          { status: 400 }
+        );
+      }
     }
 
     // Hash password
@@ -59,6 +76,7 @@ export async function POST(request: NextRequest) {
       .values({
         name,
         email,
+        username: username || undefined,
         password: hashedPassword,
         phone,
         role,
