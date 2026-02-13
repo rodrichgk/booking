@@ -1834,8 +1834,8 @@ export function ManageBarbershopClient({
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 >
                   <option value="">-- Sélectionner --</option>
-                  <option value="Coiffeur Homme">Coiffeur Homme</option>
-                  <option value="Coiffeuse Femme">Coiffeuse Femme</option>
+                  <option value="Coiffeur">Coiffeur</option>
+                  <option value="Coiffeuse">Coiffeuse</option>
                   <option value="Tresses / Braids">Tresses / Braids</option>
                   <option value="Barbier">Barbier</option>
                   <option value="Coloriste">Coloriste</option>
@@ -1911,8 +1911,8 @@ export function ManageBarbershopClient({
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 >
                   <option value="">-- Sélectionner --</option>
-                  <option value="Coiffeur Homme">Coiffeur Homme</option>
-                  <option value="Coiffeuse Femme">Coiffeuse Femme</option>
+                  <option value="Coiffeur">Coiffeur</option>
+                  <option value="Coiffeuse">Coiffeuse</option>
                   <option value="Tresses / Braids">Tresses / Braids</option>
                   <option value="Barbier">Barbier</option>
                   <option value="Coloriste">Coloriste</option>
