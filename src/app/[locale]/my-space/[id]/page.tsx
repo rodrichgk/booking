@@ -78,6 +78,7 @@ export default async function ManageBarbershopPage({
       email: users.email,
       phone: users.phone,
       profileImage: barbers.profileImage,
+      barberType: barbers.barberType,
       specialties: barbers.specialties,
       experience: barbers.experience,
       rating: barbers.rating,
