@@ -59,6 +59,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
   });
   const [mappedContacts, setMappedContacts] = useState<MappedContact[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [zeroFilterField, setZeroFilterField] = useState<string>('');
 
   // Parse CSV file
   const parseCSV = (text: string): ParsedData => {
@@ -272,6 +273,41 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     setStep('preview');
   };
 
+  // Filter rows where selected field has value "0"
+  const filterZeroValues = () => {
+    if (!zeroFilterField || !parsedData) return;
+    
+    // We need to filter based on original CSV data, then re-map
+    const filteredRows = parsedData.rows.filter(row => {
+      const value = row[zeroFilterField];
+      return value !== '0' && value !== '0.0' && value !== '0,0';
+    });
+    
+    // Update parsed data
+    setParsedData({ ...parsedData, rows: filteredRows });
+    
+    // Re-apply mapping to filtered data
+    const newMappedContacts = filteredRows.map(row => ({
+      firstName: fieldMapping.firstName ? row[fieldMapping.firstName] || '' : '',
+      lastName: fieldMapping.lastName ? row[fieldMapping.lastName] || '' : '',
+      gender: fieldMapping.gender ? row[fieldMapping.gender] || '' : '',
+      phone1: fieldMapping.phone1 ? row[fieldMapping.phone1] || '' : '',
+      phone2: fieldMapping.phone2 ? row[fieldMapping.phone2] || '' : '',
+      phone3: fieldMapping.phone3 ? row[fieldMapping.phone3] || '' : '',
+    }));
+    
+    setMappedContacts(newMappedContacts);
+  };
+
+  // Get count of rows with zero in selected field
+  const getZeroValueCount = (): number => {
+    if (!zeroFilterField || !parsedData) return 0;
+    return parsedData.rows.filter(row => {
+      const value = row[zeroFilterField];
+      return value === '0' || value === '0.0' || value === '0,0';
+    }).length;
+  };
+
   // Get count of contacts without phone
   const contactsWithoutPhone = mappedContacts.filter(c => !c.phone1 && !c.phone2 && !c.phone3).length;
 
@@ -297,6 +333,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     });
     setMappedContacts([]);
     setError(null);
+    setZeroFilterField('');
   };
 
   return (
@@ -510,6 +547,41 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     <p className="text-2xl font-bold text-red-700">{contactsWithoutPhone}</p>
                     <p className="text-sm text-red-600">Sans téléphone</p>
                   </div>
+                </div>
+
+                {/* Zero value filter */}
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg mb-6">
+                  <h3 className="text-sm font-medium text-purple-800 mb-3">
+                    Filtrer les lignes avec valeur "0"
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={zeroFilterField}
+                      onChange={(e) => setZeroFilterField(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-purple-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">-- Sélectionner un champ --</option>
+                      {parsedData?.headers.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {zeroFilterField && getZeroValueCount() > 0 && (
+                      <button
+                        onClick={filterZeroValues}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                      >
+                        Supprimer {getZeroValueCount()} ligne(s)
+                      </button>
+                    )}
+                  </div>
+                  {zeroFilterField && (
+                    <p className="text-sm text-purple-700 mt-2">
+                      {getZeroValueCount() > 0 
+                        ? `${getZeroValueCount()} ligne(s) ont la valeur "0" dans "${zeroFilterField}"`
+                        : `Aucune ligne avec "0" dans "${zeroFilterField}"`
+                      }
+                    </p>
+                  )}
                 </div>
 
                 {contactsWithoutPhone > 0 && (
