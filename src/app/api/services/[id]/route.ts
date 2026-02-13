@@ -35,24 +35,24 @@ export async function PATCH(
     }
 
     // Verify the user owns the barbershop or is admin
-    const userEmail = session.user.email;
+    const userId = (session.user as any).id;
     const userRole = (session.user as any).role;
 
-    const barbershop = await db
+    const [barbershop] = await db
       .select()
       .from(barbershops)
-      .leftJoin(users, eq(barbershops.ownerId, users.id))
       .where(eq(barbershops.id, service.barbershopId))
       .limit(1);
 
-    if (barbershop.length === 0) {
+    if (!barbershop) {
       return NextResponse.json({ error: 'Barbershop not found' }, { status: 404 });
     }
 
-    const isOwner = barbershop[0].user?.email === userEmail;
+    const isOwner = barbershop.ownerId === userId;
+    const isCoOwner = barbershop.coOwnerId === userId;
     const isAdmin = ['dev', 'admin'].includes(userRole);
 
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isCoOwner && !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

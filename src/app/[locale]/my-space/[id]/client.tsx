@@ -31,6 +31,9 @@ interface Barbershop {
   reviewCount: number | null;
   isActive: boolean;
   ownerId: string;
+  coOwnerId: string | null;
+  coOwnerName: string | null;
+  coOwnerEmail: string | null;
   createdAt: Date;
   openingHours: OpeningHours | null;
 }
@@ -119,6 +122,11 @@ export function ManageBarbershopClient({
   const [barberBio, setBarberBio] = useState('');
   const [barberType, setBarberType] = useState('');
   const [barberUsername, setBarberUsername] = useState('');
+
+  // Co-owner states
+  const [coOwnerEmail, setCoOwnerEmail] = useState('');
+  const [isAddingCoOwner, setIsAddingCoOwner] = useState(false);
+  const [isRemovingCoOwner, setIsRemovingCoOwner] = useState(false);
 
   // Shop edit states
   const [isEditingShop, setIsEditingShop] = useState(false);
@@ -301,6 +309,54 @@ export function ManageBarbershopClient({
       });
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  const handleAddCoOwner = async () => {
+    if (!coOwnerEmail.trim()) {
+      toast({ variant: 'warning', title: 'Attention', description: 'Veuillez saisir un email' });
+      return;
+    }
+    setIsAddingCoOwner(true);
+    try {
+      const res = await fetch(`/api/barbershops/${shop.id}/co-owner`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: coOwnerEmail.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ variant: 'success', title: 'Succès', description: data.message });
+        setCoOwnerEmail('');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast({ variant: 'error', title: 'Erreur', description: data.error || 'Une erreur est survenue' });
+      }
+    } catch (error) {
+      console.error('Add co-owner error:', error);
+      toast({ variant: 'error', title: 'Erreur', description: 'Une erreur est survenue' });
+    } finally {
+      setIsAddingCoOwner(false);
+    }
+  };
+
+  const handleRemoveCoOwner = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir retirer le co-propriétaire ?')) return;
+    setIsRemovingCoOwner(true);
+    try {
+      const res = await fetch(`/api/barbershops/${shop.id}/co-owner`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ variant: 'success', title: 'Succès', description: data.message });
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast({ variant: 'error', title: 'Erreur', description: data.error || 'Une erreur est survenue' });
+      }
+    } catch (error) {
+      console.error('Remove co-owner error:', error);
+      toast({ variant: 'error', title: 'Erreur', description: 'Une erreur est survenue' });
+    } finally {
+      setIsRemovingCoOwner(false);
     }
   };
 
@@ -1596,6 +1652,57 @@ export function ManageBarbershopClient({
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Co-owner Section */}
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Co-propriétaire</h3>
+                  <p className="text-sm text-gray-600">Ajouter une personne qui pourra gérer ce salon</p>
+                </div>
+              </div>
+
+              {shop.coOwnerId ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{shop.coOwnerName || 'Co-propriétaire'}</p>
+                      <p className="text-sm text-gray-600">{shop.coOwnerEmail}</p>
+                    </div>
+                    <button
+                      onClick={handleRemoveCoOwner}
+                      disabled={isRemovingCoOwner}
+                      className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {isRemovingCoOwner ? 'Retrait...' : 'Retirer'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-500">Aucun co-propriétaire. Ajoutez quelqu'un par son adresse email (il doit déjà avoir un compte).</p>
+                  <div className="flex space-x-2">
+                    <input
+                      type="email"
+                      value={coOwnerEmail}
+                      onChange={(e) => setCoOwnerEmail(e.target.value)}
+                      placeholder="email@exemple.com"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                    />
+                    <button
+                      onClick={handleAddCoOwner}
+                      disabled={isAddingCoOwner}
+                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    >
+                      {isAddingCoOwner ? 'Ajout...' : 'Ajouter'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm p-6 border border-red-200">

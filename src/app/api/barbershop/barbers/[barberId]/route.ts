@@ -17,7 +17,7 @@ export async function DELETE(
     }
 
     const { barberId } = await params;
-    const userEmail = session.user.email;
+    const userId = (session.user as any).id;
     const userRole = (session.user as any).role;
 
     // Get the barber record with barbershop info
@@ -25,7 +25,6 @@ export async function DELETE(
       .select()
       .from(barbers)
       .leftJoin(barbershops, eq(barbers.barbershopId, barbershops.id))
-      .leftJoin(users, eq(barbershops.ownerId, users.id))
       .where(eq(barbers.id, barberId))
       .limit(1);
 
@@ -33,11 +32,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Barber not found' }, { status: 404 });
     }
 
-    // Check if user owns the barbershop or is admin
-    const isOwner = barberRecord[0].user?.email === userEmail;
+    // Check if user owns the barbershop, is co-owner, or is admin
+    const shop = barberRecord[0].barbershops;
+    const isOwner = shop?.ownerId === userId;
+    const isCoOwner = shop?.coOwnerId === userId;
     const isAdmin = ['dev', 'admin'].includes(userRole);
 
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isCoOwner && !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

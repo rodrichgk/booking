@@ -37,6 +37,7 @@ export default async function ManageBarbershopPage({
       reviewCount: barbershops.reviewCount,
       isActive: barbershops.isActive,
       ownerId: barbershops.ownerId,
+      coOwnerId: barbershops.coOwnerId,
       createdAt: barbershops.createdAt,
       subscriptionStatus: barbershops.subscriptionStatus,
       currentPeriodEnd: barbershops.currentPeriodEnd,
@@ -51,20 +52,20 @@ export default async function ManageBarbershopPage({
     notFound();
   }
 
-  // Verify ownership OR admin/dev access
+  // Verify ownership, co-ownership, OR admin/dev access
   if (userRole !== 'admin' && userRole !== 'dev') {
-    if (!shop.ownerId) {
-      notFound(); // No owner assigned
-    }
-
-    const [owner] = await db
-      .select({ email: users.email })
+    // Get current user ID
+    const [currentUser] = await db
+      .select({ id: users.id })
       .from(users)
-      .where(eq(users.id, shop.ownerId))
+      .where(eq(users.email, userEmail || ''))
       .limit(1);
 
-    if (!owner || owner.email !== userEmail) {
-      notFound(); // User doesn't own this barbershop
+    const isOwner = currentUser && shop.ownerId === currentUser.id;
+    const isCoOwner = currentUser && shop.coOwnerId === currentUser.id;
+
+    if (!isOwner && !isCoOwner) {
+      notFound();
     }
   }
 
@@ -95,6 +96,21 @@ export default async function ManageBarbershopPage({
     ...b,
     name: b.barberName || b.userName,
   }));
+
+  // Fetch co-owner info if present
+  let coOwnerName: string | null = null;
+  let coOwnerEmail: string | null = null;
+  if (shop.coOwnerId) {
+    const [coOwner] = await db
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, shop.coOwnerId))
+      .limit(1);
+    if (coOwner) {
+      coOwnerName = coOwner.name;
+      coOwnerEmail = coOwner.email;
+    }
+  }
 
   // Fetch services for this barbershop
   const shopServices = await db
@@ -148,9 +164,16 @@ export default async function ManageBarbershopPage({
   // Fetch subscription price from settings
   const subscriptionPrice = await getSubscriptionPrice();
 
+  // Merge co-owner info into shop object for client
+  const shopWithCoOwner = {
+    ...shop,
+    coOwnerName,
+    coOwnerEmail,
+  };
+
   return (
     <ManageBarbershopClient
-      shop={shop as any}
+      shop={shopWithCoOwner as any}
       barbers={shopBarbers as any}
       services={shopServices as any}
       bookings={shopBookings as any}

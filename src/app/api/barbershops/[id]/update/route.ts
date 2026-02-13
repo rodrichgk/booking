@@ -48,8 +48,8 @@ export async function PUT(
     const userRole = (session.user as any).role;
     const userId = (session.user as any).id;
     
-    // Allow admin/dev to update any shop, otherwise check ownership
-    if (userRole !== 'admin' && userRole !== 'dev' && shop.ownerId !== userId) {
+    // Allow admin/dev to update any shop, otherwise check ownership or co-ownership
+    if (userRole !== 'admin' && userRole !== 'dev' && shop.ownerId !== userId && shop.coOwnerId !== userId) {
       return NextResponse.json(
         { error: 'Vous n\'êtes pas autorisé à modifier ce salon' },
         { status: 403 }

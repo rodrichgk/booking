@@ -62,6 +62,7 @@ export const barbershops = pgTable('barbershops', {
   reviewCount: integer('review_count').default(0),
   isActive: boolean('is_active').default(true),
   ownerId: uuid('owner_id').references(() => users.id),
+  coOwnerId: uuid('co_owner_id').references(() => users.id),
   openingHours: jsonb('opening_hours').$type<{
     [key: string]: { open: string; close: string; closed: boolean };
   }>(),
