@@ -102,6 +102,10 @@ export async function POST(request: NextRequest) {
         )`,
         // Add name column to barbers table for editable display name
         `ALTER TABLE barbers ADD COLUMN IF NOT EXISTS name VARCHAR(255)`,
+        // Add username column to user table for barbers sharing an email
+        `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS username VARCHAR(50) UNIQUE`,
+        // Add barber_type column to barbers table
+        `ALTER TABLE barbers ADD COLUMN IF NOT EXISTS barber_type VARCHAR(100)`,
       ];
 
       const results = [];
