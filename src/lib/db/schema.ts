@@ -81,7 +81,7 @@ export const barbers = pgTable('barbers', {
   userId: uuid('user_id').references(() => users.id).notNull(),
   barbershopId: uuid('barbershop_id').references(() => barbershops.id).notNull(),
   name: varchar('name', { length: 255 }),
-  barberType: varchar('barber_type', { length: 100 }), // e.g. "Coiffeur Homme", "Coiffeuse Femme", "Tresses/Braids"
+  barberType: varchar('barber_type', { length: 100 }), // e.g. "Coiffeur", "Coiffeuse", "Tresses/Braids"
   profileImage: text('profile_image'),
   galleryImages: jsonb('gallery_images').$type<string[]>().default([]),
   youtubeLinks: jsonb('youtube_links').$type<string[]>().default([]),
