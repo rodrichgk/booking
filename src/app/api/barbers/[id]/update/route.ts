@@ -76,6 +76,9 @@ export async function PATCH(
     if (body.experience !== undefined) {
       updateData.experience = body.experience;
     }
+    if (body.barberType !== undefined) {
+      updateData.barberType = body.barberType;
+    }
 
     await db
       .update(barbers)

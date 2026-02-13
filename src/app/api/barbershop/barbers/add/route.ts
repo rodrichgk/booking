@@ -14,10 +14,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { barbershopId, name, email, phone, password, specialties } = await request.json();
+    const { barbershopId, name, email, phone, password, specialties, barberType, username } = await request.json();
 
     if (!barbershopId || !name || !email || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Validate username format if provided
+    if (username) {
+      if (username.length < 3) {
+        return NextResponse.json({ error: 'Le nom d\'utilisateur doit contenir au moins 3 caractères' }, { status: 400 });
+      }
+      if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+        return NextResponse.json({ error: 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, points, tirets et underscores' }, { status: 400 });
+      }
+      const existingUsername = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      if (existingUsername.length > 0) {
+        return NextResponse.json({ error: 'Ce nom d\'utilisateur est déjà pris' }, { status: 400 });
+      }
     }
 
     // Verify the user owns this barbershop or is admin
@@ -62,6 +76,7 @@ export async function POST(request: Request) {
     const [newUser] = await db.insert(users).values({
       name,
       email,
+      username: username || undefined,
       phone: phone || null,
       password: hashedPassword,
       role: 'barber',
@@ -89,6 +104,7 @@ export async function POST(request: Request) {
     await db.insert(barbers).values({
       userId: newUser.id,
       barbershopId: barbershopId,
+      barberType: barberType || null,
       specialties: specialties || [],
       isActive: true,
     });

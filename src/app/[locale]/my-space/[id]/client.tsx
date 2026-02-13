@@ -42,6 +42,7 @@ interface Barber {
   email: string | null;
   phone: string | null;
   profileImage: string | null;
+  barberType: string | null;
   specialties: string[] | null;
   experience: number | null;
   rating: string | null;
@@ -116,6 +117,8 @@ export function ManageBarbershopClient({
   const [barberPhone, setBarberPhone] = useState('');
   const [barberPassword, setBarberPassword] = useState('');
   const [barberBio, setBarberBio] = useState('');
+  const [barberType, setBarberType] = useState('');
+  const [barberUsername, setBarberUsername] = useState('');
 
   // Shop edit states
   const [isEditingShop, setIsEditingShop] = useState(false);
@@ -485,6 +488,8 @@ export function ManageBarbershopClient({
           phone: barberPhone || null,
           password: barberPassword,
           barbershopId: shop.id,
+          barberType: barberType || undefined,
+          username: barberUsername || undefined,
         }),
       });
 
@@ -500,6 +505,8 @@ export function ManageBarbershopClient({
         setBarberEmail('');
         setBarberPhone('');
         setBarberPassword('');
+        setBarberType('');
+        setBarberUsername('');
         setIsAddingBarber(false);
         setTimeout(() => window.location.reload(), 1000);
       } else {
@@ -525,6 +532,7 @@ export function ManageBarbershopClient({
     setEditingBarber(barber);
     setBarberName(barber.name || '');
     setBarberBio(barber.bio || '');
+    setBarberType(barber.barberType || '');
   };
 
   const closeBarberModal = () => {
@@ -535,6 +543,8 @@ export function ManageBarbershopClient({
     setBarberPhone('');
     setBarberPassword('');
     setBarberBio('');
+    setBarberType('');
+    setBarberUsername('');
   };
 
   const handleEditBarber = async (e: React.FormEvent) => {
@@ -556,6 +566,7 @@ export function ManageBarbershopClient({
         body: JSON.stringify({
           name: barberName,
           bio: barberBio || null,
+          barberType: barberType || null,
         }),
       });
 
@@ -1104,6 +1115,9 @@ export function ManageBarbershopClient({
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">{barber.name}</h3>
+                          {barber.barberType && (
+                            <span className="inline-block text-xs bg-accent-100 text-accent-700 px-2 py-0.5 rounded-full">{barber.barberType}</span>
+                          )}
                           {barber.experience && (
                             <p className="text-sm text-gray-600">{barber.experience} ans d'expérience</p>
                           )}
@@ -1797,6 +1811,37 @@ export function ManageBarbershopClient({
                 />
                 <p className="text-xs text-gray-500 mt-1">Le coiffeur pourra se connecter avec cet email et ce mot de passe</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom d'utilisateur (identifiant)
+                </label>
+                <input
+                  type="text"
+                  value={barberUsername}
+                  onChange={(e) => setBarberUsername(e.target.value)}
+                  placeholder="Ex: jean.dupont"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                />
+                <p className="text-xs text-gray-500 mt-1">Permet au coiffeur de se connecter par identifiant (utile si plusieurs coiffeurs partagent un email)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type de coiffeur
+                </label>
+                <select
+                  value={barberType}
+                  onChange={(e) => setBarberType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                >
+                  <option value="">-- Sélectionner --</option>
+                  <option value="Coiffeur Homme">Coiffeur Homme</option>
+                  <option value="Coiffeuse Femme">Coiffeuse Femme</option>
+                  <option value="Tresses / Braids">Tresses / Braids</option>
+                  <option value="Barbier">Barbier</option>
+                  <option value="Coloriste">Coloriste</option>
+                  <option value="Mixte">Mixte</option>
+                </select>
+              </div>
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"
@@ -1855,6 +1900,24 @@ export function ManageBarbershopClient({
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type de coiffeur
+                </label>
+                <select
+                  value={barberType}
+                  onChange={(e) => setBarberType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                >
+                  <option value="">-- Sélectionner --</option>
+                  <option value="Coiffeur Homme">Coiffeur Homme</option>
+                  <option value="Coiffeuse Femme">Coiffeuse Femme</option>
+                  <option value="Tresses / Braids">Tresses / Braids</option>
+                  <option value="Barbier">Barbier</option>
+                  <option value="Coloriste">Coloriste</option>
+                  <option value="Mixte">Mixte</option>
+                </select>
               </div>
               <div className="flex space-x-3 pt-4">
                 <button
