@@ -129,8 +129,10 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     .where(eq(users.email, userEmail || ''))
     .limit(1) : [];
 
-  // Check if user owns barbershops - fetch for ALL users (any user can be a shop owner)
-  const userBarbershops = await db
+  // Check if user owns or co-owns barbershops
+  const currentUserId = currentUser[0]?.id;
+
+  const ownedShops = currentUserId ? await db
     .select({
       id: barbershops.id,
       name: barbershops.name,
@@ -153,8 +155,39 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
       `.as('subscription_status'),
     })
     .from(barbershops)
-    .leftJoin(users, eq(barbershops.ownerId, users.id))
-    .where(eq(users.email, userEmail || ''));
+    .where(eq(barbershops.ownerId, currentUserId)) : [];
+
+  const coOwnedShops = currentUserId ? await db
+    .select({
+      id: barbershops.id,
+      name: barbershops.name,
+      description: barbershops.description,
+      address: barbershops.address,
+      city: barbershops.city,
+      phone: barbershops.phone,
+      email: barbershops.email,
+      website: barbershops.website,
+      rating: barbershops.rating,
+      reviewCount: barbershops.reviewCount,
+      isActive: barbershops.isActive,
+      createdAt: barbershops.createdAt,
+      subscriptionStatus: sql<string>`
+        CASE 
+          WHEN ${barbershops.isActive} = false THEN 'inactive'
+          WHEN ${barbershops.createdAt} < NOW() - INTERVAL '1 month' THEN 'expired'
+          ELSE 'active'
+        END
+      `.as('subscription_status'),
+    })
+    .from(barbershops)
+    .where(eq(barbershops.coOwnerId, currentUserId)) : [];
+
+  // Merge owned and co-owned shops, avoiding duplicates
+  const seenIds = new Set(ownedShops.map(s => s.id));
+  const userBarbershops = [
+    ...ownedShops,
+    ...coOwnedShops.filter(s => !seenIds.has(s.id)),
+  ];
 
   // Fetch customer bookings ONLY if user is a customer
   let userBookings: any[] = [];

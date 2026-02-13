@@ -109,6 +109,8 @@ export async function POST(request: NextRequest) {
         // Fix French labels: Coiffeur Homme -> Coiffeur, Coiffeuse Femme -> Coiffeuse
         `UPDATE barbers SET barber_type = 'Coiffeur' WHERE barber_type = 'Coiffeur Homme'`,
         `UPDATE barbers SET barber_type = 'Coiffeuse' WHERE barber_type = 'Coiffeuse Femme'`,
+        // Add co_owner_id column to barbershops table
+        `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS co_owner_id UUID REFERENCES "user"(id)`,
       ];
 
       const results = [];

@@ -19,8 +19,9 @@ export default async function BookingsManagementPage({
   }
 
   const userEmail = session.user.email;
+  const userRole = (session.user as any).role;
 
-  // Fetch the barbershop and verify ownership
+  // Fetch the barbershop
   const [shop] = await db
     .select({
       id: barbershops.id,
@@ -28,19 +29,30 @@ export default async function BookingsManagementPage({
       city: barbershops.city,
       address: barbershops.address,
       ownerId: barbershops.ownerId,
+      coOwnerId: barbershops.coOwnerId,
     })
     .from(barbershops)
-    .innerJoin(users, eq(barbershops.ownerId, users.id))
-    .where(
-      and(
-        eq(barbershops.id, id),
-        eq(users.email, userEmail as string)
-      )
-    )
+    .where(eq(barbershops.id, id))
     .limit(1);
 
   if (!shop) {
     notFound();
+  }
+
+  // Verify ownership, co-ownership, or admin/dev access
+  if (userRole !== 'admin' && userRole !== 'dev') {
+    const [currentUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, userEmail || ''))
+      .limit(1);
+
+    const isOwner = currentUser && shop.ownerId === currentUser.id;
+    const isCoOwner = currentUser && shop.coOwnerId === currentUser.id;
+
+    if (!isOwner && !isCoOwner) {
+      notFound();
+    }
   }
 
   // Fetch bookings for this barbershop with all related data
