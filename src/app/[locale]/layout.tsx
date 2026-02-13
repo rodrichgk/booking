@@ -3,6 +3,7 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Montserrat, DM_Sans } from 'next/font/google';
 import { Providers } from '@/components/providers';
+import { Analytics } from '@vercel/analytics/react';
 
 const locales = ['fr', 'en'];
 
@@ -51,6 +52,7 @@ export default async function LocaleLayout({
           <NextIntlClientProvider messages={messages}>
             {children}
           </NextIntlClientProvider>
+          <Analytics />
         </Providers>
       </body>
     </html>
