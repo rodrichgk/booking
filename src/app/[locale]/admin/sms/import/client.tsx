@@ -202,6 +202,30 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     reader.readAsText(file, 'UTF-8');
   }, []);
 
+  // Format phone number: strip +33, ensure leading 0, remove spaces/dots/dashes
+  const formatPhone = (phone: string): string => {
+    if (!phone) return '';
+    // Remove spaces, dots, dashes, parentheses
+    let cleaned = phone.replace(/[\s.\-()]/g, '');
+    // Handle +33 prefix -> replace with 0
+    if (cleaned.startsWith('+33')) {
+      cleaned = '0' + cleaned.slice(3);
+    }
+    // Handle 0033 prefix -> replace with 0
+    if (cleaned.startsWith('0033')) {
+      cleaned = '0' + cleaned.slice(4);
+    }
+    // Handle 33 prefix (10+ digits starting with 33) -> replace with 0
+    if (cleaned.startsWith('33') && cleaned.length === 11) {
+      cleaned = '0' + cleaned.slice(2);
+    }
+    // Ensure leading 0 if 9 digits (missing the 0)
+    if (/^[1-9]\d{8}$/.test(cleaned)) {
+      cleaned = '0' + cleaned;
+    }
+    return cleaned;
+  };
+
   // Apply mapping and generate preview
   const applyMapping = () => {
     if (!parsedData) return;
@@ -218,9 +242,9 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
       firstName: row[fieldMapping.firstName] || '',
       lastName: row[fieldMapping.lastName] || '',
       gender: fieldMapping.gender ? (row[fieldMapping.gender] || '') : '',
-      phone1: row[fieldMapping.phone1] || '',
-      phone2: fieldMapping.phone2 ? (row[fieldMapping.phone2] || '') : '',
-      phone3: fieldMapping.phone3 ? (row[fieldMapping.phone3] || '') : '',
+      phone1: formatPhone(row[fieldMapping.phone1] || ''),
+      phone2: formatPhone(fieldMapping.phone2 ? (row[fieldMapping.phone2] || '') : ''),
+      phone3: formatPhone(fieldMapping.phone3 ? (row[fieldMapping.phone3] || '') : ''),
     })).filter(contact => contact.firstName || contact.lastName || contact.phone1);
 
     setMappedContacts(contacts);
@@ -308,9 +332,9 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
       firstName: fieldMapping.firstName ? row[fieldMapping.firstName] || '' : '',
       lastName: fieldMapping.lastName ? row[fieldMapping.lastName] || '' : '',
       gender: fieldMapping.gender ? row[fieldMapping.gender] || '' : '',
-      phone1: fieldMapping.phone1 ? row[fieldMapping.phone1] || '' : '',
-      phone2: fieldMapping.phone2 ? row[fieldMapping.phone2] || '' : '',
-      phone3: fieldMapping.phone3 ? row[fieldMapping.phone3] || '' : '',
+      phone1: formatPhone(fieldMapping.phone1 ? row[fieldMapping.phone1] || '' : ''),
+      phone2: formatPhone(fieldMapping.phone2 ? row[fieldMapping.phone2] || '' : ''),
+      phone3: formatPhone(fieldMapping.phone3 ? row[fieldMapping.phone3] || '' : ''),
     }));
     
     setMappedContacts(newMappedContacts);
