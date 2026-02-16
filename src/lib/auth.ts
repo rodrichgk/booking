@@ -24,14 +24,21 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         if (!credentials?.password) {
+          console.log('❌ Authorize - No password provided');
           return null;
         }
 
         // Allow login with email, phone, or username
         const identifier = credentials.email || credentials.phone || credentials.username;
         if (!identifier) {
+          console.log('❌ Authorize - No identifier provided');
           return null;
         }
+
+        console.log('🔐 Authorize - Attempting login for:', identifier);
+        if (credentials.email) console.log('   via Email');
+        if (credentials.username) console.log('   via Username');
+        if (credentials.phone) console.log('   via Phone');
 
         const safeSelect = {
           id: users.id,
@@ -95,35 +102,41 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, account }) {
-      // Always fetch fresh role from database on every request
-      if (token.sub) {
-        const dbUser = await db
-          .select({
-            role: users.role,
-            email: users.email,
-            name: users.name,
-          })
-          .from(users)
-          .where(eq(users.id, token.sub))
-          .limit(1);
+      try {
+        // Always fetch fresh role from database on every request
+        if (token.sub) {
+          console.log('🔄 JWT Callback - Fetching fresh data for:', token.sub);
+          const dbUser = await db
+            .select({
+              role: users.role,
+              email: users.email,
+              name: users.name,
+            })
+            .from(users)
+            .where(eq(users.id, token.sub))
+            .limit(1);
 
-        if (dbUser.length > 0) {
-          token.role = dbUser[0].role;
-          token.email = dbUser[0].email;
-          token.name = dbUser[0].name;
-          console.log('🔑 JWT Callback - Fresh role from DB:', {
-            email: dbUser[0].email,
-            role: dbUser[0].role
-          });
+          if (dbUser.length > 0) {
+            token.role = dbUser[0].role;
+            token.email = dbUser[0].email;
+            token.name = dbUser[0].name;
+            console.log('✅ JWT Callback - Fresh data loaded', { role: token.role });
+          } else {
+            console.log('⚠️ JWT Callback - User not found in DB');
+          }
         }
-      }
 
-      // Also handle initial sign in
-      if (user) {
-        token.role = user.role;
-      }
+        // Also handle initial sign in
+        if (user) {
+          token.role = user.role;
+          console.log('👤 JWT Callback - Initial sign in', { role: user.role });
+        }
 
-      return token;
+        return token;
+      } catch (error) {
+        console.error('❌ JWT Callback Error:', error);
+        return token; // Return token to avoid crashing the session
+      }
     },
     async session({ session, token }) {
       if (token) {
