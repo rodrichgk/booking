@@ -12,6 +12,8 @@ export const users = pgTable('user', {
   image: text('image'),
   role: varchar('role', { length: 20 }).notNull().default('customer'), // customer, barber, admin, dev
   emailVerified: timestamp('emailVerified'),
+  resetPasswordToken: varchar('reset_password_token', { length: 255 }),
+  resetPasswordExpires: timestamp('reset_password_expires'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
