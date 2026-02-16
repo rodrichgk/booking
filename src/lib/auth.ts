@@ -24,9 +24,9 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         try {
-          if (!credentials?.password) {
-            return null;
-          }
+        if (!credentials?.password) {
+          return null;
+        }
 
           // Trim all credential values to avoid whitespace/URL param leakage
           const email = credentials.email?.trim() || '';
@@ -35,66 +35,66 @@ export const authOptions: NextAuthOptions = {
           const password = credentials.password;
 
           const identifier = email || phone || username;
-          if (!identifier) {
-            return null;
-          }
+        if (!identifier) {
+          return null;
+        }
 
           console.log('🔐 Authorize - login for:', identifier);
 
-          const safeSelect = {
-            id: users.id,
-            email: users.email,
-            password: users.password,
-            name: users.name,
-            role: users.role,
-            image: users.image,
-          };
+        const safeSelect = {
+          id: users.id,
+          email: users.email,
+          password: users.password,
+          name: users.name,
+          role: users.role,
+          image: users.image,
+        };
 
-          let user;
-          if (username) {
-            user = await db
-              .select(safeSelect)
-              .from(users)
-              .where(eq(users.username, username))
-              .limit(1);
-          } else if (email) {
-            user = await db
-              .select(safeSelect)
-              .from(users)
-              .where(eq(users.email, email))
-              .limit(1);
-          } else {
-            user = await db
-              .select(safeSelect)
-              .from(users)
-              .where(eq(users.phone, phone))
-              .limit(1);
-          }
+        let user;
+        if (credentials.username) {
+          user = await db
+            .select(safeSelect)
+            .from(users)
+            .where(eq(users.username, credentials.username))
+            .limit(1);
+        } else if (credentials.email) {
+          user = await db
+            .select(safeSelect)
+            .from(users)
+            .where(eq(users.email, credentials.email))
+            .limit(1);
+        } else {
+          user = await db
+            .select(safeSelect)
+            .from(users)
+            .where(eq(users.phone, credentials.phone!))
+            .limit(1);
+        }
 
-          if (!user.length) {
+        if (!user.length) {
             console.log('❌ User not found:', identifier);
-            return null;
-          }
+          return null;
+        }
 
-          const isPasswordValid = await bcrypt.compare(
+        const isPasswordValid = await bcrypt.compare(
             password,
-            user[0].password || ''
-          );
+          user[0].password || ''
+        );
 
-          if (!isPasswordValid) {
+        if (!isPasswordValid) {
             console.log('❌ Invalid password for:', identifier);
-            return null;
-          }
+          return null;
+        }
 
           console.log('✅ Login OK:', user[0].email);
 
-          return {
-            id: user[0].id,
-            email: user[0].email,
-            name: user[0].name,
-            role: user[0].role,
-            image: user[0].image || undefined,
-          };
+        return {
+          id: user[0].id,
+          email: user[0].email,
+          name: user[0].name,
+          role: user[0].role,
+          image: user[0].image || undefined,
+        };
         } catch (error) {
           console.error('❌ Authorize error:', error);
           return null;
