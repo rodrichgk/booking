@@ -91,6 +91,9 @@ export const barbers = pgTable('barbers', {
   experience: integer('experience'),
   rating: decimal('rating', { precision: 3, scale: 2 }),
   isActive: boolean('is_active').default(true),
+  openingHours: jsonb('opening_hours').$type<{
+    [key: string]: { open: string; close: string; closed: boolean };
+  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

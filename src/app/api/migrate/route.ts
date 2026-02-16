@@ -111,6 +111,8 @@ export async function POST(request: NextRequest) {
         `UPDATE barbers SET barber_type = 'Coiffeuse' WHERE barber_type = 'Coiffeuse Femme'`,
         // Add co_owner_id column to barbershops table
         `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS co_owner_id UUID REFERENCES "user"(id)`,
+        // Add opening_hours column to barbers table (per-barber schedules)
+        `ALTER TABLE barbers ADD COLUMN IF NOT EXISTS opening_hours JSONB`,
       ];
 
       const results = [];

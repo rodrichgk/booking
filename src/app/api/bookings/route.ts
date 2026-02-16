@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Validate appointment is in the future
     const appointmentDateTime = new Date(appointmentDate);
     const now = new Date();
-    
+
     if (appointmentDateTime <= now) {
       return NextResponse.json(
         { error: 'Appointment date must be in the future' },
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       const hasConflict = existingBookings.some(existing => {
         const existingStart = new Date(existing.startTime);
         const existingEnd = new Date(existing.endTime);
-        
+
         // Check for any overlap
         return (
           (appointmentDateTime >= existingStart && appointmentDateTime < existingEnd) || // New starts during existing
@@ -124,14 +124,14 @@ export async function POST(request: NextRequest) {
         .innerJoin(users, eq(barbers.userId, users.id))
         .where(eq(barbers.id, barberId))
         .limit(1);
-      
+
       barberInfo = barber;
     }
 
     // Create booking
     const endTime = new Date(appointmentDateTime);
     endTime.setHours(endTime.getHours() + 1); // Default 1 hour appointment
-    
+
     const [booking] = await db
       .insert(bookings)
       .values({
@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: 'Europe/Paris',
       };
       return date.toLocaleDateString('fr-FR', options);
     };
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
     // Send confirmation email to customer
     console.log('📧 Attempting to send email to customer:', customerEmail);
     console.log('📧 Using Resend API Key:', process.env.RESEND_API_KEY ? 'Present' : 'Missing');
-    
+
     try {
       const resendClient = getResend();
       const emailResponse = await resendClient.emails.send({
@@ -309,11 +310,11 @@ export async function POST(request: NextRequest) {
       console.error('Error type:', emailError.constructor.name);
       console.error('Error message:', emailError.message);
       console.error('Error details:', JSON.stringify(emailError, null, 2));
-      
+
       if (emailError.statusCode) {
         console.error('HTTP Status Code:', emailError.statusCode);
       }
-      
+
       // Delete the booking since email failed
       try {
         await db.delete(bookings).where(eq(bookings.id, booking.id));
@@ -321,9 +322,9 @@ export async function POST(request: NextRequest) {
       } catch (deleteError) {
         console.error('Failed to delete booking:', deleteError);
       }
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Échec de l\'envoi de l\'email de confirmation. Veuillez vérifier votre adresse email.',
           details: emailError.message || 'Unknown error',
           statusCode: emailError.statusCode || 500

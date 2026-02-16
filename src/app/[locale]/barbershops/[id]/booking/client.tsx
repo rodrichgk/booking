@@ -25,6 +25,7 @@ interface Barber {
   name: string | null;
   specialties: string[] | null;
   isActive: boolean;
+  openingHours?: OpeningHours | null;
 }
 
 interface Service {
@@ -51,58 +52,89 @@ interface BookingClientProps {
 }
 
 // Generate available dates for the next 7 days
-const generateAvailableDates = () => {
+// If a barber is selected and has their own hours, show days they work even if salon is closed
+const generateAvailableDates = (
+  shopOpeningHours: OpeningHours | null,
+  selectedBarberData: Barber | undefined
+) => {
   const dates = [];
   const today = new Date();
-  
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
   for (let i = 0; i < 7; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
+
+    const dayName = days[date.getDay()];
+
+    // Check if barber has their own hours for this day
+    const barberHours = selectedBarberData?.openingHours;
+    if (barberHours && barberHours[dayName] && !barberHours[dayName].closed) {
+      dates.push(date);
+      continue;
+    }
+
+    // If barber has hours but is closed this day, skip
+    if (barberHours && barberHours[dayName]?.closed) {
+      continue;
+    }
+
+    // Fallback to shop hours
+    if (shopOpeningHours && shopOpeningHours[dayName]?.closed) {
+      continue;
+    }
+
     dates.push(date);
   }
-  
+
   return dates;
 };
 
-// Generate time slots based on shop's opening hours for the selected date
-const generateTimeSlots = (selectedDate: Date | null, openingHours: OpeningHours | null) => {
+// Generate time slots based on barber's hours (priority) or shop's opening hours
+const generateTimeSlots = (
+  selectedDate: Date | null,
+  shopOpeningHours: OpeningHours | null,
+  barberOpeningHours: OpeningHours | null | undefined
+) => {
   const slots: string[] = [];
   if (!selectedDate) return slots;
-  
+
   const now = new Date();
-  const isToday = 
+  const isToday =
     selectedDate.getDate() === now.getDate() &&
     selectedDate.getMonth() === now.getMonth() &&
     selectedDate.getFullYear() === now.getFullYear();
-  
+
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
-  
+
   // Get day name for opening hours lookup
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayName = days[selectedDate.getDay()];
-  
+
   // Default hours if no opening hours set
   let openHour = 9;
   let closeHour = 19;
-  
-  if (openingHours && openingHours[dayName]) {
-    const dayHours = openingHours[dayName];
-    if (dayHours.closed) {
-      return slots; // Shop is closed this day
+
+  // Barber hours take priority over shop hours
+  const effectiveHours = barberOpeningHours?.[dayName] ?? shopOpeningHours?.[dayName];
+
+  if (effectiveHours) {
+    if (effectiveHours.closed) {
+      return slots;
     }
-    const [openH] = dayHours.open.split(':').map(Number);
-    const [closeH] = dayHours.close.split(':').map(Number);
+    const [openH] = effectiveHours.open.split(':').map(Number);
+    const [closeH] = effectiveHours.close.split(':').map(Number);
     openHour = openH;
     closeHour = closeH;
   }
-  
+
   for (let hour = openHour; hour < closeHour; hour++) {
     // Add :00 slot
     if (!isToday || hour > currentHour || (hour === currentHour && currentMinutes < 0)) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
     }
-    
+
     // Add :30 slot
     if (hour < closeHour - 1 || (hour === closeHour - 1)) {
       if (!isToday || hour > currentHour || (hour === currentHour && currentMinutes < 30)) {
@@ -128,9 +160,10 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const availableDates = generateAvailableDates();
-  const availableTimeSlots = generateTimeSlots(selectedDate, shop.openingHours);
   const activeBarbers = barbers.filter(b => b.isActive);
+  const selectedBarberObj = activeBarbers.find(b => b.id === selectedBarber);
+  const availableDates = generateAvailableDates(shop.openingHours, selectedBarberObj);
+  const availableTimeSlots = generateTimeSlots(selectedDate, shop.openingHours, selectedBarberObj?.openingHours);
 
   const formatDate = (date: Date) => {
     const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -181,7 +214,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
             customerName,
             customerEmail,
             customerPhone,
-            notes: selectedService === 'on-site' || selectedBarber === 'on-site' 
+            notes: selectedService === 'on-site' || selectedBarber === 'on-site'
               ? `${notes ? notes + '\n' : ''}[À choisir sur place: ${selectedService === 'on-site' ? 'Service' : ''}${selectedService === 'on-site' && selectedBarber === 'on-site' ? ', ' : ''}${selectedBarber === 'on-site' ? 'Coiffeur' : ''}]`
               : notes,
           }),
@@ -226,7 +259,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -266,7 +299,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                 <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
               </>
             )}
-            
+
             {/* Date Step */}
             <div className={`flex items-center flex-shrink-0 ${step === 'date' ? 'text-primary-600' : (step === 'time' || step === 'confirm') ? 'text-green-600' : 'text-gray-400'}`}>
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'date' ? 'bg-primary-600 text-white' : (step === 'time' || step === 'confirm') ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
@@ -275,7 +308,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
               <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Date</span>
             </div>
             <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
-            
+
             {/* Time Step */}
             <div className={`flex items-center flex-shrink-0 ${step === 'time' ? 'text-primary-600' : step === 'confirm' ? 'text-green-600' : 'text-gray-400'}`}>
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'time' ? 'bg-primary-600 text-white' : step === 'confirm' ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
@@ -284,7 +317,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
               <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Heure</span>
             </div>
             <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
-            
+
             {/* Confirm Step */}
             <div className={`flex items-center flex-shrink-0 ${step === 'confirm' ? 'text-primary-600' : 'text-gray-400'}`}>
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'confirm' ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>
@@ -315,7 +348,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                 <div className="flex items-center text-gray-700">
                   <Scissors className="w-4 h-4 mr-2" />
                   <span>
-                    {selectedService === 'on-site' 
+                    {selectedService === 'on-site'
                       ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
                       : services.find(s => s.id === selectedService)?.name || 'Service'}
                   </span>
@@ -324,7 +357,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                 <div className="flex items-center text-gray-700">
                   <User className="w-4 h-4 mr-2" />
                   <span>
-                    {selectedBarber === 'on-site' 
+                    {selectedBarber === 'on-site'
                       ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
                       : selectedBarberData?.name || 'Coiffeur'}
                   </span>
@@ -373,15 +406,14 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
             {step === 'service' && (
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez un service</h2>
-                
+
                 {/* Choose on site option */}
                 <button
                   onClick={() => setSelectedService('on-site')}
-                  className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${
-                    selectedService === 'on-site'
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'
-                  }`}
+                  className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${selectedService === 'on-site'
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'
+                    }`}
                 >
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
@@ -426,11 +458,10 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
                               <button
                                 key={service.id}
                                 onClick={() => setSelectedService(service.id)}
-                                className={`p-4 rounded-lg border-2 transition-all text-left ${
-                                  selectedService === service.id
-                                    ? 'border-primary-600 bg-primary-50'
-                                    : 'border-gray-200 hover:border-primary-300'
-                                }`}
+                                className={`p-4 rounded-lg border-2 transition-all text-left ${selectedService === service.id
+                                  ? 'border-primary-600 bg-primary-50'
+                                  : 'border-gray-200 hover:border-primary-300'
+                                  }`}
                               >
                                 <div className="flex items-start justify-between mb-2">
                                   <div className="flex-1">
@@ -463,244 +494,239 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
 
             {/* Select Barber Step */}
             {step === 'barber' && (
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez votre coiffeur</h2>
-              
-              {/* Choose on site option */}
-              <button
-                onClick={() => setSelectedBarber('on-site')}
-                className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${
-                  selectedBarber === 'on-site'
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez votre coiffeur</h2>
+
+                {/* Choose on site option */}
+                <button
+                  onClick={() => setSelectedBarber('on-site')}
+                  className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${selectedBarber === 'on-site'
                     ? 'border-amber-500 bg-amber-50'
                     : 'border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'
-                }`}
-              >
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-xl">🏠</span>
+                    }`}
+                >
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-xl">🏠</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Je choisirai sur place</h4>
+                      <p className="text-sm text-gray-600">Je déciderai du coiffeur au salon</p>
+                    </div>
+                    {selectedBarber === 'on-site' && (
+                      <Check className="w-5 h-5 text-amber-600 ml-auto" />
+                    )}
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">Je choisirai sur place</h4>
-                    <p className="text-sm text-gray-600">Je déciderai du coiffeur au salon</p>
-                  </div>
-                  {selectedBarber === 'on-site' && (
-                    <Check className="w-5 h-5 text-amber-600 ml-auto" />
-                  )}
-                </div>
-              </button>
+                </button>
 
-              {activeBarbers.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600">Aucun coiffeur disponible pour le moment</p>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {activeBarbers.map((barber) => (
-                    <button
-                      key={barber.id}
-                      onClick={() => setSelectedBarber(barber.id)}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        selectedBarber === barber.id
+                {activeBarbers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">Aucun coiffeur disponible pour le moment</p>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {activeBarbers.map((barber) => (
+                      <button
+                        key={barber.id}
+                        onClick={() => setSelectedBarber(barber.id)}
+                        className={`p-4 rounded-lg border-2 transition-all text-left ${selectedBarber === barber.id
                           ? 'border-primary-600 bg-primary-50'
                           : 'border-gray-200 hover:border-primary-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold">
-                            {barber.name?.split(' ').map(n => n[0]).join('') || '?'}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{barber.name}</h3>
-                          {barber.specialties && barber.specialties.length > 0 && (
-                            <p className="text-sm text-gray-600">{barber.specialties[0]}</p>
+                          }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold">
+                              {barber.name?.split(' ').map(n => n[0]).join('') || '?'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{barber.name}</h3>
+                            {barber.specialties && barber.specialties.length > 0 && (
+                              <p className="text-sm text-gray-600">{barber.specialties[0]}</p>
+                            )}
+                          </div>
+                          {selectedBarber === barber.id && (
+                            <Check className="w-5 h-5 text-primary-600" />
                           )}
                         </div>
-                        {selectedBarber === barber.id && (
-                          <Check className="w-5 h-5 text-primary-600" />
-                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Select Date Step */}
+            {step === 'date' && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez une date</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {availableDates.map((date, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedDate(date)}
+                      className={`p-4 rounded-lg border-2 transition-all ${selectedDate?.toDateString() === date.toDateString()
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-200 hover:border-primary-300'
+                        }`}
+                    >
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">{formatDate(date)}</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1">{date.getDate()}</p>
                       </div>
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Select Date Step */}
-          {step === 'date' && (
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez une date</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {availableDates.map((date, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedDate(date)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      selectedDate?.toDateString() === date.toDateString()
-                        ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-300'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">{formatDate(date)}</p>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{date.getDate()}</p>
-                    </div>
-                  </button>
-                ))}
               </div>
-            </div>
-          )}
-
-          {/* Select Time Step */}
-          {step === 'time' && (
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez une heure</h2>
-              <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                {availableTimeSlots.map((time) => (
-                  <button
-                    key={time}
-                    onClick={() => setSelectedTime(time)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      selectedTime === time
-                        ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-300'
-                    }`}
-                  >
-                    <p className="text-center font-semibold text-gray-900">{time}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Confirm Step */}
-          {step === 'confirm' && (
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Confirmez votre réservation</h2>
-              
-              {/* Booking Summary */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Résumé</h3>
-                <div className="space-y-2 text-sm">
-                  {/* Service */}
-                  <div className="flex items-center text-gray-700">
-                    <Scissors className="w-4 h-4 mr-2" />
-                    <span>
-                      {selectedService === 'on-site' 
-                        ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
-                        : services.find(s => s.id === selectedService)?.name || 'Service'}
-                    </span>
-                  </div>
-                  {/* Barber */}
-                  <div className="flex items-center text-gray-700">
-                    <User className="w-4 h-4 mr-2" />
-                    <span>
-                      {selectedBarber === 'on-site' 
-                        ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
-                        : selectedBarberData?.name || 'Coiffeur'}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-gray-700">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    <span>{selectedDate && formatDate(selectedDate)}</span>
-                  </div>
-                  <div className="flex items-center text-gray-700">
-                    <Clock className="w-4 h-4 mr-2" />
-                    <span>{selectedTime}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Customer Info Form */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom complet *
-                  </label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    placeholder="Votre nom"
-                    disabled={!!userInfo?.name}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    placeholder="votre@email.com"
-                    disabled={!!userInfo?.email}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Téléphone *
-                  </label>
-                  <input
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    placeholder="+33 6 12 34 56 78"
-                    disabled={!!userInfo?.phone}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes (optionnel)
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    placeholder="Des demandes particulières?"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 pt-6 border-t border-gray-200">
-            {step !== 'service' && (
-              <button
-                onClick={handleBack}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors order-2 sm:order-1"
-              >
-                Retour
-              </button>
             )}
-            <button
-              onClick={handleNext}
-              disabled={!canProceed() || isSubmitting}
-              className={`sm:ml-auto px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 ${
-                canProceed() && !isSubmitting
+
+            {/* Select Time Step */}
+            {step === 'time' && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez une heure</h2>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                  {availableTimeSlots.map((time) => (
+                    <button
+                      key={time}
+                      onClick={() => setSelectedTime(time)}
+                      className={`p-3 rounded-lg border-2 transition-all ${selectedTime === time
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-200 hover:border-primary-300'
+                        }`}
+                    >
+                      <p className="text-center font-semibold text-gray-900">{time}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Confirm Step */}
+            {step === 'confirm' && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Confirmez votre réservation</h2>
+
+                {/* Booking Summary */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Résumé</h3>
+                  <div className="space-y-2 text-sm">
+                    {/* Service */}
+                    <div className="flex items-center text-gray-700">
+                      <Scissors className="w-4 h-4 mr-2" />
+                      <span>
+                        {selectedService === 'on-site'
+                          ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
+                          : services.find(s => s.id === selectedService)?.name || 'Service'}
+                      </span>
+                    </div>
+                    {/* Barber */}
+                    <div className="flex items-center text-gray-700">
+                      <User className="w-4 h-4 mr-2" />
+                      <span>
+                        {selectedBarber === 'on-site'
+                          ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
+                          : selectedBarberData?.name || 'Coiffeur'}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-gray-700">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      <span>{selectedDate && formatDate(selectedDate)}</span>
+                    </div>
+                    <div className="flex items-center text-gray-700">
+                      <Clock className="w-4 h-4 mr-2" />
+                      <span>{selectedTime}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer Info Form */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nom complet *
+                    </label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                      placeholder="Votre nom"
+                      disabled={!!userInfo?.name}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                      placeholder="votre@email.com"
+                      disabled={!!userInfo?.email}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Téléphone *
+                    </label>
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                      placeholder="+33 6 12 34 56 78"
+                      disabled={!!userInfo?.phone}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notes (optionnel)
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                      placeholder="Des demandes particulières?"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 pt-6 border-t border-gray-200">
+              {step !== 'service' && (
+                <button
+                  onClick={handleBack}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors order-2 sm:order-1"
+                >
+                  Retour
+                </button>
+              )}
+              <button
+                onClick={handleNext}
+                disabled={!canProceed() || isSubmitting}
+                className={`sm:ml-auto px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 ${canProceed() && !isSubmitting
                   ? 'bg-primary-600 hover:bg-primary-700 text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSubmitting ? 'En cours...' : step === 'confirm' ? 'Confirmer' : 'Suivant'}
-            </button>
-          </div>
+                  }`}
+              >
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? 'En cours...' : step === 'confirm' ? 'Confirmer' : 'Suivant'}
+              </button>
+            </div>
           </div>
         )}
       </div>
-      
+
       <Footer />
     </div>
   );

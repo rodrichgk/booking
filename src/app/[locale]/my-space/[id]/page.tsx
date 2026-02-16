@@ -85,6 +85,7 @@ export default async function ManageBarbershopPage({
       rating: barbers.rating,
       bio: barbers.bio,
       isActive: barbers.isActive,
+      openingHours: barbers.openingHours,
       createdAt: barbers.createdAt,
     })
     .from(barbers)

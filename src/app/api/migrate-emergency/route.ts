@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     `UPDATE barbers SET barber_type = 'Coiffeur' WHERE barber_type = 'Coiffeur Homme'`,
     `UPDATE barbers SET barber_type = 'Coiffeuse' WHERE barber_type = 'Coiffeuse Femme'`,
     `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS co_owner_id UUID REFERENCES "user"(id)`,
+    `ALTER TABLE barbers ADD COLUMN IF NOT EXISTS opening_hours JSONB`,
   ];
 
   const results = [];
