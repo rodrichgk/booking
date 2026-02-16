@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { sql } from 'drizzle-orm';
 
-// TEMPORARY emergency migration endpoint - no auth required
-// Protected by a secret key. DELETE THIS FILE after running.
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,8 +10,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid secret' }, { status: 403 });
     }
 
+    // Dynamic import to catch initialization errors (e.g. missing env vars)
+    let db;
+    let sql;
+    try {
+      const dbModule = await import('@/lib/db');
+      const drizzleModule = await import('drizzle-orm');
+      db = dbModule.db;
+      sql = drizzleModule.sql;
+    } catch (importError: any) {
+      console.error('Failed to initialize DB:', importError);
+      return NextResponse.json({
+        error: 'Database initialization failed. Check environment variables.',
+        details: importError.message
+      }, { status: 500 });
+    }
+
     if (!db) {
-      return NextResponse.json({ error: 'Database connection not initialized' }, { status: 500 });
+      return NextResponse.json({ error: 'Database connection invalid' }, { status: 500 });
     }
 
     const migrations = [
