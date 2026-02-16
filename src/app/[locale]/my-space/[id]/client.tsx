@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Link } from '@/routing';
+import { useState, useCallback, useEffect } from 'react';
+import { Link, useRouter } from '@/routing';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   Store, MapPin, Phone, Mail, Globe, Star, Calendar, Users,
@@ -92,7 +93,32 @@ export function ManageBarbershopClient({
   subscriptionPrice
 }: ManageBarbershopClientProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'barbers' | 'services' | 'gallery' | 'schedule' | 'settings'>('overview');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  type TabId = 'overview' | 'barbers' | 'services' | 'gallery' | 'schedule' | 'settings';
+  const validTabs: TabId[] = ['overview', 'barbers', 'services', 'gallery', 'schedule', 'settings'];
+  const initialTab = (validTabs.includes(searchParams.get('tab') as TabId) ? searchParams.get('tab') : 'overview') as TabId;
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  const setTab = useCallback((tab: TabId) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.pushState({}, '', url.toString());
+  }, []);
+  // Sync tab state with browser back/forward
+  useEffect(() => {
+    const onPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') as TabId;
+      if (tab && validTabs.includes(tab)) {
+        setActiveTab(tab);
+      } else {
+        setActiveTab('overview');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
   const t = useTranslations('barbershopManagement');
   const [isAddingService, setIsAddingService] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -183,7 +209,7 @@ export function ManageBarbershopClient({
       if (res.ok) {
         toast({ variant: 'success', title: 'Succès', description: 'Horaires du coiffeur mis à jour' });
         setEditingBarberHoursId(null);
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         const data = await res.json();
         toast({ variant: 'error', title: 'Erreur', description: data.error || 'Une erreur est survenue' });
@@ -207,7 +233,7 @@ export function ManageBarbershopClient({
       if (res.ok) {
         toast({ variant: 'success', title: 'Succès', description: 'Horaires personnalisés supprimés' });
         setEditingBarberHoursId(null);
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({ variant: 'error', title: 'Erreur', description: 'Une erreur est survenue' });
       }
@@ -356,7 +382,7 @@ export function ManageBarbershopClient({
           title: 'Succès',
           description: data.message,
         });
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({
           variant: 'error',
@@ -392,7 +418,7 @@ export function ManageBarbershopClient({
       if (res.ok) {
         toast({ variant: 'success', title: 'Succès', description: data.message });
         setCoOwnerEmail('');
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({ variant: 'error', title: 'Erreur', description: data.error || 'Une erreur est survenue' });
       }
@@ -412,7 +438,7 @@ export function ManageBarbershopClient({
       const data = await res.json();
       if (res.ok) {
         toast({ variant: 'success', title: 'Succès', description: data.message });
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({ variant: 'error', title: 'Erreur', description: data.error || 'Une erreur est survenue' });
       }
@@ -498,7 +524,7 @@ export function ManageBarbershopClient({
           description: 'Informations mises à jour avec succès',
         });
         setIsEditingShop(false);
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({
           variant: 'error',
@@ -568,7 +594,7 @@ export function ManageBarbershopClient({
           title: 'Succès',
           description: 'Coiffeur retiré avec succès',
         });
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({
           variant: 'error',
@@ -628,7 +654,7 @@ export function ManageBarbershopClient({
         setBarberType('');
         setBarberUsername('');
         setIsAddingBarber(false);
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({
           variant: 'error',
@@ -699,7 +725,7 @@ export function ManageBarbershopClient({
           description: 'Coiffeur modifié avec succès!',
         });
         closeBarberModal();
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({
           variant: 'error',
@@ -795,7 +821,7 @@ export function ManageBarbershopClient({
         setServiceCategory('haircut');
         setServiceImage('');
         setIsAddingService(false);
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({
           variant: 'error',
@@ -855,7 +881,7 @@ export function ManageBarbershopClient({
         setServicePrice('');
         setServiceDuration('');
         setServiceCategory('haircut');
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => router.refresh(), 1000);
       } else {
         toast({
           variant: 'error',
@@ -1001,7 +1027,7 @@ export function ManageBarbershopClient({
 
           <div className="flex overflow-x-auto scrollbar-hide mt-6 border-b border-gray-200 -mx-4 px-4 sm:mx-0 sm:px-0">
             {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              <button key={tab.id} onClick={() => setTab(tab.id)}
                 className={`flex items-center space-x-2 px-3 sm:px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'
                   }`}>
                 <tab.icon className="w-4 h-4" />
@@ -1224,7 +1250,7 @@ export function ManageBarbershopClient({
                                     body: JSON.stringify({ profileImage: uploadResult[0].url }),
                                   });
                                   toast({ variant: 'success', title: 'Photo mise à jour' });
-                                  setTimeout(() => window.location.reload(), 1000);
+                                  setTimeout(() => router.refresh(), 1000);
                                 } catch (error) {
                                   toast({ variant: 'error', title: 'Erreur', description: 'Échec du téléchargement' });
                                 }
@@ -1774,7 +1800,7 @@ export function ManageBarbershopClient({
                             title: 'Succès',
                             description: 'Votre abonnement sera annulé à la fin de la période en cours.',
                           });
-                          setTimeout(() => window.location.reload(), 2000);
+                          setTimeout(() => router.refresh(), 2000);
                         } else {
                           toast({
                             variant: 'error',

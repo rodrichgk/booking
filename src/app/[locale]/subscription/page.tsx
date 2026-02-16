@@ -23,10 +23,11 @@ export default async function SubscriptionPage({
   searchParams
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ shopId?: string }>;
+  searchParams: Promise<{ shopId?: string; barbershopId?: string }>;
 }) {
   const { locale } = await params;
-  const { shopId } = await searchParams;
+  const searchParamsResolved = await searchParams;
+  const shopId = searchParamsResolved.shopId || searchParamsResolved.barbershopId;
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {

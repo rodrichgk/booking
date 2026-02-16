@@ -148,9 +148,12 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
       createdAt: barbershops.createdAt,
       subscriptionStatus: sql<string>`
         CASE 
-          WHEN ${barbershops.isActive} = false THEN 'inactive'
-          WHEN ${barbershops.createdAt} < NOW() - INTERVAL '1 month' THEN 'expired'
-          ELSE 'active'
+          WHEN ${barbershops.subscriptionStatus} = 'active' AND (${barbershops.currentPeriodEnd} IS NULL OR ${barbershops.currentPeriodEnd} > NOW()) THEN 'active'
+          WHEN ${barbershops.subscriptionStatus} = 'past_due' THEN 'past_due'
+          WHEN ${barbershops.subscriptionStatus} = 'canceled' THEN 'canceled'
+          WHEN ${barbershops.currentPeriodEnd} IS NOT NULL AND ${barbershops.currentPeriodEnd} < NOW() THEN 'expired'
+          WHEN ${barbershops.subscriptionStatus} = 'inactive' OR ${barbershops.isActive} = false THEN 'inactive'
+          ELSE CASE WHEN ${barbershops.createdAt} < NOW() - INTERVAL '30 days' THEN 'expired' ELSE 'active' END
         END
       `.as('subscription_status'),
     })
@@ -173,9 +176,12 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
       createdAt: barbershops.createdAt,
       subscriptionStatus: sql<string>`
         CASE 
-          WHEN ${barbershops.isActive} = false THEN 'inactive'
-          WHEN ${barbershops.createdAt} < NOW() - INTERVAL '1 month' THEN 'expired'
-          ELSE 'active'
+          WHEN ${barbershops.subscriptionStatus} = 'active' AND (${barbershops.currentPeriodEnd} IS NULL OR ${barbershops.currentPeriodEnd} > NOW()) THEN 'active'
+          WHEN ${barbershops.subscriptionStatus} = 'past_due' THEN 'past_due'
+          WHEN ${barbershops.subscriptionStatus} = 'canceled' THEN 'canceled'
+          WHEN ${barbershops.currentPeriodEnd} IS NOT NULL AND ${barbershops.currentPeriodEnd} < NOW() THEN 'expired'
+          WHEN ${barbershops.subscriptionStatus} = 'inactive' OR ${barbershops.isActive} = false THEN 'inactive'
+          ELSE CASE WHEN ${barbershops.createdAt} < NOW() - INTERVAL '30 days' THEN 'expired' ELSE 'active' END
         END
       `.as('subscription_status'),
     })
