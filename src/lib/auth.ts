@@ -50,24 +50,31 @@ export const authOptions: NextAuthOptions = {
         };
 
         let user;
-        if (credentials.username) {
-          user = await db
-            .select(safeSelect)
-            .from(users)
-            .where(eq(users.username, credentials.username))
-            .limit(1);
-        } else if (credentials.email) {
-          user = await db
-            .select(safeSelect)
-            .from(users)
-            .where(eq(users.email, credentials.email))
-            .limit(1);
-        } else {
-          user = await db
-            .select(safeSelect)
-            .from(users)
-            .where(eq(users.phone, credentials.phone!))
-            .limit(1);
+        try {
+          console.log('🔄 Authorize - Querying DB...');
+          if (credentials.username) {
+            user = await db
+              .select(safeSelect)
+              .from(users)
+              .where(eq(users.username, credentials.username))
+              .limit(1);
+          } else if (credentials.email) {
+            user = await db
+              .select(safeSelect)
+              .from(users)
+              .where(eq(users.email, credentials.email))
+              .limit(1);
+          } else {
+            user = await db
+              .select(safeSelect)
+              .from(users)
+              .where(eq(users.phone, credentials.phone!))
+              .limit(1);
+          }
+          console.log('✅ Authorize - DB Query complete. Found:', user.length);
+        } catch (dbError) {
+          console.error('❌ Authorize - DB Query ERROR:', dbError);
+          return null;
         }
 
         if (!user.length) {
