@@ -33,22 +33,31 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const safeSelect = {
+          id: users.id,
+          email: users.email,
+          password: users.password,
+          name: users.name,
+          role: users.role,
+          image: users.image,
+        };
+
         let user;
         if (credentials.username) {
           user = await db
-            .select()
+            .select(safeSelect)
             .from(users)
             .where(eq(users.username, credentials.username))
             .limit(1);
         } else if (credentials.email) {
           user = await db
-            .select()
+            .select(safeSelect)
             .from(users)
             .where(eq(users.email, credentials.email))
             .limit(1);
         } else {
           user = await db
-            .select()
+            .select(safeSelect)
             .from(users)
             .where(eq(users.phone, credentials.phone!))
             .limit(1);
@@ -89,11 +98,15 @@ export const authOptions: NextAuthOptions = {
       // Always fetch fresh role from database on every request
       if (token.sub) {
         const dbUser = await db
-          .select()
+          .select({
+            role: users.role,
+            email: users.email,
+            name: users.name,
+          })
           .from(users)
           .where(eq(users.id, token.sub))
           .limit(1);
-        
+
         if (dbUser.length > 0) {
           token.role = dbUser[0].role;
           token.email = dbUser[0].email;
@@ -104,12 +117,12 @@ export const authOptions: NextAuthOptions = {
           });
         }
       }
-      
+
       // Also handle initial sign in
       if (user) {
         token.role = user.role;
       }
-      
+
       return token;
     },
     async session({ session, token }) {
@@ -118,7 +131,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
-        
+
         console.log('📋 Session Callback - Role set to:', {
           email: session.user.email,
           role: session.user.role
