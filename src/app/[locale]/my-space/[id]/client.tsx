@@ -51,6 +51,7 @@ interface Barber {
   rating: string | null;
   bio: string | null;
   isActive: boolean;
+  openingHours: OpeningHours | null;
   createdAt: Date;
 }
 
@@ -153,6 +154,69 @@ export function ManageBarbershopClient({
   const [isSavingHours, setIsSavingHours] = useState(false);
   const [closedDates, setClosedDates] = useState<string[]>([]);
   const [newClosedDate, setNewClosedDate] = useState('');
+
+  // Per-barber opening hours states
+  const [editingBarberHoursId, setEditingBarberHoursId] = useState<string | null>(null);
+  const [barberHours, setBarberHours] = useState<OpeningHours>(defaultOpeningHours);
+  const [isSavingBarberHours, setIsSavingBarberHours] = useState(false);
+
+  const handleOpenBarberHoursEditor = (barber: Barber) => {
+    setEditingBarberHoursId(barber.id);
+    setBarberHours(barber.openingHours || defaultOpeningHours);
+  };
+
+  const handleBarberHoursChange = (day: string, field: 'open' | 'close' | 'closed', value: string | boolean) => {
+    setBarberHours(prev => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: value },
+    }));
+  };
+
+  const handleSaveBarberHours = async (barberId: string) => {
+    setIsSavingBarberHours(true);
+    try {
+      const res = await fetch(`/api/barbers/${barberId}/update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openingHours: barberHours }),
+      });
+      if (res.ok) {
+        toast({ variant: 'success', title: 'Succès', description: 'Horaires du coiffeur mis à jour' });
+        setEditingBarberHoursId(null);
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        const data = await res.json();
+        toast({ variant: 'error', title: 'Erreur', description: data.error || 'Une erreur est survenue' });
+      }
+    } catch (error) {
+      toast({ variant: 'error', title: 'Erreur', description: 'Une erreur est survenue' });
+    } finally {
+      setIsSavingBarberHours(false);
+    }
+  };
+
+  const handleClearBarberHours = async (barberId: string) => {
+    if (!confirm('Supprimer les horaires personnalisés ? Le coiffeur utilisera les horaires du salon.')) return;
+    setIsSavingBarberHours(true);
+    try {
+      const res = await fetch(`/api/barbers/${barberId}/update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openingHours: null }),
+      });
+      if (res.ok) {
+        toast({ variant: 'success', title: 'Succès', description: 'Horaires personnalisés supprimés' });
+        setEditingBarberHoursId(null);
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast({ variant: 'error', title: 'Erreur', description: 'Une erreur est survenue' });
+      }
+    } catch (error) {
+      toast({ variant: 'error', title: 'Erreur', description: 'Une erreur est survenue' });
+    } finally {
+      setIsSavingBarberHours(false);
+    }
+  };
 
   // UploadThing hook for service images
   const { startUpload: startServiceImageUpload } = useUploadThing('serviceImage', {
@@ -1222,12 +1286,26 @@ export function ManageBarbershopClient({
                       )}
                     </div>
 
+                    {/* Barber hours indicator */}
+                    {barber.openingHours && (
+                      <div className="mt-3 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-lg flex items-center">
+                        <Clock className="w-3 h-3 mr-1" />
+                        <span>Horaires personnalisés</span>
+                      </div>
+                    )}
+
                     <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-100">
-                      <button 
+                      <button
                         onClick={() => openEditBarberModal(barber)}
                         className="flex-1 flex items-center justify-center space-x-1 p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                         <Edit2 className="w-4 h-4" />
                         <span className="text-sm">Modifier</span>
+                      </button>
+                      <button
+                        onClick={() => handleOpenBarberHoursEditor(barber)}
+                        className="flex-1 flex items-center justify-center space-x-1 p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <Clock className="w-4 h-4" />
+                        <span className="text-sm">Horaires</span>
                       </button>
                       <button
                         onClick={() => handleDeleteBarber(barber.id, barber.name || 'ce coiffeur')}
@@ -1236,6 +1314,73 @@ export function ManageBarbershopClient({
                         <span className="text-sm">Supprimer</span>
                       </button>
                     </div>
+
+                    {/* Barber hours inline editor */}
+                    {editingBarberHoursId === barber.id && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h4 className="font-semibold text-gray-900 text-sm mb-3">Horaires de {barber.name}</h4>
+                        <p className="text-xs text-gray-500 mb-3">Ces horaires permettent au coiffeur de recevoir des réservations même les jours où le salon est fermé.</p>
+                        <div className="space-y-2">
+                          {Object.entries({
+                            monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi',
+                            thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche'
+                          }).map(([dayKey, dayLabel]) => (
+                            <div key={dayKey} className="flex items-center space-x-2">
+                              <label className="flex items-center space-x-1 w-20 flex-shrink-0">
+                                <input
+                                  type="checkbox"
+                                  checked={!barberHours[dayKey]?.closed}
+                                  onChange={(e) => handleBarberHoursChange(dayKey, 'closed', !e.target.checked)}
+                                  className="rounded text-primary-600"
+                                />
+                                <span className="text-xs text-gray-700">{dayLabel}</span>
+                              </label>
+                              {!barberHours[dayKey]?.closed && (
+                                <div className="flex items-center space-x-1">
+                                  <input
+                                    type="time"
+                                    value={barberHours[dayKey]?.open || '09:00'}
+                                    onChange={(e) => handleBarberHoursChange(dayKey, 'open', e.target.value)}
+                                    className="text-xs border border-gray-300 rounded px-1 py-0.5"
+                                  />
+                                  <span className="text-xs text-gray-400">-</span>
+                                  <input
+                                    type="time"
+                                    value={barberHours[dayKey]?.close || '19:00'}
+                                    onChange={(e) => handleBarberHoursChange(dayKey, 'close', e.target.value)}
+                                    className="text-xs border border-gray-300 rounded px-1 py-0.5"
+                                  />
+                                </div>
+                              )}
+                              {barberHours[dayKey]?.closed && (
+                                <span className="text-xs text-gray-400">Fermé</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex items-center space-x-2 mt-3">
+                          <button
+                            onClick={() => handleSaveBarberHours(barber.id)}
+                            disabled={isSavingBarberHours}
+                            className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs rounded-lg font-medium transition-colors disabled:opacity-50">
+                            {isSavingBarberHours ? 'Enregistrement...' : 'Enregistrer'}
+                          </button>
+                          {barber.openingHours && (
+                            <button
+                              onClick={() => handleClearBarberHours(barber.id)}
+                              disabled={isSavingBarberHours}
+                              className="px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-lg font-medium hover:bg-red-100 transition-colors disabled:opacity-50">
+                              Supprimer horaires
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setEditingBarberHoursId(null)}
+                            className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

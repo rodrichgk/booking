@@ -6,10 +6,10 @@ import { barbershops, barbers, users, services } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { BookingClient } from './client';
 
-export default async function BookingPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string; locale: string }> 
+export default async function BookingPage({
+  params
+}: {
+  params: Promise<{ id: string; locale: string }>
 }) {
   const { id, locale } = await params;
   const session = await getServerSession(authOptions);
@@ -42,6 +42,7 @@ export default async function BookingPage({
       experience: barbers.experience,
       rating: barbers.rating,
       isActive: barbers.isActive,
+      openingHours: barbers.openingHours,
     })
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))

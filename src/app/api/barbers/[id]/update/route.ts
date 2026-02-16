@@ -11,7 +11,7 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Non autorisé' },
@@ -78,6 +78,9 @@ export async function PATCH(
     }
     if (body.barberType !== undefined) {
       updateData.barberType = body.barberType;
+    }
+    if (body.openingHours !== undefined) {
+      updateData.openingHours = body.openingHours;
     }
 
     await db
