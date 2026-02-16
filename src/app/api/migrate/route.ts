@@ -113,6 +113,9 @@ export async function POST(request: NextRequest) {
         `ALTER TABLE barbershops ADD COLUMN IF NOT EXISTS co_owner_id UUID REFERENCES "user"(id)`,
         // Add opening_hours column to barbers table (per-barber schedules)
         `ALTER TABLE barbers ADD COLUMN IF NOT EXISTS opening_hours JSONB`,
+        // Add reset password columns to user table
+        `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS reset_password_token VARCHAR(255)`,
+        `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS reset_password_expires TIMESTAMP`,
       ];
 
       const results = [];
