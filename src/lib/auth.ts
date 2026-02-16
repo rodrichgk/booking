@@ -23,80 +23,82 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials, req) {
-        if (!credentials?.password) {
-          console.log('❌ Authorize - No password provided');
-          return null;
-        }
-
-        // Allow login with email, phone, or username
-        const identifier = credentials.email || credentials.phone || credentials.username;
-        if (!identifier) {
-          console.log('❌ Authorize - No identifier provided');
-          return null;
-        }
-
-        console.log('🔐 Authorize - Attempting login for:', identifier);
-        if (credentials.email) console.log('   via Email');
-        if (credentials.username) console.log('   via Username');
-        if (credentials.phone) console.log('   via Phone');
-
-        const safeSelect = {
-          id: users.id,
-          email: users.email,
-          password: users.password,
-          name: users.name,
-          role: users.role,
-          image: users.image,
-        };
-
-        let user;
         try {
-          console.log('🔄 Authorize - Querying DB...');
-          if (credentials.username) {
+          if (!credentials?.password) {
+            return null;
+          }
+
+          // Trim all credential values to avoid whitespace/URL param leakage
+          const email = credentials.email?.trim() || '';
+          const phone = credentials.phone?.trim() || '';
+          const username = credentials.username?.trim() || '';
+          const password = credentials.password;
+
+          const identifier = email || phone || username;
+          if (!identifier) {
+            return null;
+          }
+
+          console.log('🔐 Authorize - login for:', identifier);
+
+          const safeSelect = {
+            id: users.id,
+            email: users.email,
+            password: users.password,
+            name: users.name,
+            role: users.role,
+            image: users.image,
+          };
+
+          let user;
+          if (username) {
             user = await db
               .select(safeSelect)
               .from(users)
-              .where(eq(users.username, credentials.username))
+              .where(eq(users.username, username))
               .limit(1);
-          } else if (credentials.email) {
+          } else if (email) {
             user = await db
               .select(safeSelect)
               .from(users)
-              .where(eq(users.email, credentials.email))
+              .where(eq(users.email, email))
               .limit(1);
           } else {
             user = await db
               .select(safeSelect)
               .from(users)
-              .where(eq(users.phone, credentials.phone!))
+              .where(eq(users.phone, phone))
               .limit(1);
           }
-          console.log('✅ Authorize - DB Query complete. Found:', user.length);
-        } catch (dbError) {
-          console.error('❌ Authorize - DB Query ERROR:', dbError);
+
+          if (!user.length) {
+            console.log('❌ User not found:', identifier);
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            password,
+            user[0].password || ''
+          );
+
+          if (!isPasswordValid) {
+            console.log('❌ Invalid password for:', identifier);
+            return null;
+          }
+
+          console.log('✅ Login OK:', user[0].email);
+
+          return {
+            id: user[0].id,
+            email: user[0].email,
+            name: user[0].name,
+            role: user[0].role,
+            image: user[0].image || undefined,
+          };
+        } catch (error) {
+          console.error('❌ Authorize error:', error);
           return null;
         }
-
-        if (!user.length) {
-          return null;
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user[0].password || ''
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user[0].id,
-          email: user[0].email,
-          name: user[0].name,
-          role: user[0].role,
-          image: user[0].image || undefined,
-        };
       },
     }),
   ],
