@@ -5,15 +5,15 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 // TEMPORARY debug endpoint - DELETE AFTER USE
-export async function GET(request: NextRequest) {
-  const email = request.nextUrl.searchParams.get('email');
-  const password = request.nextUrl.searchParams.get('password');
-
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Provide email and password as query params' }, { status: 400 });
-  }
-
+export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Provide email and password in JSON body' }, { status: 400 });
+    }
+
     // Find user
     const user = await db
       .select({
