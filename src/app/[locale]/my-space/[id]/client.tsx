@@ -1341,14 +1341,14 @@ export function ManageBarbershopClient({
                                     type="time"
                                     value={barberHours[dayKey]?.open || '09:00'}
                                     onChange={(e) => handleBarberHoursChange(dayKey, 'open', e.target.value)}
-                                    className="text-xs border border-gray-300 rounded px-1 py-0.5"
+                                    className="text-xs border border-gray-300 rounded px-1 py-0.5 text-gray-900 bg-white"
                                   />
                                   <span className="text-xs text-gray-400">-</span>
                                   <input
                                     type="time"
                                     value={barberHours[dayKey]?.close || '19:00'}
                                     onChange={(e) => handleBarberHoursChange(dayKey, 'close', e.target.value)}
-                                    className="text-xs border border-gray-300 rounded px-1 py-0.5"
+                                    className="text-xs border border-gray-300 rounded px-1 py-0.5 text-gray-900 bg-white"
                                   />
                                 </div>
                               )}
