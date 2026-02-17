@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 // POST - Create a new user
@@ -20,13 +21,29 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, email, phone, role, password } = body;
+    const { name, email, username, phone, role, password } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: 'Name, email, and password are required' },
         { status: 400 }
       );
+    }
+
+    // Check if username already taken
+    if (username) {
+      const existingUsername = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (existingUsername.length > 0) {
+        return NextResponse.json(
+          { error: 'Username already taken' },
+          { status: 400 }
+        );
+      }
     }
 
     // Only dev can create dev users
@@ -43,6 +60,7 @@ export async function POST(request: Request) {
       .values({
         name,
         email,
+        username: username || undefined,
         phone: phone || null,
         role: role || 'customer',
         password: hashedPassword,

@@ -2,7 +2,7 @@ import { pgTable, text, timestamp, integer, boolean, decimal, uuid, varchar, jso
 import { relations } from 'drizzle-orm';
 
 // Users table
-export const users = pgTable('users', {
+export const users = pgTable('user', {
   id: uuid('id').defaultRandom().primaryKey(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   username: varchar('username', { length: 50 }).unique(), // Unique username for login (especially for barbers sharing an email)
@@ -19,7 +19,7 @@ export const users = pgTable('users', {
 });
 
 // NextAuth adapter tables
-export const accounts = pgTable('Account', {
+export const accounts = pgTable('accounts', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   type: varchar('type', { length: 255 }).notNull(),
@@ -34,14 +34,14 @@ export const accounts = pgTable('Account', {
   session_state: varchar('session_state', { length: 255 }),
 });
 
-export const sessions = pgTable('Session', {
+export const sessions = pgTable('sessions', {
   id: uuid('id').defaultRandom().primaryKey(),
   sessionToken: varchar('sessionToken', { length: 255 }).notNull().unique(),
   userId: uuid('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expires: timestamp('expires').notNull(),
 });
 
-export const verificationTokens = pgTable('VerificationToken', {
+export const verificationTokens = pgTable('verification_tokens', {
   identifier: varchar('identifier', { length: 255 }).notNull(),
   token: varchar('token', { length: 255 }).notNull().unique(),
   expires: timestamp('expires').notNull(),
