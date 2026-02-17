@@ -61,7 +61,7 @@ const generateAvailableDates = (
   const today = new Date();
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 90; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
 
