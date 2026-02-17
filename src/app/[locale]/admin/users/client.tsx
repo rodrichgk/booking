@@ -160,7 +160,7 @@ export function UserManagementClient({
     }
   };
 
-  const handleCreateUser = async (userData: { name: string; email: string; phone?: string; role: string; password: string }) => {
+  const handleCreateUser = async (userData: { name: string; email: string; username?: string; phone?: string; role: string; password: string }) => {
     setLoading(true);
     setError(null);
     try {
@@ -533,12 +533,13 @@ function AddUserModal({
   currentUserRole
 }: { 
   onClose: () => void; 
-  onSave: (userData: { name: string; email: string; phone?: string; role: string; password: string }) => void;
+  onSave: (userData: { name: string; email: string; username?: string; phone?: string; role: string; password: string }) => void;
   loading: boolean;
   currentUserRole: string;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('customer');
   const [password, setPassword] = useState('');
@@ -566,6 +567,16 @@ function AddUserModal({
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-900"
               required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-900"
+              placeholder="Optional - for login"
             />
           </div>
           <div>
@@ -610,7 +621,7 @@ function AddUserModal({
             Cancel
           </button>
           <button
-            onClick={() => onSave({ name, email, phone: phone || undefined, role, password })}
+            onClick={() => onSave({ name, email, username: username || undefined, phone: phone || undefined, role, password })}
             className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
             disabled={loading || !name || !email || !password}
           >

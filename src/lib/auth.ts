@@ -29,17 +29,23 @@ export const authOptions: NextAuthOptions = {
         }
 
           // Trim all credential values to avoid whitespace/URL param leakage
-          const email = credentials.email?.trim() || '';
-          const phone = credentials.phone?.trim() || '';
-          const username = credentials.username?.trim() || '';
+          // NextAuth serializes undefined as the string "undefined", so filter that out
+          const email = (credentials.email && credentials.email !== 'undefined') ? credentials.email.trim() : '';
+          const phone = (credentials.phone && credentials.phone !== 'undefined') ? credentials.phone.trim() : '';
+          const username = (credentials.username && credentials.username !== 'undefined') ? credentials.username.trim() : '';
           const password = credentials.password;
 
           const identifier = email || phone || username;
         if (!identifier) {
+          console.log('❌ No identifier provided');
           return null;
         }
 
-          console.log('🔐 Authorize - login for:', identifier);
+          console.log('🔐 Authorize - login attempt');
+          console.log('   Email:', email || '(empty)');
+          console.log('   Phone:', phone || '(empty)');
+          console.log('   Username:', username || '(empty)');
+          console.log('   Identifier:', identifier);
 
         const safeSelect = {
           id: users.id,
@@ -51,35 +57,43 @@ export const authOptions: NextAuthOptions = {
         };
 
         let user;
-        if (credentials.username) {
+        if (username) {
+          console.log('🔍 Searching by username:', username);
           user = await db
             .select(safeSelect)
             .from(users)
-            .where(eq(users.username, credentials.username))
+            .where(eq(users.username, username))
             .limit(1);
-        } else if (credentials.email) {
+        } else if (email) {
+          console.log('🔍 Searching by email:', email);
           user = await db
             .select(safeSelect)
             .from(users)
-            .where(eq(users.email, credentials.email))
+            .where(eq(users.email, email))
             .limit(1);
         } else {
+          console.log('🔍 Searching by phone:', phone);
           user = await db
             .select(safeSelect)
             .from(users)
-            .where(eq(users.phone, credentials.phone!))
+            .where(eq(users.phone, phone))
             .limit(1);
         }
+        console.log('📊 Query returned', user.length, 'user(s)');
 
         if (!user.length) {
             console.log('❌ User not found:', identifier);
           return null;
         }
 
+        console.log('✅ User found:', user[0].email);
+        console.log('   Has password:', !!user[0].password);
+        
         const isPasswordValid = await bcrypt.compare(
             password,
           user[0].password || ''
         );
+        console.log('🔐 Password check result:', isPasswordValid);
 
         if (!isPasswordValid) {
             console.log('❌ Invalid password for:', identifier);
