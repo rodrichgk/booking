@@ -231,7 +231,13 @@
     "myReservationsDesc": "Gérez vos rendez-vous passés et à venir",
     "proProfessionals": "Coiffeurs Pro",
     "proProfessionalsDesc": "Trouvez les meilleurs coiffeurs spécialisés",
-    "discover": "Découvrir"
+    "discover": "Découvrir",
+    "manageBookingsAndDiscover": "Gérez vos réservations et découvrez de nouveaux salons",
+    "completedAppointmentsCount": "Rendez-vous terminés",
+    "upcomingAppointmentsTitle": "Rendez-vous à venir",
+    "noUpcomingBookings": "Aucun rendez-vous à venir",
+    "findSalon": "Trouver un salon",
+    "findIdealBarber": "Trouvez le coiffeur idéal"
   },
   "admin": {
     "users": "Gestion des Utilisateurs",
@@ -377,7 +383,8 @@
     "coursePrice": "Prix (centimes)",
     "addVideo": "Ajouter une Vidéo",
     "youtubeId": "ID YouTube",
-    "videoOrder": "Ordre"
+    "videoOrder": "Ordre",
+    "verified": "Vérifié"
   },
   "courses": {
     "title": "Cours Vidéo",

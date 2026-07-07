@@ -1,5 +1,5 @@
-import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { IntlProvider } from '@/components/intl-provider';
 import { notFound } from 'next/navigation';
 import { Montserrat, DM_Sans } from 'next/font/google';
 import { Providers } from '@/components/providers';
@@ -49,9 +49,9 @@ export default async function LocaleLayout({
       */}
       <body className="font-sans antialiased" suppressHydrationWarning={true}>
         <Providers>
-          <NextIntlClientProvider messages={messages}>
+          <IntlProvider locale={locale} messages={messages}>
             {children}
-          </NextIntlClientProvider>
+          </IntlProvider>
           <Analytics />
         </Providers>
       </body>
