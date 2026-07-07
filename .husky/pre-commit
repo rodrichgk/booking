@@ -1,0 +1,2 @@
+# Fast gate on every commit: block dangerous patterns instantly.
+npm run guard

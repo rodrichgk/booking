@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { barbershops, coursePurchases } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { decideSubscriptionState } from '@/lib/subscription';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
     apiVersion: '2023-10-16',
@@ -18,7 +19,6 @@ export async function POST(request: Request) {
         const signature = headersList.get('stripe-signature');
 
         if (!signature) {
-            console.error('Missing stripe-signature header');
             return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
         }
 
@@ -31,12 +31,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
-        console.log(`Received Stripe webhook: ${event.type}`);
-
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
-                // Route to appropriate handler based on metadata
                 if (session.metadata?.type === 'course_purchase' || session.metadata?.courseId) {
                     await handleCoursePurchaseCompleted(session);
                 } else {
@@ -45,7 +42,10 @@ export async function POST(request: Request) {
                 break;
             }
 
-            case 'invoice.paid': {
+            // Renewal succeeded (fires each billing cycle). Some accounts emit
+            // `invoice.payment_succeeded` instead of / in addition to `invoice.paid`.
+            case 'invoice.paid':
+            case 'invoice.payment_succeeded': {
                 const invoice = event.data.object as Stripe.Invoice;
                 await handleInvoicePaid(invoice);
                 break;
@@ -57,27 +57,15 @@ export async function POST(request: Request) {
                 break;
             }
 
-            case 'charge.failed': {
-                const charge = event.data.object as Stripe.Charge;
-                await handleChargeFailed(charge);
-                break;
-            }
-
-            case 'payment_intent.succeeded': {
-                const paymentIntent = event.data.object as Stripe.PaymentIntent;
-                console.log(`Payment intent succeeded: ${paymentIntent.id}, amount: ${paymentIntent.amount / 100} ${paymentIntent.currency}`);
-                break;
-            }
-
             case 'payment_intent.payment_failed': {
                 const paymentIntent = event.data.object as Stripe.PaymentIntent;
-                await handlePaymentIntentFailed(paymentIntent);
+                console.error(`Payment intent failed: ${paymentIntent.id} (${paymentIntent.last_payment_error?.message || 'unknown'})`);
                 break;
             }
 
             case 'customer.subscription.updated': {
                 const subscription = event.data.object as Stripe.Subscription;
-                await handleSubscriptionUpdated(subscription);
+                await syncBarbershopSubscription(subscription);
                 break;
             }
 
@@ -88,7 +76,7 @@ export async function POST(request: Request) {
             }
 
             default:
-                console.log(`Unhandled event type: ${event.type}`);
+                break;
         }
 
         return NextResponse.json({ received: true });
@@ -102,150 +90,121 @@ export async function POST(request: Request) {
 }
 
 /**
- * Handle checkout.session.completed - Initial subscription setup
+ * Single source of truth for a shop's subscription state.
+ *
+ * Rule: a shop stays publicly visible (`isActive: true`) as long as EITHER
+ *   - it has paid through a date in the future (`current_period_end > now`), OR
+ *   - Stripe currently reports a healthy/grace status (active, trialing, past_due).
+ *
+ * It is only switched OFF when the subscription is in a terminal state AND the
+ * paid-through date has actually passed. This prevents the previous bug where a
+ * transient status during the renewal window flipped the shop off even though the
+ * customer had just paid.
+ *
+ * Out-of-order protection: Stripe does not guarantee webhook ordering, and it can
+ * redeliver events. We ignore any event that would move the paid-through date
+ * backwards (a stale/duplicate event from a previous cycle), so a late-arriving
+ * event cannot clobber a shop that has already been renewed.
+ */
+async function syncBarbershopSubscription(subscription: Stripe.Subscription) {
+    const subscriptionId = subscription.id;
+    const status = subscription.status;
+    const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+
+    const [shop] = await db
+        .select({ id: barbershops.id, currentPeriodEnd: barbershops.currentPeriodEnd })
+        .from(barbershops)
+        .where(eq(barbershops.stripeSubscriptionId, subscriptionId));
+
+    if (!shop) {
+        console.error(`No barbershop found with subscription ${subscriptionId}`);
+        return;
+    }
+
+    const decision = decideSubscriptionState({
+        status,
+        currentPeriodEndMs: currentPeriodEnd.getTime(),
+        storedPeriodEndMs: shop.currentPeriodEnd ? shop.currentPeriodEnd.getTime() : null,
+    });
+
+    if (decision.ignore) {
+        console.warn(
+            `Ignoring stale subscription event for shop ${shop.id}: event period ${currentPeriodEnd.toISOString()} < stored ${shop.currentPeriodEnd?.toISOString()}`
+        );
+        return;
+    }
+
+    await db
+        .update(barbershops)
+        .set({
+            subscriptionStatus: decision.subscriptionStatus,
+            currentPeriodEnd,
+            isActive: decision.isActive,
+            updatedAt: new Date(),
+        })
+        .where(eq(barbershops.id, shop.id));
+
+    console.log(`Shop ${shop.id} synced: status=${decision.subscriptionStatus}, isActive=${decision.isActive}, paidUntil=${currentPeriodEnd.toISOString()}`);
+}
+
+/**
+ * checkout.session.completed - initial subscription setup. Stores the Stripe
+ * identifiers on the shop, then defers all state to syncBarbershopSubscription.
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const shopId = session.metadata?.shopId;
     const customerId = session.customer as string;
     const subscriptionId = session.subscription as string;
 
-    if (!shopId) {
-        console.error('No shopId in checkout session metadata');
+    if (!shopId || !subscriptionId) {
+        console.error('checkout.session.completed missing shopId or subscription');
         return;
     }
 
-    console.log(`Checkout completed for shop ${shopId}, subscription ${subscriptionId}`);
-
-    // Retrieve subscription details to get current_period_end
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-
-    // Update barbershop with subscription info
     await db
         .update(barbershops)
         .set({
             stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
-            subscriptionStatus: 'active',
-            currentPeriodEnd: currentPeriodEnd,
-            isActive: true,
             updatedAt: new Date(),
         })
         .where(eq(barbershops.id, shopId));
 
-    console.log(`Shop ${shopId} subscription activated until ${currentPeriodEnd.toISOString()}`);
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    await syncBarbershopSubscription(subscription);
 }
 
 /**
- * Handle invoice.paid - Auto-renewal success (fires each billing cycle)
+ * invoice.paid / invoice.payment_succeeded - renewal succeeded. Retrieve the
+ * subscription so we sync from its authoritative (already-advanced) period.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
     const subscriptionId = invoice.subscription as string;
+    if (!subscriptionId) return;
 
-    if (!subscriptionId) {
-        console.log('Invoice not related to a subscription');
-        return;
-    }
-
-    console.log(`Invoice paid for subscription ${subscriptionId}`);
-
-    // Retrieve subscription to get updated period end
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-
-    // Find and update the barbershop by subscription ID
-    const [shop] = await db
-        .select({ id: barbershops.id })
-        .from(barbershops)
-        .where(eq(barbershops.stripeSubscriptionId, subscriptionId));
-
-    if (!shop) {
-        console.error(`No barbershop found with subscription ${subscriptionId}`);
-        return;
-    }
-
-    // Update subscription period end (this handles auto-renewal)
-    await db
-        .update(barbershops)
-        .set({
-            subscriptionStatus: 'active',
-            currentPeriodEnd: currentPeriodEnd,
-            isActive: true,
-            updatedAt: new Date(),
-        })
-        .where(eq(barbershops.id, shop.id));
-
-    console.log(`Shop ${shop.id} subscription renewed until ${currentPeriodEnd.toISOString()}`);
+    await syncBarbershopSubscription(subscription);
 }
 
 /**
- * Handle customer.subscription.updated - Status changes
+ * invoice.payment_failed - a recurring charge failed. We deliberately do NOT
+ * disable the shop here: syncBarbershopSubscription keeps it active while the
+ * subscription is in the `past_due` grace window and Stripe retries the card.
  */
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-    const subscriptionId = subscription.id;
-    const status = subscription.status;
-    const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+    const subscriptionId = invoice.subscription as string;
+    if (!subscriptionId) return;
 
-    console.log(`Subscription ${subscriptionId} updated: status=${status}`);
-
-    // Find barbershop by subscription ID
-    const [shop] = await db
-        .select({ id: barbershops.id })
-        .from(barbershops)
-        .where(eq(barbershops.stripeSubscriptionId, subscriptionId));
-
-    if (!shop) {
-        console.error(`No barbershop found with subscription ${subscriptionId}`);
-        return;
-    }
-
-    // Map Stripe status to our status
-    let mappedStatus: string;
-    let isActive = true;
-
-    switch (status) {
-        case 'active':
-        case 'trialing':
-            mappedStatus = status;
-            isActive = true;
-            break;
-        case 'past_due':
-            mappedStatus = 'past_due';
-            isActive = true; // Keep active during grace period
-            break;
-        case 'canceled':
-        case 'unpaid':
-        case 'incomplete_expired':
-            mappedStatus = 'canceled';
-            isActive = false;
-            break;
-        default:
-            mappedStatus = 'inactive';
-            isActive = false;
-    }
-
-    await db
-        .update(barbershops)
-        .set({
-            subscriptionStatus: mappedStatus,
-            currentPeriodEnd: currentPeriodEnd,
-            isActive: isActive,
-            updatedAt: new Date(),
-        })
-        .where(eq(barbershops.id, shop.id));
-
-    console.log(`Shop ${shop.id} subscription status updated to ${mappedStatus}`);
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    await syncBarbershopSubscription(subscription);
 }
 
 /**
- * Handle customer.subscription.deleted - Subscription canceled
+ * customer.subscription.deleted - the subscription is gone for good.
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     const subscriptionId = subscription.id;
 
-    console.log(`Subscription ${subscriptionId} deleted`);
-
-    // Find barbershop by subscription ID
     const [shop] = await db
         .select({ id: barbershops.id })
         .from(barbershops)
@@ -269,89 +228,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 
 /**
- * Handle invoice.payment_failed - Recurring payment failed
- */
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-    const subscriptionId = invoice.subscription as string;
-
-    if (!subscriptionId) {
-        console.log('Invoice payment failed but not related to a subscription');
-        return;
-    }
-
-    console.log(`Invoice payment failed for subscription ${subscriptionId}`);
-
-    // Find barbershop by subscription ID
-    const [shop] = await db
-        .select({ id: barbershops.id })
-        .from(barbershops)
-        .where(eq(barbershops.stripeSubscriptionId, subscriptionId));
-
-    if (!shop) {
-        console.error(`No barbershop found with subscription ${subscriptionId}`);
-        return;
-    }
-
-    // Set status to past_due - customer has a grace period to update payment
-    await db
-        .update(barbershops)
-        .set({
-            subscriptionStatus: 'past_due',
-            updatedAt: new Date(),
-            // Keep isActive true during grace period
-        })
-        .where(eq(barbershops.id, shop.id));
-
-    console.log(`Shop ${shop.id} subscription payment failed - status set to past_due`);
-}
-
-/**
- * Handle charge.failed - Individual charge failed
- */
-async function handleChargeFailed(charge: Stripe.Charge) {
-    console.log(`Charge failed: ${charge.id}`);
-    console.log(`Failure code: ${charge.failure_code}, message: ${charge.failure_message}`);
-
-    // If this is related to a customer, try to find their shop
-    const customerId = charge.customer as string;
-
-    if (customerId) {
-        const [shop] = await db
-            .select({ id: barbershops.id, name: barbershops.name })
-            .from(barbershops)
-            .where(eq(barbershops.stripeCustomerId, customerId));
-
-        if (shop) {
-            console.log(`Charge failed for shop ${shop.id} (${shop.name})`);
-            // Note: We don't update status here as invoice.payment_failed handles subscription payments
-        }
-    }
-}
-
-/**
- * Handle payment_intent.payment_failed - Payment intent failed
- */
-async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
-    console.log(`Payment intent failed: ${paymentIntent.id}`);
-    console.log(`Last payment error: ${paymentIntent.last_payment_error?.message || 'Unknown'}`);
-
-    const customerId = paymentIntent.customer as string;
-
-    if (customerId) {
-        const [shop] = await db
-            .select({ id: barbershops.id, name: barbershops.name })
-            .from(barbershops)
-            .where(eq(barbershops.stripeCustomerId, customerId));
-
-        if (shop) {
-            console.log(`Payment intent failed for shop ${shop.id} (${shop.name})`);
-            // Log for monitoring - actual status change is handled by invoice.payment_failed
-        }
-    }
-}
-
-/**
- * Handle course purchase checkout.session.completed
+ * Course purchase checkout.session.completed
  */
 async function handleCoursePurchaseCompleted(session: Stripe.Checkout.Session) {
     const courseId = session.metadata?.courseId;
@@ -359,13 +236,10 @@ async function handleCoursePurchaseCompleted(session: Stripe.Checkout.Session) {
     const paymentIntentId = session.payment_intent as string;
 
     if (!courseId || !userId) {
-        console.error('Missing courseId or userId in course purchase session metadata');
+        console.error('Course purchase session missing courseId or userId');
         return;
     }
 
-    console.log(`Course purchase completed for course ${courseId}, user ${userId}`);
-
-    // Find the pending purchase by session ID and update it
     const [existingPurchase] = await db
         .select()
         .from(coursePurchases)
@@ -377,7 +251,6 @@ async function handleCoursePurchaseCompleted(session: Stripe.Checkout.Session) {
         );
 
     if (existingPurchase) {
-        // Update the existing pending purchase
         await db
             .update(coursePurchases)
             .set({
@@ -386,10 +259,7 @@ async function handleCoursePurchaseCompleted(session: Stripe.Checkout.Session) {
                 purchasedAt: new Date(),
             })
             .where(eq(coursePurchases.id, existingPurchase.id));
-
-        console.log(`Course purchase ${existingPurchase.id} marked as completed`);
     } else {
-        // Create a new completed purchase record (fallback)
         await db
             .insert(coursePurchases)
             .values({
@@ -402,7 +272,5 @@ async function handleCoursePurchaseCompleted(session: Stripe.Checkout.Session) {
                 status: 'completed',
                 purchasedAt: new Date(),
             });
-
-        console.log(`New course purchase created for course ${courseId}, user ${userId}`);
     }
 }
