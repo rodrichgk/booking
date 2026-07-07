@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '@/routing';
 import { useTranslations, useLocale } from 'next-intl';
 import { Star, MapPin } from 'lucide-react';
+import { Reveal } from '@/components/ui/reveal';
 
 interface FeaturedShop {
   id: string;
@@ -62,21 +63,22 @@ export function FeaturedBarbershops() {
   return (
     <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <Reveal className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
             {text.title}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             {text.subtitle}
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {shops.map((shop) => {
+          {shops.map((shop, index) => {
             const image = shop.images?.[0];
             const rating = shop.rating ? parseFloat(shop.rating) : 0;
             return (
-              <div key={shop.id} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group">
+              <Reveal key={shop.id} delay={index * 120}>
+                <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group">
                 <div className="relative">
                   {image ? (
                     <img
@@ -133,7 +135,8 @@ export function FeaturedBarbershops() {
                     </Link>
                   </div>
                 </div>
-              </div>
+                </div>
+              </Reveal>
             );
           })}
         </div>

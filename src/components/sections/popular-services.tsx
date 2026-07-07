@@ -3,6 +3,7 @@
 import { Link } from '@/routing';
 import { useTranslations, useLocale } from 'next-intl';
 import { Scissors, Sparkles, Palette, Zap } from 'lucide-react';
+import { Reveal } from '@/components/ui/reveal';
 
 const servicesData = {
   fr: [
@@ -116,20 +117,20 @@ export function PopularServices() {
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <Reveal className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
             {t.title}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             {t.subtitle}
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {services.map((service) => {
+          {services.map((service, index) => {
             const IconComponent = service.icon;
             return (
-              <div key={service.id} className="group relative">
+              <Reveal key={service.id} delay={index * 120} className="group relative">
                 <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
                   <div className="relative">
                     <img
@@ -174,7 +175,7 @@ export function PopularServices() {
                     </Link>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             );
           })}
         </div>

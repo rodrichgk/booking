@@ -105,3 +105,39 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* Scroll-reveal: hidden until the element enters the viewport, then eases in. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal.reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Staggered animation-delay helpers (for on-load entrance animations). */
+.anim-delay-100 { animation-delay: 0.1s; }
+.anim-delay-200 { animation-delay: 0.2s; }
+.anim-delay-300 { animation-delay: 0.3s; }
+.anim-delay-500 { animation-delay: 0.5s; }
+.anim-delay-700 { animation-delay: 0.7s; }
+
+/* Accessibility: honor the user's reduced-motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+

@@ -2,6 +2,7 @@
 
 import { useLocale } from 'next-intl';
 import { Search, Calendar, Scissors, Star } from 'lucide-react';
+import { Reveal } from '@/components/ui/reveal';
 
 const stepsData = {
   fr: [
@@ -95,20 +96,20 @@ export function HowItWorks() {
   return (
     <section className="py-16 bg-gradient-to-br from-gray-50 to-primary-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
             {t.title}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             {t.subtitle}
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((step, index) => {
             const IconComponent = step.icon;
             return (
-              <div key={step.id} className="relative">
+              <Reveal key={step.id} delay={index * 120} className="relative h-full">
                 <div className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300 text-center h-full">
                   <div className={`w-16 h-16 ${step.color} rounded-2xl flex items-center justify-center mx-auto mb-6`}>
                     <IconComponent className="w-8 h-8 text-white" />
@@ -136,7 +137,7 @@ export function HowItWorks() {
                     </div>
                   </div>
                 )}
-              </div>
+              </Reveal>
             );
           })}
         </div>

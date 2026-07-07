@@ -42,12 +42,19 @@ export function Hero() {
   const text = translations[locale] || translations.fr;
 
   return (
-    <section className="relative bg-gradient-to-br from-primary-50 via-white to-accent-50 pt-16 pb-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary-50 via-white to-accent-50 pt-16 pb-24">
+      {/* Ambient drifting blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-24 -left-16 w-72 h-72 rounded-full bg-primary-200/40 blur-3xl animate-blob"></div>
+        <div className="absolute top-8 right-0 w-80 h-80 rounded-full bg-accent-200/40 blur-3xl animate-blob anim-delay-300"></div>
+        <div className="absolute bottom-0 left-1/3 w-72 h-72 rounded-full bg-primary-100/50 blur-3xl animate-blob anim-delay-500"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div className="space-y-8">
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fade-in-up">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold text-gray-900 leading-tight">
                 {t('title')}
               </h1>
@@ -57,7 +64,7 @@ export function Hero() {
             </div>
 
             {/* Search Form */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 animate-fade-in-up anim-delay-200">
               <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -90,7 +97,7 @@ export function Hero() {
             </div>
 
             {/* Value props (grounded in reality — no vanity metrics) */}
-            <div className="grid grid-cols-3 gap-8">
+            <div className="grid grid-cols-3 gap-8 animate-fade-in-up anim-delay-300">
               <div className="text-center">
                 <div className="text-xl md:text-2xl font-bold text-primary-600 font-sans leading-tight">{text.stat1Value}</div>
                 <div className="text-sm text-gray-600 font-body">{text.stat1Label}</div>
@@ -107,7 +114,7 @@ export function Hero() {
           </div>
 
           {/* Right Content - Hero Image */}
-          <div className="relative">
+          <div className="relative animate-fade-in-up anim-delay-200">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl">
               <img
                 src="https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
@@ -118,7 +125,7 @@ export function Hero() {
             </div>
 
             {/* Floating Cards */}
-            <div className="absolute -top-4 -left-4 bg-white rounded-xl shadow-lg p-4 border border-gray-100">
+            <div className="absolute -top-4 -left-4 bg-white rounded-xl shadow-lg p-4 border border-gray-100 animate-float">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
                   <Calendar className="w-6 h-6 text-primary-600" />
@@ -130,7 +137,7 @@ export function Hero() {
               </div>
             </div>
 
-            <div className="absolute -bottom-4 -right-4 bg-white rounded-xl shadow-lg p-4 border border-gray-100">
+            <div className="absolute -bottom-4 -right-4 bg-white rounded-xl shadow-lg p-4 border border-gray-100 animate-float-slow">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center">
                   <Star className="w-6 h-6 text-accent-600" />
