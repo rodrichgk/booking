@@ -1,61 +1,29 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Link } from '@/routing';
 import { useTranslations, useLocale } from 'next-intl';
-import { Star, MapPin, Clock, Heart } from 'lucide-react';
+import { Star, MapPin } from 'lucide-react';
 
-const featuredShops = [
-  {
-    id: '1',
-    name: 'Crown & Glory Barbershop',
-    image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    rating: 4.9,
-    reviewCount: 127,
-    address: 'Brooklyn, NY',
-    specialties: ['Natural Hair', 'Protective Styles', 'Loc Maintenance'],
-    openNow: true,
-    price: '$$',
-  },
-  {
-    id: '2',
-    name: 'Afro Artistry Studio',
-    image: 'https://lesatelierscrepus.com/cdn/shop/articles/top-5-des-coiffeurs-experts-en-cheveux-cre_CC_81pus-a_CC_80-Paris.jpg?v=1730206921',
-    rating: 4.8,
-    reviewCount: 89,
-    address: 'Atlanta, GA',
-    specialties: ['Braids', 'Twist Outs', 'Color'],
-    openNow: false,
-    price: '$$$',
-  },
-  {
-    id: '3',
-    name: 'Royal Cuts & Styles',
-    image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    rating: 4.7,
-    reviewCount: 156,
-    address: 'Chicago, IL',
-    specialties: ['Fade Cuts', 'Beard Styling', 'Hot Towel'],
-    openNow: true,
-    price: '$$',
-  },
-];
+interface FeaturedShop {
+  id: string;
+  name: string;
+  city: string | null;
+  rating: string | null;
+  reviewCount: number | null;
+  images: string[] | null;
+}
 
 const translations = {
   fr: {
-    title: 'Salons en Vedette',
-    subtitle: 'Découvrez les meilleurs salons de votre région, spécialisés dans les soins capillaires afro et naturels',
-    open: 'Ouvert',
-    closed: 'Fermé',
-    more: 'autres',
-    viewAll: 'Voir Tous les Salons',
+    title: 'Salons en vedette',
+    subtitle: 'Une sélection de nos salons partenaires, spécialisés dans les cheveux afro, bouclés et texturés — de Marseille à New York.',
+    viewAll: 'Voir tous les salons',
   },
   en: {
-    title: 'Featured Salons',
-    subtitle: 'Discover the best salons in your area, specializing in afro and natural hair care',
-    open: 'Open',
-    closed: 'Closed',
-    more: 'more',
-    viewAll: 'View All Salons',
+    title: 'Featured salons',
+    subtitle: 'A handful of our partner salons, specialists in afro, curly and textured hair — from Marseille to New York.',
+    viewAll: 'View all salons',
   },
 };
 
@@ -63,6 +31,33 @@ export function FeaturedBarbershops() {
   const t = useTranslations('barbershop');
   const locale = useLocale() as 'fr' | 'en';
   const text = translations[locale] || translations.fr;
+
+  const [shops, setShops] = useState<FeaturedShop[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/barbershops?activeOnly=true&limit=3')
+      .then((res) => (res.ok ? res.json() : { barbershops: [] }))
+      .then((data) => {
+        if (active) setShops(Array.isArray(data.barbershops) ? data.barbershops : []);
+      })
+      .catch(() => {
+        if (active) setShops([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Don't render a section full of nothing (or fake filler) — hide it until there
+  // are real, active salons to show.
+  if (loading || shops.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-16 bg-gray-50">
@@ -77,82 +72,70 @@ export function FeaturedBarbershops() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featuredShops.map((shop) => (
-            <div key={shop.id} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group">
-              <div className="relative">
-                <img
-                  src={shop.image}
-                  alt={shop.name}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <button className="absolute top-4 right-4 p-2 bg-white/90 rounded-full hover:bg-white transition-colors">
-                  <Heart className="w-5 h-5 text-gray-600 hover:text-red-500" />
-                </button>
-                <div className="absolute bottom-4 left-4">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${shop.openNow
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                    }`}>
-                    {shop.openNow ? text.open : text.closed}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-xl font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
-                    {shop.name}
-                  </h3>
-                  <span className="text-sm font-medium text-gray-600">{shop.price}</span>
-                </div>
-
-                <div className="flex items-center space-x-4 mb-3">
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    <span className="text-sm font-medium text-gray-900">{shop.rating}</span>
-                    <span className="text-sm text-gray-600">({shop.reviewCount})</span>
-                  </div>
-                  <div className="flex items-center space-x-1 text-gray-600">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">{shop.address}</span>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    {shop.specialties.slice(0, 2).map((specialty) => (
-                      <span
-                        key={specialty}
-                        className="px-2 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full"
-                      >
-                        {specialty}
+          {shops.map((shop) => {
+            const image = shop.images?.[0];
+            const rating = shop.rating ? parseFloat(shop.rating) : 0;
+            return (
+              <div key={shop.id} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group">
+                <div className="relative">
+                  {image ? (
+                    <img
+                      src={image}
+                      alt={shop.name}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gradient-to-br from-primary-100 to-accent-100 flex items-center justify-center">
+                      <span className="text-4xl font-display font-bold text-primary-600">
+                        {shop.name.charAt(0).toUpperCase()}
                       </span>
-                    ))}
-                    {shop.specialties.length > 2 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                        +{shop.specialties.length - 2} {text.more}
-                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-xl font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                      {shop.name}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center space-x-4 mb-4 text-gray-600">
+                    {rating > 0 && (
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <span className="text-sm font-medium text-gray-900">{rating.toFixed(1)}</span>
+                        {shop.reviewCount ? (
+                          <span className="text-sm text-gray-600">({shop.reviewCount})</span>
+                        ) : null}
+                      </div>
+                    )}
+                    {shop.city && (
+                      <div className="flex items-center space-x-1">
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-sm">{shop.city}</span>
+                      </div>
                     )}
                   </div>
-                </div>
 
-                <div className="flex space-x-3">
-                  <Link
-                    href={`/barbershops/${shop.id}`}
-                    className="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-center py-2 px-4 rounded-lg font-medium transition-colors"
-                  >
-                    {t('viewDetails')}
-                  </Link>
-                  <Link
-                    href={`/barbershops/${shop.id}/booking`}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 text-center py-2 px-4 rounded-lg font-medium transition-colors"
-                  >
-                    {t('bookNow')}
-                  </Link>
+                  <div className="flex space-x-3">
+                    <Link
+                      href={`/barbershops/${shop.id}`}
+                      className="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-center py-2 px-4 rounded-lg font-medium transition-colors"
+                    >
+                      {t('viewDetails')}
+                    </Link>
+                    <Link
+                      href={`/barbershops/${shop.id}/booking`}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 text-center py-2 px-4 rounded-lg font-medium transition-colors"
+                    >
+                      {t('bookNow')}
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="text-center mt-12">

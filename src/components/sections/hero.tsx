@@ -8,9 +8,12 @@ import { Search, MapPin, Calendar, Star } from 'lucide-react';
 const translations = {
   fr: {
     locationPlaceholder: 'Ville ou code postal',
-    verifiedSalons: 'Salons Vérifiés',
-    happyClients: 'Clients Satisfaits',
-    avgRating: 'Note Moyenne',
+    stat1Value: 'Afro & texturés',
+    stat1Label: 'Notre spécialité',
+    stat2Value: '24/7',
+    stat2Label: 'Réservation en ligne',
+    stat3Value: 'Marseille → NY',
+    stat3Label: 'Nos villes',
     easyBooking: 'Réservation Facile',
     onlineAlways: '24h/24 En Ligne',
     topRated: 'Très Bien Noté',
@@ -18,9 +21,12 @@ const translations = {
   },
   en: {
     locationPlaceholder: 'City or zip code',
-    verifiedSalons: 'Verified Salons',
-    happyClients: 'Happy Clients',
-    avgRating: 'Avg Rating',
+    stat1Value: 'Afro & textured',
+    stat1Label: 'Our specialty',
+    stat2Value: '24/7',
+    stat2Label: 'Online booking',
+    stat3Value: 'Marseille → NY',
+    stat3Label: 'Our cities',
     easyBooking: 'Easy Booking',
     onlineAlways: 'Online 24/7',
     topRated: 'Top Rated',
@@ -83,19 +89,19 @@ export function Hero() {
               </Link>
             </div>
 
-            {/* Stats */}
+            {/* Value props (grounded in reality — no vanity metrics) */}
             <div className="grid grid-cols-3 gap-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600 font-sans">500+</div>
-                <div className="text-sm text-gray-600 font-body">{text.verifiedSalons}</div>
+                <div className="text-xl md:text-2xl font-bold text-primary-600 font-sans leading-tight">{text.stat1Value}</div>
+                <div className="text-sm text-gray-600 font-body">{text.stat1Label}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600 font-sans">10K+</div>
-                <div className="text-sm text-gray-600 font-body">{text.happyClients}</div>
+                <div className="text-xl md:text-2xl font-bold text-primary-600 font-sans leading-tight">{text.stat2Value}</div>
+                <div className="text-sm text-gray-600 font-body">{text.stat2Label}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600 font-sans">4.8★</div>
-                <div className="text-sm text-gray-600 font-body">{text.avgRating}</div>
+                <div className="text-xl md:text-2xl font-bold text-primary-600 font-sans leading-tight">{text.stat3Value}</div>
+                <div className="text-sm text-gray-600 font-body">{text.stat3Label}</div>
               </div>
             </div>
           </div>
