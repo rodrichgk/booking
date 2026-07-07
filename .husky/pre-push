@@ -1,0 +1,2 @@
+# Full gate before pushing: guard + typecheck + lint + tests.
+npm run ci

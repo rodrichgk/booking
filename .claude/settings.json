@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "out=$( { npm run guard && npm run test:run; } 2>&1 ); if [ $? -ne 0 ]; then echo \"$out\" >&2; exit 2; fi",
+            "statusMessage": "Running guard + tests before finishing...",
+            "timeout": 180
+          }
+        ]
+      }
+    ]
+  }
+}

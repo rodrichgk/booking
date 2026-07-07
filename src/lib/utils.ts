@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Escape a string for safe interpolation into HTML (e.g. email templates).
+ * Prevents HTML/script injection from user-supplied values like names and notes.
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function formatPrice(price: number, locale: string = 'fr-FR', currency: string = 'EUR'): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',

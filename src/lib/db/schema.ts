@@ -134,6 +134,12 @@ export const bookings = pgTable('bookings', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+// NOTE: a partial UNIQUE INDEX enforces at most one *confirmed* booking per
+// barber per exact start_time at the database level (applied via /api/migrate):
+//   CREATE UNIQUE INDEX bookings_barber_start_confirmed_unique
+//     ON bookings (barber_id, start_time)
+//     WHERE barber_id IS NOT NULL AND status = 'confirmed';
+// The booking API relies on this to close the read-then-insert race condition.
 
 // Reviews table
 export const reviews = pgTable('reviews', {
