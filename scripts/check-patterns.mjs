@@ -10,9 +10,12 @@
  *   2. Hardcoded shared-secret auth gates (e.g. `secret !== 'debug-2026'`) —
  *      auth must go through the session, not a string baked into source.
  *   3. Committed backup files (*.bak) — dead code belongs in git history, not HEAD.
+ *   4. Real environment files tracked in git (.env, .env.local, ...) — these leak
+ *      secrets. Only *.example templates may be committed.
  */
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { execSync } from 'node:child_process';
 
 const ROOT = process.cwd();
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.vercel', 'coverage', 'dist', 'build']);
@@ -61,6 +64,22 @@ function checkFile(fullPath) {
 }
 
 walk(ROOT);
+
+// Rule 4: no real environment files tracked in git. A local, gitignored .env is
+// fine — but if git is TRACKING one, its secrets are (or will be) in history.
+try {
+  const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');
+  for (const path of tracked) {
+    const base = (path.split('/').pop() || '').trim();
+    if (/^\.env(\..+)?$/.test(base) && !base.endsWith('.example')) {
+      violations.push(
+        `Environment file tracked in git: ${path} — remove it (git rm --cached), gitignore it, and ROTATE any keys it contained.`
+      );
+    }
+  }
+} catch {
+  // Not a git repo or git unavailable — skip this check.
+}
 
 if (violations.length > 0) {
   console.error('\n[31m✗ Pattern guard failed:[0m');
