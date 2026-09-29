@@ -33,10 +33,14 @@ interface BarberBookingClientProps {
     category: string | null;
   }>;
   locale: string;
-  userId: string;
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+  };
 }
 
-export function BarberBookingClient({ barber, barbershop, services, locale, userId }: BarberBookingClientProps) {
+export function BarberBookingClient({ barber, barbershop, services, locale, customer }: BarberBookingClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preSelectedServiceId = searchParams.get('serviceId');
@@ -46,6 +50,9 @@ export function BarberBookingClient({ barber, barbershop, services, locale, user
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Only asked for when the account has no phone number on file
+  const needsPhone = !customer.phone;
+  const [phone, setPhone] = useState(customer.phone);
 
   // Auto-select service if provided in URL and skip to step 2
   useEffect(() => {
@@ -83,14 +90,13 @@ export function BarberBookingClient({ barber, barbershop, services, locale, user
   };
 
   const handleBooking = async () => {
-    if (!selectedService || !selectedDate || !selectedTime) return;
+    if (!selectedService || !selectedDate || !selectedTime || !phone.trim()) return;
 
     setIsSubmitting(true);
 
     try {
-      const startTime = new Date(`${selectedDate}T${selectedTime}:00`);
-      const endTime = new Date(startTime);
-      endTime.setMinutes(endTime.getMinutes() + (selectedServiceData?.duration || 60));
+      // Duration, end time and price are derived server-side from the service.
+      const appointmentDate = new Date(`${selectedDate}T${selectedTime}:00`);
 
       const response = await fetch('/api/bookings', {
         method: 'POST',
@@ -99,17 +105,18 @@ export function BarberBookingClient({ barber, barbershop, services, locale, user
           barbershopId: barbershop.id,
           barberId: barber.id,
           serviceId: selectedService,
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
-          totalPrice: selectedServiceData?.price,
-          status: 'pending',
+          appointmentDate: appointmentDate.toISOString(),
+          customerName: customer.name,
+          customerEmail: customer.email,
+          customerPhone: phone.trim(),
         }),
       });
 
       if (response.ok) {
         router.push(`/${locale}/my-space?booking=success`);
       } else {
-        alert('Booking failed. Please try again.');
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || 'Booking failed. Please try again.');
       }
     } catch (error) {
       console.error('Booking error:', error);
@@ -350,6 +357,30 @@ export function BarberBookingClient({ barber, barbershop, services, locale, user
                 <p className="text-sm text-gray-600">{selectedTime}</p>
               </div>
 
+              <div className="border-b pb-4">
+                <h3 className="font-semibold text-gray-700 mb-2">Your Details</h3>
+                <p className="text-gray-900">{customer.name}</p>
+                <p className="text-sm text-gray-600">{customer.email}</p>
+                {needsPhone ? (
+                  <div className="mt-3">
+                    <label htmlFor="customer-phone" className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone number *
+                    </label>
+                    <input
+                      id="customer-phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="06 12 34 56 78"
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600">{phone}</p>
+                )}
+              </div>
+
               <div className="pt-4">
                 <div className="flex justify-between items-center text-xl font-bold">
                   <span>Total</span>
@@ -368,7 +399,7 @@ export function BarberBookingClient({ barber, barbershop, services, locale, user
               </button>
               <button
                 onClick={handleBooking}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !phone.trim()}
                 className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Booking...' : 'Confirm Booking'}

@@ -29,7 +29,7 @@ export async function PATCH(
       .where(eq(barbers.id, id))
       .limit(1);
 
-    if (!barber) {
+    if (!barber || !barber.isActive) {
       return NextResponse.json(
         { error: 'Coiffeur non trouvé' },
         { status: 404 }

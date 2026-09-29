@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { barbershops, users, barbers, services, bookings } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { barbershops, users, barbers, services, bookings, reviews } from '@/lib/db/schema';
+import { eq, or, inArray } from 'drizzle-orm';
 
 export async function DELETE(
   request: NextRequest,
@@ -48,18 +48,25 @@ export async function DELETE(
       }
     }
 
-    // Delete related records
-    // Delete bookings
-    await db.delete(bookings).where(eq(bookings.barbershopId, id));
-    
-    // Delete services
-    await db.delete(services).where(eq(services.barbershopId, id));
-    
-    // Delete barbers associated with this barbershop
-    await db.delete(barbers).where(eq(barbers.barbershopId, id));
-    
-    // Delete barbershop
-    await db.delete(barbershops).where(eq(barbershops.id, id));
+    // Delete the shop and everything that references it in one transaction, so a
+    // failure part-way can't leave the shop half-deleted. Reviews go first: they
+    // reference the shop's bookings, barbers and the shop itself.
+    await db.transaction(async (tx) => {
+      const shopBookingIds = tx.select({ id: bookings.id }).from(bookings).where(eq(bookings.barbershopId, id));
+      const shopBarberIds = tx.select({ id: barbers.id }).from(barbers).where(eq(barbers.barbershopId, id));
+
+      await tx.delete(reviews).where(
+        or(
+          eq(reviews.barbershopId, id),
+          inArray(reviews.bookingId, shopBookingIds),
+          inArray(reviews.barberId, shopBarberIds)
+        )
+      );
+      await tx.delete(bookings).where(eq(bookings.barbershopId, id));
+      await tx.delete(services).where(eq(services.barbershopId, id));
+      await tx.delete(barbers).where(eq(barbers.barbershopId, id));
+      await tx.delete(barbershops).where(eq(barbershops.id, id));
+    });
 
     return NextResponse.json({ 
       success: true,

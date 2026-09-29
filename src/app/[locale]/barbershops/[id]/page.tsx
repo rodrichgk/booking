@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbershops, barbers, users, services } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { BarbershopDetailClient } from './client';
 
 export default async function BarbershopDetailsPage({ 
@@ -53,7 +53,7 @@ export default async function BarbershopDetailsPage({
     })
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))
-    .where(eq(barbers.barbershopId, id));
+    .where(and(eq(barbers.barbershopId, id), eq(barbers.isActive, true)));
 
   // Fetch services for this barbershop
   const shopServices = await db

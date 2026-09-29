@@ -68,6 +68,14 @@ export default async function BarberBookingPage({
     notFound();
   }
 
+  // The booking API needs the customer's contact details; take them from the
+  // signed-in account (the form asks for the phone if the account has none).
+  const [customer] = await db
+    .select({ name: users.name, email: users.email, phone: users.phone })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
   // Fetch services available at this barber's barbershop
   const shopServices = await db
     .select({
@@ -97,7 +105,11 @@ export default async function BarberBookingPage({
       }}
       services={shopServices as any}
       locale={locale}
-      userId={session.user.id}
+      customer={{
+        name: customer?.name || session.user.name || '',
+        email: customer?.email || session.user.email || '',
+        phone: customer?.phone || '',
+      }}
     />
   );
 }

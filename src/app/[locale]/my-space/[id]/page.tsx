@@ -90,7 +90,7 @@ export default async function ManageBarbershopPage({
     })
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))
-    .where(eq(barbers.barbershopId, id));
+    .where(and(eq(barbers.barbershopId, id), eq(barbers.isActive, true)));
 
   // Use barber's custom name if set, otherwise fall back to user's name
   const shopBarbers = shopBarbersRaw.map(b => ({

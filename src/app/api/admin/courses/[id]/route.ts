@@ -142,6 +142,21 @@ export async function DELETE(
             return NextResponse.json({ error: 'Course not found' }, { status: 404 });
         }
 
+        // Purchase records are payment history and reference the course, so a
+        // purchased course can't be deleted — it should be deactivated instead.
+        const [purchase] = await db
+            .select({ id: coursePurchases.id })
+            .from(coursePurchases)
+            .where(eq(coursePurchases.courseId, id))
+            .limit(1);
+
+        if (purchase) {
+            return NextResponse.json(
+                { error: 'This course has purchases and cannot be deleted. Deactivate it instead.' },
+                { status: 409 }
+            );
+        }
+
         // Delete videos first (cascade should handle this, but being explicit)
         await db.delete(courseVideos).where(eq(courseVideos.courseId, id));
 

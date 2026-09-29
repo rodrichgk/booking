@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { db } from '@/lib/db';
 import { barbers, users, barbershops } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { BarbersClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -36,7 +36,7 @@ export default async function BarbersPage({ params }: { params: Promise<{ locale
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))
     .innerJoin(barbershops, eq(barbers.barbershopId, barbershops.id))
-    .where(eq(barbershops.isActive, true)); // Only show barbers from active shops
+    .where(and(eq(barbershops.isActive, true), eq(barbers.isActive, true))); // Only show active barbers from active shops
 
   return <BarbersClient barbers={allBarbers as any} locale={locale} />;
 }

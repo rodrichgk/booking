@@ -32,7 +32,15 @@ export async function DELETE(
     await db.delete(users).where(eq(users.id, id));
 
     return NextResponse.json({ message: 'User deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
+    // 23503 = foreign key violation: the user still owns shops, is a barber, or
+    // has bookings/reviews/purchases. Report it instead of a generic 500.
+    if (error?.code === '23503') {
+      return NextResponse.json(
+        { error: 'This user is still linked to barbershops, bookings, reviews or purchases and cannot be deleted' },
+        { status: 409 }
+      );
+    }
     console.error('Error deleting user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

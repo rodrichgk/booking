@@ -76,14 +76,17 @@ export async function POST(request: NextRequest) {
     let totalPrice = '0';
     if (serviceId) {
       const [service] = await db
-        .select({ duration: services.duration, price: services.price })
+        .select({ duration: services.duration, price: services.price, isActive: services.isActive })
         .from(services)
-        .where(eq(services.id, serviceId))
+        .where(and(eq(services.id, serviceId), eq(services.barbershopId, barbershopId)))
         .limit(1);
-      if (service) {
-        durationMinutes = service.duration ?? DEFAULT_DURATION_MINUTES;
-        totalPrice = service.price ?? '0';
+      // The service must belong to this shop (otherwise a booking could take its
+      // price and duration from another shop's service) and not be deactivated.
+      if (!service || service.isActive === false) {
+        return NextResponse.json({ error: 'Service not found' }, { status: 404 });
       }
+      durationMinutes = service.duration ?? DEFAULT_DURATION_MINUTES;
+      totalPrice = service.price ?? '0';
     }
 
     const endTime = new Date(appointmentDateTime.getTime() + durationMinutes * 60 * 1000);
@@ -95,9 +98,18 @@ export async function POST(request: NextRequest) {
         .select({ id: barbers.id, name: users.name })
         .from(barbers)
         .innerJoin(users, eq(barbers.userId, users.id))
-        .where(eq(barbers.id, barberId))
+        .where(
+          and(
+            eq(barbers.id, barberId),
+            eq(barbers.barbershopId, barbershopId),
+            eq(barbers.isActive, true)
+          )
+        )
         .limit(1);
-      barberInfo = barber ?? null;
+      if (!barber) {
+        return NextResponse.json({ error: 'Barber not found' }, { status: 404 });
+      }
+      barberInfo = barber;
     }
 
     // Create the booking inside a transaction. The overlap check + insert run

@@ -56,12 +56,12 @@ export async function POST(
     let isBarber = false;
     if (booking.barberId) {
       const [barber] = await db
-        .select({ userId: barbers.userId })
+        .select({ userId: barbers.userId, isActive: barbers.isActive })
         .from(barbers)
         .where(eq(barbers.id, booking.barberId))
         .limit(1);
-      
-      isBarber = barber?.userId === currentUser.id;
+
+      isBarber = !!barber?.isActive && barber.userId === currentUser.id;
     }
 
     if (!isAdmin && !isCustomer && !isBarber) {
