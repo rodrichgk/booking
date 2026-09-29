@@ -71,12 +71,12 @@ export default async function DatabaseManagementPage({ params }: { params: Promi
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
       <DatabaseManagementClient
         dbStats={dbStats}
         locale={locale}
         currentUserRole={userRole}
       />
-    </div>
+    </>
   );
 }

@@ -3,8 +3,8 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { db } from '@/lib/db';
-import { sessions, securityLogs, blockedIps, users } from '@/lib/db/schema';
-import { sql, desc, eq, gt } from 'drizzle-orm';
+import { securityLogs, blockedIps, users } from '@/lib/db/schema';
+import { sql, desc, eq } from 'drizzle-orm';
 import { SecurityClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -34,7 +34,6 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
   let recentActivity: any[] = [];
   let totalLogins = 0;
   let failedLogins = 0;
-  let activeSessions = 0;
   let blockedIPsList: any[] = [];
   let blockedIPsCount = 0;
 
@@ -95,14 +94,6 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
       .where(sql`${securityLogs.type} = 'failed_login' AND ${securityLogs.createdAt} > ${thirtyDaysAgo}`);
     failedLogins = Number(failedCount?.count) || 0;
 
-    // Count active sessions (not expired)
-    const now = new Date();
-    const [sessionCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(sessions)
-      .where(gt(sessions.expires, now));
-    activeSessions = Number(sessionCount?.count) || 0;
-
     // Fetch blocked IPs
     const ips = await db
       .select()
@@ -121,32 +112,22 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
     // Tables might not exist yet, continue with empty data
   }
 
+  // Sessions are JWT-based (no sessions table), so there is no "active sessions" figure.
   const securityData = {
     recentActivity,
     securityMetrics: {
       totalLogins,
       failedLogins,
       blockedIPs: blockedIPsCount,
-      activeSessions,
-      securityAlerts: failedLogins > 10 ? Math.floor(failedLogins / 10) : 0,
     },
     blockedIPs: blockedIPsList,
-    securitySettings: {
-      twoFactorRequired: false,
-      ipWhitelist: false,
-      sessionMonitoring: true,
-      loginNotifications: false,
-      bruteForceProtection: true,
-    },
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <SecurityClient
-        securityData={securityData}
-        locale={locale}
-        currentUserRole={userRole}
-      />
-    </div>
+    <SecurityClient
+      securityData={securityData}
+      locale={locale}
+      currentUserRole={userRole}
+    />
   );
 }

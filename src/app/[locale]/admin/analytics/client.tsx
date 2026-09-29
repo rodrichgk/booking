@@ -1,21 +1,26 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { 
-  BarChart3, TrendingUp, Users, Store, Calendar, DollarSign, 
-  Star, Activity, ArrowUp, ArrowDown, Eye, Filter, Download
-} from 'lucide-react';
+import { Users, Store, Calendar, Star, TrendingUp, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import {
+  PageHeader, PageShell, Panel, PanelHeader, StatGrid, Stat, EmptyState, formatEuro,
+} from '@/components/dashboard/ui';
 
-interface Stat {
-  label: string;
-  value: string;
-  icon: string;
-  color: string;
-  change: string;
+interface Metrics {
+  totalUsers: number;
+  newUsers30d: number;
+  totalBarbershops: number;
+  visibleBarbershops: number;
+  newBarbershops30d: number;
+  totalBookings: number;
+  bookings30d: number;
+  bookings7d: number;
+  monthlyRevenue: number;
+  totalReviews: number;
+  avgRating: number;
 }
 
 interface Barbershop {
@@ -27,246 +32,133 @@ interface Barbershop {
   bookingCount: number;
 }
 
-interface Activity {
+interface ActivityItem {
   type: string;
   name: string;
   createdAt: Date;
 }
 
 interface AnalyticsClientProps {
-  overviewStats: Stat[];
+  metrics: Metrics;
   topBarbershops: Barbershop[];
-  recentActivity: Activity[];
+  recentActivity: ActivityItem[];
   locale: string;
-  currentUserRole: string;
 }
 
-const renderIcon = (iconName: string, className: string) => {
-  const iconMap: { [key: string]: any } = {
-    Users,
-    Store,
-    Calendar,
-    DollarSign,
-    Star,
-    Activity,
-    BarChart3,
-    TrendingUp,
-    ArrowUp,
-    ArrowDown,
-    Eye,
-    Filter,
-    Download,
-  };
-  
-  const IconComponent = iconMap[iconName];
-  return IconComponent ? <IconComponent className={className} /> : null;
+const ACTIVITY: Record<string, { label: string; icon: typeof Users }> = {
+  user: { label: 'Nouvel utilisateur', icon: Users },
+  barbershop: { label: 'Nouveau salon', icon: Store },
+  booking: { label: 'Nouvelle réservation', icon: Calendar },
 };
 
-export function AnalyticsClient({ 
-  overviewStats, 
-  topBarbershops, 
-  recentActivity, 
-  locale, 
-  currentUserRole 
-}: AnalyticsClientProps) {
+function timeAgo(date: Date | string) {
+  const diff = Date.now() - new Date(date).getTime();
+  const minutes = Math.round(diff / 60000);
+  if (minutes < 1) return 'à l’instant';
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `il y a ${days} j`;
+  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+export function AnalyticsClient({ metrics, topBarbershops, recentActivity, locale }: AnalyticsClientProps) {
   const t = useTranslations('admin');
-  const [timeRange, setTimeRange] = useState('month');
-
-  const formatDate = (date: Date | string) => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'user': return <Users className="w-4 h-4 text-blue-500" />;
-      case 'barbershop': return <Store className="w-4 h-4 text-green-500" />;
-      case 'booking': return <Calendar className="w-4 h-4 text-purple-500" />;
-      default: return <Activity className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const getActivityBadge = (type: string) => {
-    switch (type) {
-      case 'user': return 'bg-blue-100 text-blue-800';
-      case 'barbershop': return 'bg-green-100 text-green-800';
-      case 'booking': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const ranked = topBarbershops.filter(b => Number(b.bookingCount) > 0);
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{t('systemAnalytics')}</h1>
-              <p className="text-gray-600 mt-1">{t('viewSystemAnalytics')}</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-              >
-                <option value="day">{t('last24Hours')}</option>
-                <option value="week">{t('lastWeek')}</option>
-                <option value="month">{t('lastMonth')}</option>
-                <option value="year">{t('lastYear')}</option>
-              </select>
-              <button className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                <Download className="w-4 h-4 mr-2" />
-                {t('exportReport')}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {overviewStats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                  <p className="text-sm text-gray-500 mt-2 flex items-center">
-                    <TrendingUp className="w-3 h-3 mr-1 text-green-500" />
-                    {stat.change}
-                  </p>
-                </div>
-                <div className={`p-3 bg-${stat.color}-100 rounded-lg ml-4`}>
-                  {renderIcon(stat.icon, `w-6 h-6 text-${stat.color}-600`)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <PageHeader title={t('systemAnalytics')} description="Chiffres de la plateforme. Les évolutions portent sur les 30 derniers jours." />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-          {/* Top Performing Barbershops */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">{t('topPerformingBarbershops')}</h2>
-              <p className="text-sm text-gray-600 mt-1">{t('byNumberOfBookings')}</p>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {topBarbershops.map((barbershop, index) => (
-                  <div key={barbershop.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center justify-center w-8 h-8 bg-primary-100 text-primary-600 rounded-full text-sm font-medium">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{barbershop.name}</p>
-                        <p className="text-xs text-gray-500">{barbershop.city}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">{barbershop.bookingCount} {t('bookings')}</p>
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Star className="w-3 h-3 mr-1 text-yellow-400" />
-                        {parseFloat(barbershop.rating || '0').toFixed(1)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <Link
-                  href={`/${locale}/admin/barbershops`}
-                  className="text-sm text-primary-600 hover:text-primary-800 font-medium"
-                >
-                  {t('viewAllBarbershops')}
+      <PageShell className="space-y-6">
+        <StatGrid>
+          <Stat label="Réservations" icon={Calendar} value={metrics.totalBookings} hint={`+${metrics.bookings30d} sur 30 jours, dont ${metrics.bookings7d} cette semaine`} />
+          <Stat label="Utilisateurs" icon={Users} value={metrics.totalUsers} hint={`+${metrics.newUsers30d} sur 30 jours`} />
+          <Stat
+            label="Salons visibles"
+            icon={Store}
+            value={`${metrics.visibleBarbershops}/${metrics.totalBarbershops}`}
+            hint={`+${metrics.newBarbershops30d} nouveaux sur 30 jours`}
+          />
+          <Stat label="Revenu mensuel" icon={TrendingUp} value={formatEuro(metrics.monthlyRevenue)} hint={`soit ${formatEuro(metrics.monthlyRevenue * 12)} par an`} />
+        </StatGrid>
+
+        <div className="grid items-start gap-6 lg:grid-cols-5">
+          <Panel className="lg:col-span-3">
+            <PanelHeader
+              title={t('topPerformingBarbershops')}
+              description={
+                metrics.totalReviews > 0
+                  ? `Classés par nombre de réservations. Note moyenne de la plateforme : ${metrics.avgRating.toFixed(1)} sur ${metrics.totalReviews} avis.`
+                  : 'Classés par nombre de réservations.'
+              }
+              actions={
+                <Link href={`/${locale}/admin/barbershops`} className="inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:text-primary-800">
+                  Tous les salons
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">{t('recentActivity')}</h2>
-              <p className="text-sm text-gray-600 mt-1">{t('latestSystemActivity')}</p>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {recentActivity.slice(0, 10).map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full">
-                      {getActivityIcon(activity.type)}
+              }
+            />
+            {ranked.length === 0 ? (
+              <EmptyState icon={Store} title="Aucune réservation pour l’instant" description="Le classement apparaîtra dès les premières réservations." />
+            ) : (
+              <ol className="divide-y divide-gray-100">
+                {ranked.map((shop, index) => (
+                  <li key={shop.id} className="flex items-center gap-4 px-5 py-3 sm:px-6">
+                    <span className="w-6 text-right font-display text-sm font-semibold tabular-nums text-gray-400">{index + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">{shop.name}</p>
+                      <p className="truncate text-xs text-gray-500">{shop.city}</p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{activity.name}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getActivityBadge(activity.type)}`}>
-                          {t(activity.type)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(activity.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    {parseFloat(shop.rating) > 0 && (
+                      <span className="hidden items-center gap-1 text-xs tabular-nums text-gray-500 sm:inline-flex">
+                        <Star className="h-3.5 w-3.5 fill-primary-500 text-primary-500" />
+                        {parseFloat(shop.rating).toFixed(1)}
+                      </span>
+                    )}
+                    <span className="w-24 text-right text-sm tabular-nums text-gray-900">
+                      <span className="font-semibold">{shop.bookingCount}</span>
+                      <span className="text-gray-500"> résa.</span>
+                    </span>
+                  </li>
                 ))}
-              </div>
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <button className="text-sm text-primary-600 hover:text-primary-800 font-medium">
-                  {t('viewAllActivity')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+              </ol>
+            )}
+          </Panel>
 
-        {/* Revenue Overview */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">{t('revenueOverview')}</h2>
-            <p className="text-sm text-gray-600 mt-1">{t('subscriptionBasedRevenue')}</p>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-600">{t('monthlyRevenue')}</p>
-                <p className="text-2xl font-bold text-green-600 mt-2">
-                  €{overviewStats.find(s => s.label === t('monthlyRevenue'))?.value.replace('€', '') || '0'}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{t('fromActiveSubscriptions')}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-600">{t('yearlyProjection')}</p>
-                <p className="text-2xl font-bold text-blue-600 mt-2">
-                  €{((parseFloat(overviewStats.find(s => s.label === t('monthlyRevenue'))?.value.replace('€', '') || '0')) * 12).toFixed(0)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{t('basedOnCurrentSubscriptions')}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-600">{t('activeSubscriptions')}</p>
-                <p className="text-2xl font-bold text-purple-600 mt-2">
-                  {overviewStats.find(s => s.label === t('activeBarbershops'))?.value || '0'}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{t('payingBarbershops')}</p>
-              </div>
-            </div>
-          </div>
+          <Panel className="lg:col-span-2">
+            <PanelHeader title={t('recentActivity')} />
+            {recentActivity.length === 0 ? (
+              <EmptyState title="Aucune activité récente" />
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {recentActivity.slice(0, 12).map((item, index) => {
+                  const meta = ACTIVITY[item.type] ?? { label: item.type, icon: Calendar };
+                  return (
+                    <li key={index} className="flex items-center gap-3 px-5 py-3 sm:px-6">
+                      <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                        <meta.icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-gray-900">{item.name}</p>
+                        <p className="text-xs text-gray-500">{meta.label}</p>
+                      </div>
+                      <time dateTime={new Date(item.createdAt).toISOString()} className="flex-shrink-0 text-xs tabular-nums text-gray-500">
+                        {timeAgo(item.createdAt)}
+                      </time>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
         </div>
-      </div>
+      </PageShell>
+
+      <Footer />
     </div>
-    <Footer />
-    </>
   );
 }

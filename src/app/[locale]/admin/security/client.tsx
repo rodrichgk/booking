@@ -1,34 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { 
-  Shield, AlertTriangle, Lock, Eye, Activity, Ban, CheckCircle, 
-  RefreshCw, Download, Filter, Search, Globe, User, AlertCircle
-} from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Activity, Ban, CheckCircle, AlertCircle, Search, ShieldAlert, LogIn, UserCog, X, Plus } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/components/dashboard/confirm-dialog';
+import { Modal } from '@/components/dashboard/modal';
+import {
+  PageHeader, PageShell, Tabs, Panel, PanelHeader, StatGrid, Stat, Badge, EmptyState, Spinner,
+  btn, inputClass, labelClass, type BadgeTone,
+} from '@/components/dashboard/ui';
 
 interface SecurityActivity {
   id: string;
   type: string;
   user: string;
   email?: string;
-  target?: string;
   action?: string;
   ip: string;
   location: string;
   timestamp: string;
   status: string;
-}
-
-interface SecurityMetrics {
-  totalLogins: number;
-  failedLogins: number;
-  blockedIPs: number;
-  activeSessions: number;
-  securityAlerts: number;
 }
 
 interface BlockedIP {
@@ -39,15 +33,8 @@ interface BlockedIP {
 
 interface SecurityData {
   recentActivity: SecurityActivity[];
-  securityMetrics: SecurityMetrics;
+  securityMetrics: { totalLogins: number; failedLogins: number; blockedIPs: number };
   blockedIPs: BlockedIP[];
-  securitySettings: {
-    twoFactorRequired: boolean;
-    ipWhitelist: boolean;
-    sessionMonitoring: boolean;
-    loginNotifications: boolean;
-    bruteForceProtection: boolean;
-  };
 }
 
 interface SecurityClientProps {
@@ -56,301 +43,223 @@ interface SecurityClientProps {
   currentUserRole: string;
 }
 
-export function SecurityClient({ 
-  securityData, 
-  locale, 
-  currentUserRole 
-}: SecurityClientProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activityFilter, setActivityFilter] = useState('all');
+type Filter = 'all' | 'login' | 'failed_login' | 'other';
 
-  const filteredActivity = securityData.recentActivity.filter(activity => {
-    const matchesSearch = 
-      activity.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.ip.includes(searchTerm);
-    
-    const matchesFilter = activityFilter === 'all' || activity.type === activityFilter;
+const EVENT: Record<string, { label: string; tone: BadgeTone; icon: typeof Activity }> = {
+  login: { label: 'Connexion', tone: 'neutral', icon: LogIn },
+  failed_login: { label: 'Échec de connexion', tone: 'danger', icon: AlertCircle },
+  role_change: { label: 'Changement de rôle', tone: 'brand', icon: UserCog },
+  ip_blocked: { label: 'IP bloquée', tone: 'warning', icon: Ban },
+  logout: { label: 'Déconnexion', tone: 'neutral', icon: Activity },
+  password_change: { label: 'Mot de passe modifié', tone: 'brand', icon: UserCog },
+};
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+export function SecurityClient({ securityData }: SecurityClientProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const confirm = useConfirm();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [blockOpen, setBlockOpen] = useState(false);
+  const [blockIp, setBlockIp] = useState('');
+  const [blockReason, setBlockReason] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const events = securityData.recentActivity;
+  const filtered = events.filter((event) => {
+    const q = searchTerm.trim().toLowerCase();
+    const matchesSearch = !q || [event.user, event.email, event.ip].some((v) => v?.toLowerCase().includes(q));
+    const matchesFilter =
+      filter === 'all'
+      || (filter === 'other' ? event.type !== 'login' && event.type !== 'failed_login' : event.type === filter);
     return matchesSearch && matchesFilter;
   });
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'login': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'failed_login': return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'role_change': return <User className="w-4 h-4 text-blue-500" />;
-      case 'security_alert': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-      default: return <Activity className="w-4 h-4 text-gray-500" />;
+  const handleBlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy('new');
+    try {
+      const res = await fetch('/api/admin/security/blocked-ips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: blockIp.trim(), reason: blockReason.trim() || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error);
+      toast({ variant: 'success', title: 'IP bloquée', description: blockIp.trim() });
+      setBlockOpen(false);
+      setBlockIp('');
+      setBlockReason('');
+      router.refresh();
+    } catch (err) {
+      toast({ variant: 'error', title: 'Blocage impossible', description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setBusy(null);
     }
   };
 
-  const getActivityBadge = (type: string) => {
-    switch (type) {
-      case 'login': return 'bg-green-100 text-green-800';
-      case 'failed_login': return 'bg-red-100 text-red-800';
-      case 'role_change': return 'bg-blue-100 text-blue-800';
-      case 'security_alert': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const handleUnblock = async (ip: string) => {
+    const ok = await confirm({ title: `Débloquer ${ip} ?`, description: 'Cette adresse pourra de nouveau accéder au site.', confirmLabel: 'Débloquer' });
+    if (!ok) return;
+    setBusy(ip);
+    try {
+      const res = await fetch(`/api/admin/security/blocked-ips?ip=${encodeURIComponent(ip)}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error);
+      toast({ variant: 'success', title: 'IP débloquée', description: ip });
+      router.refresh();
+    } catch (err) {
+      toast({ variant: 'error', title: 'Déblocage impossible', description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setBusy(null);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    return status === 'success' ? 
-      <CheckCircle className="w-4 h-4 text-green-500" /> : 
-      <AlertCircle className="w-4 h-4 text-red-500" />;
-  };
+  const { totalLogins, failedLogins, blockedIPs } = securityData.securityMetrics;
+  const failureRate = totalLogins + failedLogins > 0 ? Math.round((failedLogins / (totalLogins + failedLogins)) * 100) : 0;
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Security</h1>
-              <p className="text-gray-600 mt-1">Security logs and access control</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
-                <Download className="w-4 h-4 mr-2" />
-                Export Logs
-              </button>
-              <button className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Security Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Logins</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{securityData.securityMetrics.totalLogins}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Activity className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Failed Logins</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{securityData.securityMetrics.failedLogins}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-lg">
-                <AlertCircle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Blocked IPs</p>
-                <p className="text-3xl font-bold text-orange-600 mt-2">{securityData.securityMetrics.blockedIPs}</p>
-              </div>
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Ban className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Sessions</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{securityData.securityMetrics.activeSessions}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Eye className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Security Alerts</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-2">{securityData.securityMetrics.securityAlerts}</p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+      <PageHeader title="Sécurité" description="Journal des connexions et adresses IP bloquées." />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          {/* Security Activity */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Security Activity</h2>
-              <p className="text-sm text-gray-600 mt-1">Recent security events and logs</p>
-            </div>
-            
-            {/* Filters */}
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="Search by user, email, or IP..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                </div>
-                <div className="sm:w-48">
-                  <select
-                    value={activityFilter}
-                    onChange={(e) => setActivityFilter(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                  >
-                    <option value="all">All Activity</option>
-                    <option value="login">Logins</option>
-                    <option value="failed_login">Failed Logins</option>
-                    <option value="role_change">Role Changes</option>
-                    <option value="security_alert">Security Alerts</option>
-                  </select>
-                </div>
+      <PageShell className="space-y-6">
+        <StatGrid columns={3}>
+          <Stat label="Connexions réussies" icon={LogIn} value={totalLogins} hint="30 derniers jours" />
+          <Stat
+            label="Échecs de connexion"
+            icon={AlertCircle}
+            value={failedLogins}
+            hint={`${failureRate} % des tentatives`}
+            tone={failureRate >= 20 ? 'attention' : 'default'}
+          />
+          <Stat label="IP bloquées" icon={Ban} value={blockedIPs} />
+        </StatGrid>
+
+        <div className="grid items-start gap-6 lg:grid-cols-3">
+          <Panel className="lg:col-span-2">
+            <PanelHeader title="Journal" description="50 derniers événements" />
+            <div className="border-b border-gray-100 px-5 pb-0 pt-3 sm:px-6">
+              <div className="relative max-w-sm">
+                <label htmlFor="security-search" className="sr-only">Rechercher</label>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  id="security-search"
+                  type="search"
+                  placeholder="Utilisateur, email ou IP"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`${inputClass} pl-9`}
+                />
+              </div>
+              <div className="-mb-px">
+                <Tabs<Filter>
+                  active={filter}
+                  onChange={setFilter}
+                  tabs={[
+                    { id: 'all', label: 'Tout', count: events.length },
+                    { id: 'login', label: 'Connexions', count: events.filter(e => e.type === 'login').length },
+                    { id: 'failed_login', label: 'Échecs', count: events.filter(e => e.type === 'failed_login').length },
+                    { id: 'other', label: 'Autres', count: events.filter(e => e.type !== 'login' && e.type !== 'failed_login').length },
+                  ]}
+                />
               </div>
             </div>
-
-            {/* Activity List */}
-            <div className="p-6">
-              <div className="space-y-4">
-                {filteredActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full border border-gray-200">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{activity.user}</p>
-                          {activity.email && (
-                            <p className="text-xs text-gray-500">{activity.email}</p>
-                          )}
-                          {activity.action && (
-                            <p className="text-xs text-gray-600 mt-1">{activity.action}</p>
-                          )}
+            {filtered.length === 0 ? (
+              <EmptyState icon={ShieldAlert} title="Aucun événement" description={events.length ? 'Aucun résultat pour ce filtre.' : 'Les connexions apparaîtront ici.'} />
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {filtered.map((event) => {
+                  const meta = EVENT[event.type] ?? { label: event.type.replace(/_/g, ' '), tone: 'neutral' as BadgeTone, icon: Activity };
+                  return (
+                    <li key={event.id} className="flex items-start gap-3 px-5 py-3 sm:px-6">
+                      <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                        <meta.icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900">{event.user !== 'Inconnu' ? event.user : event.email || 'Inconnu'}</p>
+                          <Badge tone={meta.tone}>{meta.label}</Badge>
+                          {event.status !== 'success' && event.type !== 'failed_login' && <Badge tone="danger">Échec</Badge>}
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getActivityBadge(activity.type)}`}>
-                            {activity.type.replace('_', ' ')}
-                          </span>
-                          {getStatusIcon(activity.status)}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <Globe className="w-3 h-3 mr-1" />
-                          {activity.ip}
-                        </div>
-                        <div className="flex items-center">
-                          <Activity className="w-3 h-3 mr-1" />
-                          {activity.location}
-                        </div>
-                        <div className="flex items-center">
-                          <Eye className="w-3 h-3 mr-1" />
-                          {formatDate(activity.timestamp)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Blocked IPs */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Blocked IPs</h2>
-              <p className="text-sm text-gray-600 mt-1">Currently blocked IP addresses</p>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {securityData.blockedIPs.map((blockedIP, index) => (
-                  <div key={index} className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-red-900">{blockedIP.ip}</p>
-                        <p className="text-xs text-red-700 mt-1">{blockedIP.reason}</p>
-                        <p className="text-xs text-red-600 mt-2">
-                          Blocked: {formatDate(blockedIP.blockedAt)}
+                        {event.action && <p className="mt-0.5 text-sm text-gray-600">{event.action}</p>}
+                        <p className="mt-0.5 font-mono text-xs text-gray-500">
+                          {event.ip}
+                          {event.location && event.location !== 'Inconnu' ? `, ${event.location}` : ''}
                         </p>
                       </div>
-                      <button className="text-red-600 hover:text-red-800">
-                        <Ban className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-6 space-y-3">
-                <button className="w-full flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
-                  <Ban className="w-4 h-4 mr-2" />
-                  Block New IP
-                </button>
-                <button className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors">
-                  View All Blocked IPs
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+                      <time dateTime={event.timestamp} className="flex-shrink-0 text-xs tabular-nums text-gray-500">{formatDate(event.timestamp)}</time>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
 
-        {/* Security Settings */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Security Settings</h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Object.entries(securityData.securitySettings).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {value ? 'Enabled' : 'Disabled'}
-                    </p>
-                  </div>
-                  <div className={`w-3 h-3 rounded-full ${value ? 'bg-green-500' : 'bg-gray-300'}`} />
-                </div>
-              ))}
-            </div>
-          </div>
+          <Panel>
+            <PanelHeader
+              title="IP bloquées"
+              description="Liste de suivi. Le blocage n’est pas encore appliqué par le site."
+              actions={
+                <button onClick={() => setBlockOpen(true)} className={`${btn.secondary} ${btn.sm}`}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Bloquer
+                </button>
+              }
+            />
+            {securityData.blockedIPs.length === 0 ? (
+              <EmptyState icon={CheckCircle} title="Aucune IP bloquée" />
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {securityData.blockedIPs.map((blocked) => (
+                  <li key={blocked.ip} className="flex items-start gap-3 px-5 py-3 sm:px-6">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-sm text-gray-900">{blocked.ip}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">{blocked.reason}</p>
+                      <p className="text-xs tabular-nums text-gray-400">{formatDate(blocked.blockedAt)}</p>
+                    </div>
+                    <button onClick={() => handleUnblock(blocked.ip)} disabled={busy === blocked.ip} className={btn.icon} aria-label={`Débloquer ${blocked.ip}`} title="Débloquer">
+                      {busy === blocked.ip ? <Spinner /> : <X className="h-4 w-4" />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
         </div>
-      </div>
+      </PageShell>
+
+      <Footer />
+
+      <Modal
+        open={blockOpen}
+        onClose={() => setBlockOpen(false)}
+        title="Bloquer une adresse IP"
+        footer={
+          <>
+            <button type="button" onClick={() => setBlockOpen(false)} className={btn.secondary}>Annuler</button>
+            <button type="submit" form="block-ip-form" disabled={busy === 'new'} className={btn.danger}>
+              {busy === 'new' && <Spinner className="h-3.5 w-3.5" />}
+              Bloquer
+            </button>
+          </>
+        }
+      >
+        <form id="block-ip-form" onSubmit={handleBlock} className="space-y-4">
+          <div>
+            <label htmlFor="block-ip" className={labelClass}>Adresse IP <span className="text-red-600" aria-hidden="true">*</span></label>
+            <input id="block-ip" type="text" value={blockIp} onChange={(e) => setBlockIp(e.target.value)} required placeholder="203.0.113.42" className={`${inputClass} font-mono`} />
+          </div>
+          <div>
+            <label htmlFor="block-reason" className={labelClass}>Raison</label>
+            <input id="block-reason" type="text" value={blockReason} onChange={(e) => setBlockReason(e.target.value)} placeholder="Ex : tentatives de connexion répétées" className={inputClass} />
+          </div>
+        </form>
+      </Modal>
     </div>
-    <Footer />
-    </>
   );
 }

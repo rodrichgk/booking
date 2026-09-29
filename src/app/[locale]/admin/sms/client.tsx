@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import {
-  MessageSquare, Send, Users, CreditCard, AlertCircle, CheckCircle,
-  RefreshCw, Phone, Search, Filter, ChevronDown, X
+  MessageSquare, Send, Users, CreditCard, AlertCircle, CheckCircle, Phone, Search, Upload, ArrowLeft, FlaskConical,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useConfirm } from '@/components/dashboard/confirm-dialog';
+import {
+  PageHeader, PageShell, Panel, PanelHeader, PanelBody, StatGrid, Stat, Badge, Notice, EmptyState, Spinner,
+  btn, inputClass, labelClass, backLinkClass,
+} from '@/components/dashboard/ui';
+
+const ROLE_LABELS: Record<string, string> = { customer: 'Client', barber: 'Coiffeur', admin: 'Admin', dev: 'Dev' };
 
 interface User {
   id: string;
@@ -32,6 +38,7 @@ interface SMSMarketingClientProps {
 }
 
 export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
+  const confirm = useConfirm();
   const [message, setMessage] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [customNumbers, setCustomNumbers] = useState('');
@@ -238,324 +245,232 @@ export function SMSMarketingClient({ locale }: SMSMarketingClientProps) {
   const messageLength = message.length;
   const smsCount = Math.ceil(messageLength / 160) || 1;
   const totalRecipients = getSelectedRecipients().length;
+  const totalSms = totalRecipients * smsCount;
+  const allFilteredSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedUsers.includes(u.id));
+  const notEnoughCredits = credits !== null && totalSms > credits;
+
+  const confirmAndSend = async () => {
+    const ok = await confirm({
+      title: `Envoyer ${totalSms.toLocaleString('fr-FR')} SMS ?`,
+      description: `${totalRecipients} destinataire${totalRecipients > 1 ? 's' : ''}, ${smsCount} SMS chacun. Les crédits sont débités immédiatement et l’envoi ne peut pas être annulé.`,
+      confirmLabel: 'Envoyer la campagne',
+      tone: 'danger',
+    });
+    if (ok) handleSend(false);
+  };
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Marketing SMS</h1>
-                <p className="text-gray-600 mt-1">Envoyez des campagnes SMS à vos clients</p>
-              </div>
-              <div className="flex items-center space-x-4">
-                {credits !== null && (
-                  <div className="flex items-center space-x-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                    <CreditCard className="w-5 h-5 text-green-600" />
-                    <span className="text-green-800 font-medium">{credits} crédits</span>
-                  </div>
-                )}
-                <Link
-                  href={`/${locale}/admin/sms/import`}
-                  className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition-colors"
-                >
-                  📥 Import CSV
-                </Link>
-                <Link
-                  href={`/${locale}/admin`}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
-                >
-                  ← Retour
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Imported contacts banner */}
-          {importedContacts.length > 0 && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
-              <div className="flex items-center">
-                <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
-                <div>
-                  <p className="text-green-800 font-medium">
-                    {importedContacts.length} contacts importés prêts à recevoir votre SMS
-                  </p>
-                  <p className="text-green-700 text-sm">
-                    Les variables {'{Prénom}'} et {'{Nom}'} seront remplacées automatiquement
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setImportedContacts([])}
-                className="text-green-600 hover:text-green-800 p-1"
-                title="Effacer les contacts importés"
-              >
-                <X className="w-5 h-5" />
+      <PageHeader
+        title="Campagnes SMS"
+        description="Envoyez un SMS à vos clients via SMS Factor."
+        back={
+          <Link href={`/${locale}/my-space`} className={backLinkClass} aria-label="Retour">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        }
+        actions={
+          <>
+            {credits !== null && (
+              <Badge tone={credits > 0 ? 'neutral' : 'danger'} icon={CreditCard}>
+                {credits.toLocaleString('fr-FR')} crédits
+              </Badge>
+            )}
+            <Link href={`/${locale}/admin/sms/import`} className={btn.secondary}>
+              <Upload className="h-4 w-4" />
+              Importer un CSV
+            </Link>
+          </>
+        }
+      />
+
+      <PageShell className="space-y-6">
+        {importedContacts.length > 0 && (
+          <Notice
+            tone="success"
+            icon={CheckCircle}
+            title={`${importedContacts.length} contacts importés ajoutés aux destinataires`}
+            action={
+              <button onClick={() => setImportedContacts([])} className={`${btn.ghost} ${btn.sm}`}>
+                Retirer
               </button>
-            </div>
-          )}
+            }
+          >
+            Les variables {'{Prénom}'} et {'{Nom}'} seront remplacées pour chacun.
+          </Notice>
+        )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Message Composer */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2 text-primary-600" />
-                  Composer le message
-                </h2>
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <Panel>
+              <PanelHeader icon={MessageSquare} title="Message" />
+              <PanelBody className="space-y-4">
+                <div>
+                  <label htmlFor="sms-sender" className={labelClass}>Expéditeur</label>
+                  <input
+                    id="sms-sender"
+                    type="text"
+                    value={sender}
+                    onChange={(e) => setSender(e.target.value.slice(0, 11))}
+                    placeholder="Orphelia"
+                    maxLength={11}
+                    className={inputClass}
+                    aria-describedby="sms-sender-help"
+                  />
+                  <p id="sms-sender-help" className="mt-1.5 text-xs text-gray-500">11 caractères maximum, enregistré chez SMS Factor.</p>
+                </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expéditeur
-                    </label>
-                    <input
-                      type="text"
-                      value={sender}
-                      onChange={(e) => setSender(e.target.value.slice(0, 11))}
-                      placeholder="Orphelia"
-                      maxLength={11}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Max 11 caractères, doit être enregistré chez SMS Factor</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Message
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      <span className="text-xs text-gray-500 self-center">Variables :</span>
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <label htmlFor="sms-message" className="text-sm font-medium text-gray-800">Texte</label>
+                    <div className="flex gap-1">
                       {TEMPLATE_VARIABLES.map((v) => (
                         <button
                           key={v.key}
                           type="button"
                           onClick={() => insertVariable(v.key)}
-                          className="px-2 py-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded font-mono transition-colors"
-                          title={v.description}
+                          className="rounded-md border border-gray-200 bg-white px-2 py-0.5 font-mono text-xs text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-700"
+                          title={`Insérer : ${v.description}`}
                         >
                           {v.key}
                         </button>
                       ))}
                     </div>
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Salut {Prénom}, c'est Maggie ! Grande nouvelle..."
-                      rows={6}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>{messageLength} caractères (variables non remplacées)</span>
-                      <span>{smsCount} SMS par destinataire</span>
-                    </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Numéros supplémentaires (optionnel)
-                    </label>
-                    <textarea
-                      value={customNumbers}
-                      onChange={(e) => setCustomNumbers(e.target.value)}
-                      placeholder="Format: numéro,prénom,nom (un par ligne)&#10;Ex: 0612345678,Marie,Dupont&#10;0698765432,Jean,Martin"
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Format: numéro,prénom,nom - Le prénom et nom sont utilisés pour les variables {'{Prénom}'} et {'{Nom}'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Summary & Actions */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Résumé</h2>
-                
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{totalRecipients}</p>
-                    <p className="text-xs text-gray-600">Destinataires</p>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{smsCount}</p>
-                    <p className="text-xs text-gray-600">SMS/personne</p>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary-600">{totalRecipients * smsCount}</p>
-                    <p className="text-xs text-gray-600">Total SMS</p>
+                  <textarea
+                    id="sms-message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Bonjour {Prénom}, votre salon vous offre -20 % cette semaine..."
+                    rows={6}
+                    className={`${inputClass} resize-none`}
+                  />
+                  <div className="mt-1.5 flex justify-between text-xs tabular-nums text-gray-500">
+                    <span>{messageLength} caractères, variables non remplacées</span>
+                    <span className={smsCount > 1 ? 'font-medium text-amber-700' : ''}>{smsCount} SMS par destinataire</span>
                   </div>
                 </div>
 
+                <div>
+                  <label htmlFor="sms-custom" className={labelClass}>Numéros supplémentaires</label>
+                  <textarea
+                    id="sms-custom"
+                    value={customNumbers}
+                    onChange={(e) => setCustomNumbers(e.target.value)}
+                    placeholder={'0612345678,Marie,Dupont\n0698765432,Jean,Martin'}
+                    rows={3}
+                    className={`${inputClass} resize-none font-mono`}
+                    aria-describedby="sms-custom-help"
+                  />
+                  <p id="sms-custom-help" className="mt-1.5 text-xs text-gray-500">
+                    Un par ligne : numéro, prénom, nom. Prénom et nom sont facultatifs.
+                  </p>
+                </div>
+              </PanelBody>
+            </Panel>
+
+            <Panel>
+              <StatGrid columns={3} className="rounded-b-none rounded-t-xl border-0 border-b">
+                <Stat label="Destinataires" value={totalRecipients} />
+                <Stat label="SMS chacun" value={smsCount} />
+                <Stat label="Total" value={totalSms} tone={notEnoughCredits ? 'attention' : 'default'} hint={notEnoughCredits ? 'Crédits insuffisants' : undefined} />
+              </StatGrid>
+              <PanelBody className="space-y-4">
                 {result && (
-                  <div className={`mb-4 p-4 rounded-lg ${result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                    <div className="flex items-start">
-                      {result.success ? (
-                        <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 mr-2" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-2" />
-                      )}
-                      <div>
-                        {result.success ? (
-                          <>
-                            <p className="text-green-800 font-medium">
-                              {result.simulated ? 'Simulation réussie!' : 'Campagne envoyée!'}
-                            </p>
-                            <p className="text-green-700 text-sm">
-                              {result.sent} SMS envoyés{result.failed ? `, ${result.failed} échoués` : ''}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-red-800">{result.error}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <Notice tone={result.success ? 'success' : 'danger'} icon={result.success ? CheckCircle : AlertCircle} title={result.success ? (result.simulated ? 'Simulation réussie' : 'Campagne envoyée') : undefined}>
+                    {result.success ? `${result.sent} SMS envoyés${result.failed ? `, ${result.failed} en échec` : ''}.` : result.error}
+                  </Notice>
                 )}
-
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => handleSend(true)}
-                    disabled={isSimulating || isSending || totalRecipients === 0}
-                    className="flex-1 flex items-center justify-center px-4 py-3 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-700 disabled:text-gray-400 rounded-lg font-medium transition-colors"
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${isSimulating ? 'animate-spin' : ''}`} />
-                    {isSimulating ? 'Simulation...' : 'Simuler'}
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <button onClick={() => handleSend(true)} disabled={isSimulating || isSending || totalRecipients === 0} className={btn.secondary}>
+                    {isSimulating ? <Spinner className="h-3.5 w-3.5" /> : <FlaskConical className="h-4 w-4" />}
+                    Simuler sans envoyer
                   </button>
-                  <button
-                    onClick={() => handleSend(false)}
-                    disabled={isSending || isSimulating || totalRecipients === 0}
-                    className="flex-1 flex items-center justify-center px-4 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <Send className={`w-4 h-4 mr-2 ${isSending ? 'animate-pulse' : ''}`} />
-                    {isSending ? 'Envoi...' : 'Envoyer'}
+                  <button onClick={confirmAndSend} disabled={isSending || isSimulating || totalRecipients === 0 || !message.trim()} className={btn.primary}>
+                    {isSending ? <Spinner className="h-3.5 w-3.5" /> : <Send className="h-4 w-4" />}
+                    Envoyer
                   </button>
                 </div>
-              </div>
-            </div>
+                <p className="text-xs text-gray-500">
+                  Un SMS fait 160 caractères ; au-delà il est découpé. La simulation ne consomme aucun crédit.
+                </p>
+              </PanelBody>
+            </Panel>
+          </div>
 
-            {/* Recipients Selection */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-primary-600" />
-                Sélectionner les destinataires
-                <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 text-sm rounded-full">
-                  {selectedUsers.length} sélectionnés
-                </span>
-              </h2>
-
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Panel>
+            <PanelHeader
+              icon={Users}
+              title="Destinataires"
+              description={`${selectedUsers.length} utilisateur${selectedUsers.length > 1 ? 's' : ''} sélectionné${selectedUsers.length > 1 ? 's' : ''}`}
+            />
+            <div className="space-y-3 border-b border-gray-100 px-5 py-4 sm:px-6">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1">
+                  <label htmlFor="sms-search" className="sr-only">Rechercher</label>
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="text"
+                    id="sms-search"
+                    type="search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                    placeholder="Nom ou numéro"
+                    className={`${inputClass} pl-9`}
                   />
                 </div>
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                >
+                <label htmlFor="sms-role" className="sr-only">Rôle</label>
+                <select id="sms-role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className={`${inputClass} sm:w-44`}>
                   <option value="all">Tous les rôles</option>
                   <option value="customer">Clients</option>
                   <option value="barber">Coiffeurs</option>
                   <option value="admin">Admins</option>
                 </select>
               </div>
-
-              {/* Select All */}
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
-                <button
-                  onClick={selectAllFiltered}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  {filteredUsers.every(u => selectedUsers.includes(u.id)) 
-                    ? 'Désélectionner tout' 
-                    : 'Sélectionner tout'}
+              <div className="flex items-center justify-between text-sm">
+                <button onClick={selectAllFiltered} disabled={filteredUsers.length === 0} className="font-medium text-primary-700 hover:text-primary-800 disabled:text-gray-400">
+                  {allFilteredSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
-                <span className="text-sm text-gray-500">
-                  {filteredUsers.length} utilisateurs avec téléphone
-                </span>
-              </div>
-
-              {/* Users List */}
-              <div className="max-h-[400px] overflow-y-auto space-y-2">
-                {isLoadingUsers ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    Chargement...
-                  </div>
-                ) : filteredUsers.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Phone className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    Aucun utilisateur trouvé
-                  </div>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <label
-                      key={user.id}
-                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedUsers.includes(user.id)
-                          ? 'bg-primary-50 border border-primary-200'
-                          : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => toggleUserSelection(user.id)}
-                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      />
-                      <div className="ml-3 flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.name || 'Sans nom'}
-                        </p>
-                        <p className="text-xs text-gray-500">{user.phone}</p>
-                      </div>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        user.role === 'customer' ? 'bg-blue-100 text-blue-700' :
-                        user.role === 'barber' ? 'bg-purple-100 text-purple-700' :
-                        user.role === 'admin' ? 'bg-red-100 text-red-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </label>
-                  ))
-                )}
+                <span className="tabular-nums text-gray-500">{filteredUsers.length} avec un téléphone</span>
               </div>
             </div>
-          </div>
 
-          {/* Info Box */}
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
-            <div className="flex items-start">
-              <AlertCircle className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-              <div>
-                <h3 className="text-blue-800 font-medium">Informations importantes</h3>
-                <ul className="mt-2 text-sm text-blue-700 space-y-1">
-                  <li>• Un SMS standard contient 160 caractères. Au-delà, le message sera divisé en plusieurs SMS.</li>
-                  <li>• L'expéditeur doit être enregistré sur votre compte SMS Factor.</li>
-                  <li>• Utilisez "Simuler" pour tester sans consommer de crédits.</li>
-                  <li>• Les numéros français doivent commencer par 06 ou 07.</li>
+            <div className="max-h-[32rem] overflow-y-auto">
+              {isLoadingUsers ? (
+                <div className="flex justify-center py-10"><Spinner className="h-5 w-5 text-gray-400" /></div>
+              ) : filteredUsers.length === 0 ? (
+                <EmptyState icon={Phone} title="Aucun utilisateur trouvé" description="Seuls les comptes avec un numéro de téléphone apparaissent ici." />
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {filteredUsers.map((user) => {
+                    const checked = selectedUsers.includes(user.id);
+                    return (
+                      <li key={user.id}>
+                        <label className={`flex cursor-pointer items-center gap-3 px-5 py-2.5 transition-colors sm:px-6 ${checked ? 'bg-primary-50/60' : 'hover:bg-gray-50'}`}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleUserSelection(user.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-gray-900">{user.name || 'Sans nom'}</span>
+                            <span className="block font-mono text-xs text-gray-500">{user.phone}</span>
+                          </span>
+                          <Badge>{ROLE_LABELS[user.role] ?? user.role}</Badge>
+                        </label>
+                      </li>
+                    );
+                  })}
                 </ul>
-              </div>
+              )}
             </div>
-          </div>
+          </Panel>
         </div>
-      </div>
+      </PageShell>
+
       <Footer />
-    </>
+    </div>
   );
 }

@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { Link } from '@/routing';
+import { useMemo, useState } from 'react';
+import { Link, useRouter } from '@/routing';
 import {
-  ArrowLeft, CalendarCheck, User, Mail, Phone, Clock, Euro,
-  Calendar, CheckCircle, XCircle, AlertCircle, X, Send, Edit3
+  ArrowLeft, CalendarCheck, Mail, Phone, Send, Edit3, Check, X, MessageSquare, Scissors, User,
 } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/components/dashboard/confirm-dialog';
+import {
+  PageHeader, PageShell, Tabs, Panel, Badge, EmptyState, Spinner,
+  btn, inputClass, backLinkClass, formatEuro, type BadgeTone,
+} from '@/components/dashboard/ui';
 
 interface Barbershop {
   id: string;
@@ -38,485 +43,322 @@ interface BookingsManagementClientProps {
   locale: string;
 }
 
-export function BookingsManagementClient({
-  shop,
-  bookings,
-  locale
-}: BookingsManagementClientProps) {
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('all');
+type Filter = 'upcoming' | 'past' | 'cancelled' | 'all';
+
+const STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  confirmed: { label: 'Confirmé', tone: 'success' },
+  completed: { label: 'Terminé', tone: 'neutral' },
+  cancelled: { label: 'Annulé', tone: 'danger' },
+  pending: { label: 'En attente', tone: 'warning' },
+};
+
+const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+function dayLabel(d: Date, now: Date) {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+  const long = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+  if (diff === 0) return `Aujourd'hui, ${long}`;
+  if (diff === 1) return `Demain, ${long}`;
+  if (diff === -1) return `Hier, ${long}`;
+  return long.charAt(0).toUpperCase() + long.slice(1);
+}
+
+const toLocalInput = (date: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+export function BookingsManagementClient({ shop, bookings }: BookingsManagementClientProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const confirm = useConfirm();
+  const [filter, setFilter] = useState<Filter>('upcoming');
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
-  const [newDateTime, setNewDateTime] = useState<string>('');
+  const [newDateTime, setNewDateTime] = useState('');
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
 
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir annuler cette réservation ?')) {
-      return;
-    }
-
+  const run = async (bookingId: string, action: () => Promise<Response>, success: string, fallbackError: string) => {
     setProcessingId(bookingId);
-    setError(null);
-    setSuccessMessage(null);
-
     try {
-      const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to cancel booking');
-      }
-
-      // Reload the page to show updated data
-      window.location.reload();
+      const response = await action();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || fallbackError);
+      toast({ variant: 'success', title: success });
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      toast({ variant: 'error', title: 'Erreur', description: err instanceof Error ? err.message : 'Une erreur est survenue' });
+      return false;
+    } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleCancelBooking = async (booking: Booking) => {
+    const ok = await confirm({
+      title: 'Annuler ce rendez-vous ?',
+      description: `${booking.customerName || 'Le client'}, ${new Date(booking.startTime).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}.`,
+      confirmLabel: 'Annuler le rendez-vous',
+      cancelLabel: 'Garder',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    if (await run(booking.id, () => fetch(`/api/bookings/${booking.id}`, { method: 'DELETE' }), 'Rendez-vous annulé', "Impossible d'annuler")) {
+      router.refresh();
     }
   };
 
   const handleMarkCompleted = async (bookingId: string) => {
-    setProcessingId(bookingId);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const response = await fetch(`/api/bookings/${bookingId}`, {
+    const done = await run(
+      bookingId,
+      () => fetch(`/api/bookings/${bookingId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'completed' }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update booking');
-      }
-
-      // Reload the page to show updated data
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
-      setProcessingId(null);
-    }
+      }),
+      'Rendez-vous marqué comme terminé',
+      'Impossible de mettre à jour'
+    );
+    if (done) router.refresh();
   };
 
-  const handleResendEmail = async (bookingId: string) => {
-    setProcessingId(bookingId);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const response = await fetch(`/api/bookings/${bookingId}/resend-email`, {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Échec du renvoi des emails');
-      }
-
-      setSuccessMessage('Emails renvoyés avec succès !');
-      setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const handleOpenTimeEdit = (booking: Booking) => {
-    const date = new Date(booking.startTime);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    setNewDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
-    setEditingTimeId(booking.id);
-  };
+  const handleResendEmail = (bookingId: string) =>
+    run(bookingId, () => fetch(`/api/bookings/${bookingId}/resend-email`, { method: 'POST' }), 'Emails de confirmation renvoyés', 'Échec du renvoi des emails');
 
   const handleSaveTime = async (bookingId: string) => {
     if (!newDateTime) return;
-
-    setProcessingId(bookingId);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const response = await fetch(`/api/bookings/${bookingId}`, {
+    const done = await run(
+      bookingId,
+      () => fetch(`/api/bookings/${bookingId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startTime: new Date(newDateTime).toISOString() }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Échec de la modification');
-      }
-
-      setSuccessMessage('Horaire modifié et emails envoyés !');
+      }),
+      'Horaire modifié, le client a été prévenu par email',
+      'Échec de la modification'
+    );
+    if (done) {
       setEditingTimeId(null);
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
-    } finally {
-      setProcessingId(null);
+      router.refresh();
     }
   };
 
-  // Filter bookings
-  const filteredBookings = bookings.filter(booking => {
-    const bookingDate = new Date(booking.startTime);
+  const counts = useMemo(() => ({
+    upcoming: bookings.filter(b => new Date(b.startTime) >= now && b.status !== 'cancelled').length,
+    past: bookings.filter(b => new Date(b.startTime) < now && b.status !== 'cancelled').length,
+    cancelled: bookings.filter(b => b.status === 'cancelled').length,
+    all: bookings.length,
+  }), [bookings, now]);
 
-    if (filter === 'upcoming') {
-      return bookingDate >= now && booking.status !== 'cancelled';
-    } else if (filter === 'past') {
-      return bookingDate < now;
-    } else if (filter === 'cancelled') {
-      return booking.status === 'cancelled';
+  // Upcoming reads forward in time (next appointment first); everything else newest first.
+  const groups = useMemo(() => {
+    const list = bookings
+      .filter((b) => {
+        const d = new Date(b.startTime);
+        if (filter === 'upcoming') return d >= now && b.status !== 'cancelled';
+        if (filter === 'past') return d < now && b.status !== 'cancelled';
+        if (filter === 'cancelled') return b.status === 'cancelled';
+        return true;
+      })
+      .sort((a, b) => {
+        const diff = new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+        return filter === 'upcoming' ? diff : -diff;
+      });
+
+    const byDay = new Map<string, { date: Date; items: Booking[] }>();
+    for (const booking of list) {
+      const d = new Date(booking.startTime);
+      const key = dayKey(d);
+      if (!byDay.has(key)) byDay.set(key, { date: d, items: [] });
+      byDay.get(key)!.items.push(booking);
     }
-    return true; // 'all'
-  });
+    return Array.from(byDay.values());
+  }, [bookings, filter, now]);
 
-  // Count bookings by status
-  const upcomingCount = bookings.filter(b => new Date(b.startTime) >= now && b.status !== 'cancelled').length;
-  const pastCount = bookings.filter(b => new Date(b.startTime) < now).length;
-  const cancelledCount = bookings.filter(b => b.status === 'cancelled').length;
+  const emptyCopy: Record<Filter, { title: string; description: string }> = {
+    upcoming: { title: 'Aucun rendez-vous à venir', description: 'Les nouvelles réservations de vos clients apparaîtront ici.' },
+    past: { title: 'Aucun rendez-vous passé', description: 'L’historique des rendez-vous honorés s’affichera ici.' },
+    cancelled: { title: 'Aucune annulation', description: 'Les rendez-vous annulés s’afficheront ici.' },
+    all: { title: 'Aucune réservation', description: 'Les réservations de vos clients apparaîtront ici.' },
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Page Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link
-                href={`/my-space/${shop.id}`}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </Link>
-              <div>
-                <h1 className="text-2xl font-sans font-bold text-gray-900">Réservations</h1>
-                <p className="text-gray-600 mt-1">{shop.name} - {shop.city}</p>
-              </div>
-            </div>
-            <div className="text-sm text-gray-600">
-              {bookings.length} réservation{bookings.length > 1 ? 's' : ''} au total
-            </div>
-          </div>
+      <PageHeader
+        title="Réservations"
+        description={`${shop.name}, ${shop.city}`}
+        back={
+          <Link href={`/my-space/${shop.id}`} className={backLinkClass} aria-label="Retour au salon">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        }
+      >
+        <Tabs<Filter>
+          active={filter}
+          onChange={setFilter}
+          tabs={[
+            { id: 'upcoming', label: 'À venir', count: counts.upcoming },
+            { id: 'past', label: 'Passés', count: counts.past },
+            { id: 'cancelled', label: 'Annulés', count: counts.cancelled },
+            { id: 'all', label: 'Tous', count: counts.all },
+          ]}
+        />
+      </PageHeader>
 
-          {/* Filter Tabs */}
-          <div className="flex space-x-2 mt-6">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${filter === 'all'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-            >
-              Toutes ({bookings.length})
-            </button>
-            <button
-              onClick={() => setFilter('upcoming')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${filter === 'upcoming'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-            >
-              À venir ({upcomingCount})
-            </button>
-            <button
-              onClick={() => setFilter('past')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${filter === 'past'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-            >
-              Passées ({pastCount})
-            </button>
-            <button
-              onClick={() => setFilter('cancelled')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${filter === 'cancelled'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-            >
-              Annulées ({cancelledCount})
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Success Message */}
-        {successMessage && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start space-x-3">
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-green-900">{successMessage}</p>
-              </div>
-              <button
-                onClick={() => setSuccessMessage(null)}
-                className="text-green-400 hover:text-green-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-900">Erreur</p>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-              <button
-                onClick={() => setError(null)}
-                className="text-red-400 hover:text-red-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {filteredBookings.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-200 text-center">
-            <CalendarCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Aucune réservation
-            </h3>
-            <p className="text-gray-600 mb-6">
-              {filter === 'all' && "Les réservations de vos clients apparaîtront ici"}
-              {filter === 'upcoming' && "Aucune réservation à venir"}
-              {filter === 'past' && "Aucune réservation passée"}
-              {filter === 'cancelled' && "Aucune réservation annulée"}
-            </p>
-          </div>
+      <PageShell>
+        {groups.length === 0 ? (
+          <Panel>
+            <EmptyState icon={CalendarCheck} title={emptyCopy[filter].title} description={emptyCopy[filter].description} />
+          </Panel>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Service
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Coiffeur
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date & Heure
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Statut
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredBookings.map((booking) => {
-                    const bookingDate = new Date(booking.startTime);
-                    const isPast = bookingDate < now;
+          <div className="space-y-8">
+            {groups.map((group) => (
+              <section key={dayKey(group.date)} aria-labelledby={`day-${dayKey(group.date)}`}>
+                <div className="mb-3 flex items-baseline justify-between">
+                  <h2 id={`day-${dayKey(group.date)}`} className="font-display text-sm font-semibold text-gray-900">
+                    {dayLabel(group.date, now)}
+                  </h2>
+                  <span className="text-xs tabular-nums text-gray-500">
+                    {group.items.length} rendez-vous
+                  </span>
+                </div>
+                <Panel>
+                  <ul className="divide-y divide-gray-100">
+                    {group.items.map((booking) => {
+                      const start = new Date(booking.startTime);
+                      const isPast = start < now;
+                      const isBusy = processingId === booking.id;
+                      const isConfirmed = booking.status === 'confirmed';
+                      // Upcoming + confirmed is the normal case, so it carries no badge.
+                      // A past appointment still "confirmed" was never closed out.
+                      const status = isConfirmed
+                        ? isPast ? { label: 'À clôturer', tone: 'warning' as BadgeTone } : null
+                        : STATUS[booking.status || 'pending'] ?? { label: booking.status || 'En attente', tone: 'neutral' as BadgeTone };
+                      const isEditing = editingTimeId === booking.id;
 
-                    return (
-                      <tr key={booking.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <User className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium text-gray-900">{booking.customerName}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Mail className="w-3 h-3 text-gray-400" />
-                              <span className="text-sm text-gray-500">{booking.customerEmail}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Phone className="w-3 h-3 text-gray-400" />
-                              <span className="text-sm text-gray-500">{booking.customerPhone}</span>
-                            </div>
+                      return (
+                        <li key={booking.id} className="grid gap-4 px-5 py-4 sm:px-6 lg:grid-cols-[5.5rem_1fr_auto] lg:items-start">
+                          <div className="flex items-center gap-3 lg:block">
+                            <p className="font-display text-lg font-semibold tabular-nums text-gray-900">
+                              {start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            {booking.serviceDuration ? (
+                              <p className="text-xs tabular-nums text-gray-500">{booking.serviceDuration} min</p>
+                            ) : null}
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="font-medium text-gray-900">{booking.serviceName || 'N/A'}</div>
-                            {booking.servicePrice && (
-                              <div className="flex items-center space-x-3 mt-1 text-sm text-gray-500">
-                                <div className="flex items-center">
-                                  <Euro className="w-3 h-3 mr-1" />
-                                  <span>{booking.servicePrice}€</span>
+
+                          <div className="min-w-0 space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium text-gray-900">{booking.customerName || 'Client'}</p>
+                              {status && <Badge tone={status.tone}>{status.label}</Badge>}
+                            </div>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Scissors className="h-3.5 w-3.5 text-gray-400" />
+                                {booking.serviceName || 'Service non précisé'}
+                                {booking.servicePrice && <span className="tabular-nums text-gray-500">({formatEuro(booking.servicePrice)})</span>}
+                              </span>
+                              <span className="inline-flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5 text-gray-400" />
+                                {booking.barberName || 'Sans préférence'}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                              {booking.customerPhone && (
+                                <a href={`tel:${booking.customerPhone}`} className="inline-flex items-center gap-1.5 text-gray-600 hover:text-primary-700">
+                                  <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                  {booking.customerPhone}
+                                </a>
+                              )}
+                              {booking.customerEmail && (
+                                <a href={`mailto:${booking.customerEmail}`} className="inline-flex min-w-0 items-center gap-1.5 text-gray-600 hover:text-primary-700">
+                                  <Mail className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                                  <span className="truncate">{booking.customerEmail}</span>
+                                </a>
+                              )}
+                            </div>
+                            {booking.notes && (
+                              <p className="flex gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                                <MessageSquare className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                                <span className="break-words">{booking.notes}</span>
+                              </p>
+                            )}
+                            {isEditing && (
+                              <form
+                                className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center"
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  handleSaveTime(booking.id);
+                                }}
+                              >
+                                <label htmlFor={`time-${booking.id}`} className="sr-only">Nouvel horaire</label>
+                                <input
+                                  id={`time-${booking.id}`}
+                                  type="datetime-local"
+                                  value={newDateTime}
+                                  onChange={(e) => setNewDateTime(e.target.value)}
+                                  className={`${inputClass} sm:w-60`}
+                                />
+                                <div className="flex gap-2">
+                                  <button type="submit" disabled={isBusy} className={`${btn.primary} ${btn.sm}`}>
+                                    {isBusy ? <Spinner className="h-3 w-3" /> : <Check className="h-3.5 w-3.5" />}
+                                    Valider
+                                  </button>
+                                  <button type="button" onClick={() => setEditingTimeId(null)} className={`${btn.secondary} ${btn.sm}`}>
+                                    Annuler
+                                  </button>
                                 </div>
-                                <div className="flex items-center">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  <span>{booking.serviceDuration} min</span>
-                                </div>
-                              </div>
+                              </form>
                             )}
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">{booking.barberName || 'Non assigné'}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {editingTimeId === booking.id ? (
-                            <div className="space-y-2">
-                              <input
-                                type="datetime-local"
-                                value={newDateTime}
-                                onChange={(e) => setNewDateTime(e.target.value)}
-                                className="block w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
-                              />
-                              <div className="flex space-x-2">
-                                <button
-                                  onClick={() => handleSaveTime(booking.id)}
-                                  disabled={processingId === booking.id}
-                                  className="px-3 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
-                                >
-                                  {processingId === booking.id ? '...' : 'Valider'}
+
+                          {isConfirmed && !isEditing && (
+                            <div className="flex flex-wrap items-center gap-1 lg:justify-end">
+                              {isPast ? (
+                                <button onClick={() => handleMarkCompleted(booking.id)} disabled={isBusy} className={`${btn.secondary} ${btn.sm}`}>
+                                  {isBusy ? <Spinner className="h-3 w-3" /> : <Check className="h-3.5 w-3.5" />}
+                                  Marquer terminé
                                 </button>
-                                <button
-                                  onClick={() => setEditingTimeId(null)}
-                                  className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                >
-                                  Annuler
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="flex items-center space-x-2">
-                                <Calendar className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm font-medium text-gray-900">
-                                  {bookingDate.toLocaleDateString('fr-FR', {
-                                    weekday: 'short',
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric'
-                                  })}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Clock className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-500">
-                                  {bookingDate.toLocaleTimeString('fr-FR', {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </span>
-                              </div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setNewDateTime(toLocalInput(start));
+                                      setEditingTimeId(booking.id);
+                                    }}
+                                    disabled={isBusy}
+                                    className={`${btn.ghost} ${btn.sm}`}
+                                  >
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                    Déplacer
+                                  </button>
+                                  <button onClick={() => handleResendEmail(booking.id)} disabled={isBusy} className={`${btn.ghost} ${btn.sm}`}>
+                                    {isBusy ? <Spinner className="h-3 w-3" /> : <Send className="h-3.5 w-3.5" />}
+                                    Renvoyer l&apos;email
+                                  </button>
+                                  <button onClick={() => handleCancelBooking(booking)} disabled={isBusy} className={`${btn.dangerGhost} ${btn.sm}`}>
+                                    <X className="h-3.5 w-3.5" />
+                                    Annuler
+                                  </button>
+                                </>
+                              )}
                             </div>
                           )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ${booking.status === 'confirmed'
-                              ? 'bg-green-100 text-green-800'
-                              : booking.status === 'cancelled'
-                                ? 'bg-red-100 text-red-800'
-                                : booking.status === 'completed'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                            }`}>
-                            {booking.status === 'confirmed' && <CheckCircle className="w-3 h-3 mr-1" />}
-                            {booking.status === 'cancelled' && <XCircle className="w-3 h-3 mr-1" />}
-                            {booking.status === 'confirmed' ? 'Confirmé' :
-                              booking.status === 'cancelled' ? 'Annulé' :
-                                booking.status === 'completed' ? 'Terminé' :
-                                  booking.status || 'En attente'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-2">
-                            {/* Resend Email button */}
-                            {booking.status === 'confirmed' && (
-                              <button
-                                onClick={() => handleResendEmail(booking.id)}
-                                disabled={processingId === booking.id}
-                                className="px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                                title="Renvoyer les emails de confirmation"
-                              >
-                                <Send className="w-3.5 h-3.5" />
-                                <span>{processingId === booking.id ? '...' : 'Renvoyer email'}</span>
-                              </button>
-                            )}
-                            {/* Edit time button */}
-                            {!isPast && booking.status === 'confirmed' && editingTimeId !== booking.id && (
-                              <button
-                                onClick={() => handleOpenTimeEdit(booking)}
-                                disabled={processingId === booking.id}
-                                className="px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                                title="Modifier l'heure du rendez-vous"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                                <span>Modifier heure</span>
-                              </button>
-                            )}
-                            {/* Cancel button */}
-                            {!isPast && booking.status === 'confirmed' && (
-                              <button
-                                onClick={() => handleCancelBooking(booking.id)}
-                                disabled={processingId === booking.id}
-                                className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {processingId === booking.id ? 'En cours...' : 'Annuler'}
-                              </button>
-                            )}
-                            {/* Mark completed button */}
-                            {isPast && booking.status === 'confirmed' && (
-                              <button
-                                onClick={() => handleMarkCompleted(booking.id)}
-                                disabled={processingId === booking.id}
-                                className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {processingId === booking.id ? 'En cours...' : 'Marquer terminé'}
-                              </button>
-                            )}
-                            {booking.notes && (
-                              <button
-                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                title={booking.notes}
-                              >
-                                <AlertCircle className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Panel>
+              </section>
+            ))}
           </div>
         )}
-      </div>
+      </PageShell>
 
       <Footer />
     </div>

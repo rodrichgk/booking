@@ -88,12 +88,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
       <SettingsClient
         settings={defaultSettings}
         locale={locale}
         currentUserRole={userRole}
       />
-    </div>
+    </>
   );
 }

@@ -79,44 +79,18 @@ export default async function BarbershopManagementPage({ params }: { params: Pro
     })
     .from(barbershops)
     .leftJoin(users, eq(barbershops.ownerId, users.id))
-    .leftJoin(barbers, eq(barbershops.id, barbers.barbershopId))
+    .leftJoin(barbers, and(eq(barbershops.id, barbers.barbershopId), eq(barbers.isActive, true)))
     .groupBy(barbershops.id, users.id)
     .orderBy(desc(barbershops.createdAt));
 
-  // Get barbershop statistics
-  const totalBarbershops = allBarbershops.length;
-  const activeBarbershops = allBarbershops.filter(b => b.subscriptionStatus === 'active').length;
-  const pendingBarbershops = allBarbershops.filter(b => !b.isActive).length;
-  const expiredBarbershops = allBarbershops.filter(b =>
-    b.subscriptionStatus === 'expired' || b.subscriptionStatus === 'canceled'
-  ).length;
-  const avgRating = allBarbershops.reduce((acc, b) => acc + (parseFloat(b.rating as string) || 0), 0) / totalBarbershops || 0;
-  // Get accurate barber count
-  const totalBarbers = Math.max(0, allBarbershops.reduce((acc, b) => acc + (parseInt(String(b.barberCount)) || 0), 0));
   const subscriptionPrice = await getSubscriptionPrice();
-  const monthlyRevenue = activeBarbershops * subscriptionPrice;
-
-  const t = await getTranslations({ locale, namespace: 'admin' });
-
-  const stats = [
-    { label: t('total'), value: totalBarbershops, icon: 'Store', color: 'blue' },
-    { label: t('active'), value: activeBarbershops, icon: 'CheckCircle', color: 'green' },
-    { label: t('pending'), value: pendingBarbershops, icon: 'Clock', color: 'yellow' },
-    { label: t('expired'), value: expiredBarbershops, icon: 'XCircle', color: 'red' },
-    { label: t('totalBarbers'), value: totalBarbers, icon: 'Store', color: 'purple' },
-    { label: t('avgRating'), value: avgRating.toFixed(1), icon: 'Star', color: 'yellow' },
-    { label: t('monthlyRevenue'), value: `€${monthlyRevenue.toFixed(0)}`, icon: 'DollarSign', color: 'green' },
-  ];
 
   return (
-    <div className="min-h-screen bg-white">
-      <BarbershopManagementClient
-        initialBarbershops={allBarbershops as any}
-        initialStats={stats as any}
-        locale={locale}
-        currentUserRole={userRole}
-        subscriptionPrice={subscriptionPrice}
-      />
-    </div>
+    <BarbershopManagementClient
+      initialBarbershops={allBarbershops as any}
+      locale={locale}
+      currentUserRole={userRole}
+      subscriptionPrice={subscriptionPrice}
+    />
   );
 }

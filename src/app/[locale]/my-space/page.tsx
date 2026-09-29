@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Users, Calendar, Settings, BarChart3, Store, Scissors, Star, Clock, DollarSign, Shield, Database, MapPin, Heart, ArrowRight, Sparkles, TrendingUp, AlertCircle, Mail, Video, MessageSquare } from 'lucide-react';
+import { Users, Calendar, Settings, BarChart3, Store, Shield, Database, ArrowRight, TrendingUp, Video, MessageSquare } from 'lucide-react';
+import { Badge, StatGrid, Stat, formatEuro } from '@/components/dashboard/ui';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { db } from '@/lib/db';
@@ -73,13 +74,16 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     // Fetch real statistics for admin/dev ONLY
     const totalUsers = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
     const totalBarbershops = await db.select({ count: sql<number>`COUNT(*)` }).from(barbershops);
-    const totalBarbers = await db.select({ count: sql<number>`COUNT(*)` }).from(barbers).where(sql`user_id != '00000000-0000-0000-0000-000000000000'`);
+    const totalBarbers = await db.select({ count: sql<number>`COUNT(*)` }).from(barbers).where(and(sql`user_id != '00000000-0000-0000-0000-000000000000'`, eq(barbers.isActive, true)));
 
-    // Bookings today
+    // Bookings today (bounded to today; a bare ">= today" also counted every future booking)
     const bookingsToday = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(bookings)
-      .where(gte(bookings.startTime, today));
+      .where(and(
+        gte(bookings.startTime, today),
+        lt(bookings.startTime, new Date(today.getTime() + 24 * 60 * 60 * 1000))
+      ));
 
     // Total bookings
     const totalBookings = await db.select({ count: sql<number>`COUNT(*)` }).from(bookings);
@@ -126,7 +130,7 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     })
     .from(barbers)
     .leftJoin(users, eq(barbers.userId, users.id))
-    .where(eq(users.email, userEmail || ''))
+    .where(and(eq(users.email, userEmail || ''), eq(barbers.isActive, true)))
     .limit(1) : [];
 
   // Check if user owns or co-owns barbershops
@@ -307,8 +311,9 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     barberBookingsList = await db
       .select({
         id: bookings.id,
-        customerName: users.name,
-        customerPhone: users.phone,
+        // Guest bookings have no user account; fall back to the contact saved on the booking.
+        customerName: sql<string>`COALESCE(${users.name}, ${bookings.customerName})`,
+        customerPhone: sql<string | null>`COALESCE(${users.phone}, ${bookings.customerPhone})`,
         serviceName: services.name,
         servicePrice: services.price,
         startTime: bookings.startTime,
@@ -334,75 +339,65 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
     rating: barberRating.toFixed(1),
   };
 
+  const roleLabel: Record<string, string> = {
+    dev: 'Développeur',
+    admin: 'Administrateur',
+    barber: 'Coiffeur',
+    customer: userBarbershops.length > 0 ? 'Propriétaire de salon' : 'Client',
+  };
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* User Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                {user.image ? (
-                  <Image
-                    src={user.image}
-                    alt={user.name || ''}
-                    width={80}
-                    height={80}
-                    className="rounded-full border-4 border-primary-100"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center border-4 border-primary-100">
-                    <span className="text-3xl font-bold text-white">
-                      {user.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
-                  <p className="text-gray-600 mt-1">{user.email}</p>
-                  <span className="inline-flex items-center px-3 py-1 mt-2 rounded-full text-sm font-medium bg-primary-100 text-primary-800 capitalize">
-                    {userRole === 'dev' && <Shield className="w-4 h-4 mr-1" />}
-                    {userRole}
-                  </span>
-                </div>
-              </div>
-            </div>
+      <div className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-6 sm:px-6 lg:px-8">
+          {user.image ? (
+            <Image src={user.image} alt="" width={56} height={56} className="h-14 w-14 rounded-full object-cover ring-1 ring-gray-200" />
+          ) : (
+            <span className="inline-flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 font-display text-xl font-semibold text-primary-700 ring-1 ring-primary-100">
+              {user.name?.charAt(0).toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">{user.name}</h1>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+              <span className="truncate">{user.email}</span>
+              <Badge tone={userRole === 'dev' || userRole === 'admin' ? 'brand' : 'neutral'} icon={userRole === 'dev' || userRole === 'admin' ? Shield : undefined}>
+                {roleLabel[userRole] || userRole}
+              </Badge>
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Email Verification Banner */}
-        {!isEmailVerified && (
-          <EmailVerificationBanner email={userEmail || ''} userName={user.name || ''} />
+      {!isEmailVerified && <EmailVerificationBanner email={userEmail || ''} userName={user.name || ''} />}
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {(userRole === 'dev' || userRole === 'admin') && (
+          <AdminHome locale={locale} stats={stats} role={userRole} />
         )}
-
-        {/* Dashboard Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {userRole === 'dev' && <DevDashboard locale={locale} stats={stats} />}
-          {userRole === 'admin' && <AdminDashboard locale={locale} stats={stats} />}
-          {userRole === 'barber' && (
-            <BarberSpaceClient
-              profile={barberProfile[0] as any}
-              barbershop={barberBarbershop}
-              bookings={barberBookingsList as any}
-              stats={barberStats}
-              locale={locale}
-              userName={session.user.name || ''}
-            />
-          )}
-          {userRole === 'customer' && (
-            <MySpaceClient
-              barbershops={userBarbershops as any}
-              barberProfile={barberProfile[0] as any}
-              bookings={userBookings as any}
-              locale={locale}
-              userRole={userRole}
-              userName={session.user.name || ''}
-              subscriptionPrice={subscriptionPrice}
-            />
-          )}
-        </div>
+        {userRole === 'barber' && (
+          <BarberSpaceClient
+            profile={barberProfile[0] as any}
+            barbershop={barberBarbershop}
+            bookings={barberBookingsList as any}
+            stats={barberStats}
+            locale={locale}
+            userName={session.user.name || ''}
+          />
+        )}
+        {userRole === 'customer' && (
+          <MySpaceClient
+            barbershops={userBarbershops as any}
+            barberProfile={barberProfile[0] as any}
+            bookings={userBookings as any}
+            locale={locale}
+            userRole={userRole}
+            userName={session.user.name || ''}
+            subscriptionPrice={subscriptionPrice}
+          />
+        )}
       </div>
 
       <Footer />
@@ -410,7 +405,6 @@ export default async function MySpacePage({ params }: { params: Promise<{ locale
   );
 }
 
-// Dev Dashboard - Full system access
 interface DashboardStats {
   totalUsers: number;
   totalBarbershops: number;
@@ -422,182 +416,80 @@ interface DashboardStats {
   avgRating: string;
 }
 
-async function DevDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
+// Admin + dev home: platform figures and entry points to the admin tools.
+// Links are filtered by role so nobody lands on a page that redirects them away.
+async function AdminHome({ locale, stats, role }: { locale: string; stats: DashboardStats; role: string }) {
   const t = await getTranslations({ locale, namespace: 'mySpace' });
+  const isDev = role === 'dev';
+  const fr = locale === 'fr';
 
-  const stats = [
-    { label: t('totalUsers'), value: realStats.totalUsers.toString(), icon: Users, color: 'blue' },
-    { label: t('barbershops'), value: realStats.totalBarbershops.toString(), icon: Store, color: 'green' },
-    { label: t('bookingsToday'), value: realStats.bookingsToday.toString(), icon: Calendar, color: 'purple' },
-    { label: t('revenue'), value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
-  ];
-
-  const sections = [
+  const groups: { title: string; items: { title: string; desc: string; icon: typeof Users; href: string; devOnly?: boolean }[] }[] = [
     {
-      title: t('userManagement'),
-      description: t('userManagementDesc'),
-      icon: Users,
-      color: 'blue',
-      link: `/${locale}/admin/users`,
+      title: fr ? 'Plateforme' : 'Platform',
+      items: [
+        { title: t('barbershopManagement'), desc: t('barbershopManagementDesc'), icon: Store, href: `/${locale}/admin/barbershops` },
+        { title: t('userManagement'), desc: t('userManagementDesc'), icon: Users, href: `/${locale}/admin/users` },
+        { title: t('systemAnalytics'), desc: t('systemAnalyticsDesc'), icon: BarChart3, href: `/${locale}/admin/analytics` },
+      ],
     },
     {
-      title: t('barbershopManagement'),
-      description: t('barbershopManagementDesc'),
-      icon: Store,
-      color: 'green',
-      link: `/${locale}/admin/barbershops`,
+      title: fr ? 'Contenu et marketing' : 'Content & marketing',
+      items: [
+        { title: fr ? 'Cours vidéo' : 'Video courses', desc: fr ? 'Gérer les cours vidéo et leurs tarifs' : 'Manage video courses and pricing', icon: Video, href: `/${locale}/admin/courses` },
+        { title: fr ? 'Campagnes SMS' : 'SMS campaigns', desc: fr ? 'Envoyer des SMS aux clients' : 'Send SMS campaigns to customers', icon: MessageSquare, href: `/${locale}/admin/sms` },
+      ],
     },
     {
-      title: t('systemAnalytics'),
-      description: t('systemAnalyticsDesc'),
-      icon: BarChart3,
-      color: 'purple',
-      link: `/${locale}/admin/analytics`,
-    },
-    {
-      title: t('databaseManagement'),
-      description: t('databaseManagementDesc'),
-      icon: Database,
-      color: 'orange',
-      link: `/${locale}/admin/database`,
-    },
-    {
-      title: t('settings'),
-      description: t('settingsDesc'),
-      icon: Settings,
-      color: 'gray',
-      link: `/${locale}/admin/settings`,
-    },
-    {
-      title: t('security'),
-      description: t('securityDesc'),
-      icon: Shield,
-      color: 'red',
-      link: `/${locale}/admin/security`,
-    },
-    {
-      title: locale === 'fr' ? 'Cours Vidéo' : 'Video Courses',
-      description: locale === 'fr' ? 'Gérer les cours vidéo et les tarifs' : 'Manage video courses and pricing',
-      icon: Video,
-      color: 'indigo',
-      link: `/${locale}/admin/courses`,
-    },
-    {
-      title: locale === 'fr' ? 'Marketing SMS' : 'SMS Marketing',
-      description: locale === 'fr' ? 'Envoyer des campagnes SMS aux clients' : 'Send SMS campaigns to customers',
-      icon: MessageSquare,
-      color: 'teal',
-      link: `/${locale}/admin/sms`,
+      title: fr ? 'Système' : 'System',
+      items: [
+        { title: t('settings'), desc: t('settingsDesc'), icon: Settings, href: `/${locale}/admin/settings` },
+        { title: t('security'), desc: t('securityDesc'), icon: Shield, href: `/${locale}/admin/security`, devOnly: true },
+        { title: t('databaseManagement'), desc: t('databaseManagementDesc'), icon: Database, href: `/${locale}/admin/database`, devOnly: true },
+      ],
     },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-              </div>
-              <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-10">
+      <StatGrid>
+        <Stat label={t('bookingsToday')} icon={Calendar} value={stats.bookingsToday} hint={`${stats.totalBookings} au total`} />
+        <Stat label={t('barbershops')} icon={Store} value={stats.activeBarbershops} hint={`visibles sur ${stats.totalBarbershops}`} />
+        <Stat label={t('totalUsers')} icon={Users} value={stats.totalUsers} hint={`dont ${stats.totalBarbers} coiffeurs`} />
+        <Stat label={fr ? 'Revenu mensuel estimé' : 'Estimated monthly revenue'} icon={TrendingUp} value={formatEuro(stats.monthlyRevenue)} hint={fr ? 'salons visibles x abonnement' : 'visible shops x subscription'} />
+      </StatGrid>
 
-      {/* Admin Sections */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('systemAdministration')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sections.map((section) => (
-            <Link
-              key={section.title}
-              href={section.link}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-primary-50 rounded-lg group-hover:bg-primary-100 transition-colors">
-                  <section.icon className="w-6 h-6 text-primary-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{section.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{section.description}</p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      {groups.map((group) => {
+        const items = group.items.filter((item) => isDev || !item.devOnly);
+        if (items.length === 0) return null;
+        return (
+          <section key={group.title}>
+            <h2 className="mb-3 font-display text-sm font-semibold text-gray-900">{group.title}</h2>
+            <div className="grid gap-px overflow-hidden rounded-xl border border-gray-200 bg-gray-200 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((item) => (
+                <Link key={item.href} href={item.href} className="group flex items-start gap-4 bg-white p-5 transition-colors hover:bg-gray-50">
+                  <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition-colors group-hover:bg-primary-50 group-hover:text-primary-600">
+                    <item.icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1 font-medium text-gray-900">
+                      {item.title}
+                      <ArrowRight className="h-3.5 w-3.5 -translate-x-1 text-gray-400 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                    </span>
+                    <span className="mt-0.5 block text-sm text-gray-500">{item.desc}</span>
+                  </span>
+                </Link>
+              ))}
+              {/* Fill the last row so the hairline grid never shows an empty grey cell. */}
+              {Array.from({ length: (2 - (items.length % 2)) % 2 }).map((_, i) => (
+                <div key={`filler2-${i}`} aria-hidden="true" className="hidden bg-white sm:block lg:hidden" />
+              ))}
+              {Array.from({ length: (3 - (items.length % 3)) % 3 }).map((_, i) => (
+                <div key={`filler3-${i}`} aria-hidden="true" className="hidden bg-white lg:block" />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
-
-// Admin/Owner Dashboard - Business management
-async function AdminDashboard({ locale, stats: realStats }: { locale: string; stats: DashboardStats }) {
-  const t = await getTranslations({ locale, namespace: 'mySpace' });
-
-  const stats = [
-    { label: t('totalBookingsAdmin'), value: realStats.totalBookings.toString(), icon: Calendar, color: 'blue' },
-    { label: t('activeBarbers'), value: realStats.totalBarbers.toString(), icon: Scissors, color: 'green' },
-    { label: t('monthlyRevenue'), value: `€${realStats.monthlyRevenue}`, icon: DollarSign, color: 'yellow' },
-    { label: t('avgRating'), value: realStats.avgRating, icon: Star, color: 'purple' },
-  ];
-
-  const sections = [
-    { title: t('mySpaceLink'), icon: Store, link: `/${locale}/my-space`, desc: t('mySpaceDesc') },
-    { title: t('staffManagement'), icon: Users, link: `/${locale}/admin/staff`, desc: t('staffManagementDesc') },
-    { title: t('bookingsManagement'), icon: Calendar, link: `/${locale}/admin/bookings`, desc: t('bookingsManagementDesc') },
-    { title: t('analytics'), icon: BarChart3, link: `/${locale}/admin/analytics`, desc: t('analyticsDesc') },
-    { title: t('servicesPricing'), icon: DollarSign, link: `/${locale}/admin/services`, desc: t('servicesPricingDesc') },
-    { title: t('settingsPreferences'), icon: Settings, link: `/${locale}/admin/settings`, desc: t('settingsPreferencesDesc') },
-  ];
-
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-              </div>
-              <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('businessManagement')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sections.map((section) => (
-            <Link
-              key={section.title}
-              href={section.link}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-primary-50 rounded-lg group-hover:bg-primary-100 transition-colors">
-                  <section.icon className="w-6 h-6 text-primary-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{section.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{section.desc}</p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-

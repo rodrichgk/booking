@@ -2,19 +2,33 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { Store, Save, ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Info } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+import { Panel, PanelBody, Notice, Spinner, btn, inputClass, labelClass, backLinkClass } from '@/components/dashboard/ui';
 
 interface AddBarbershopClientProps {
   locale: string;
   userRole: string;
 }
 
-export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientProps) {
+type FormData = {
+  name: string;
+  description: string;
+  address: string;
+  city: string;
+  phone: string;
+  email: string;
+  website: string;
+  ownerEmail: string;
+};
+
+export function AddBarbershopClient({ locale }: AddBarbershopClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
     address: '',
@@ -28,6 +42,7 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch('/api/admin/barbershops/create', {
@@ -35,17 +50,17 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        alert('Barbershop created successfully!');
+        toast({ variant: 'success', title: 'Salon créé', description: 'Il reste masqué jusqu’au paiement de l’abonnement.' });
         router.push(`/${locale}/admin/barbershops`);
       } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to create barbershop');
+        setError(data.error || 'Impossible de créer le salon.');
       }
-    } catch (error) {
-      console.error('Error creating barbershop:', error);
-      alert('An error occurred. Please try again.');
+    } catch (err) {
+      console.error('Error creating barbershop:', err);
+      setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -55,177 +70,104 @@ export function AddBarbershopClient({ locale, userRole }: AddBarbershopClientPro
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const field = (name: keyof FormData, label: string, opts: { type?: string; required?: boolean; placeholder?: string; help?: string } = {}) => (
+    <div>
+      <label htmlFor={`new-shop-${name}`} className={labelClass}>
+        {label}
+        {opts.required && <span className="text-red-600" aria-hidden="true"> *</span>}
+      </label>
+      <input
+        id={`new-shop-${name}`}
+        type={opts.type || 'text'}
+        name={name}
+        value={formData[name]}
+        onChange={handleChange}
+        required={opts.required}
+        placeholder={opts.placeholder}
+        aria-describedby={opts.help ? `new-shop-${name}-help` : undefined}
+        className={inputClass}
+      />
+      {opts.help && <p id={`new-shop-${name}-help`} className="mt-1.5 text-xs text-gray-500">{opts.help}</p>}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Back Button */}
-          <Link
-            href={`/${locale}/admin/barbershops`}
-            className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-6"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Barbershops
-          </Link>
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+      <div className="mb-6 flex items-start gap-3">
+        <Link href={`/${locale}/admin/barbershops`} className={backLinkClass} aria-label="Retour aux salons">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Nouveau salon</h1>
+          <p className="mt-1 text-sm text-gray-600">Créer un salon au nom d’un propriétaire existant.</p>
+        </div>
+      </div>
 
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <div className="flex items-center mb-6">
-            <div className="p-3 bg-primary-100 rounded-lg mr-4">
-              <Store className="w-8 h-8 text-primary-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Add New Barbershop</h1>
-              <p className="text-gray-600 mt-1">Create a new barbershop listing</p>
-            </div>
-          </div>
+      <div className="space-y-4">
+        <Notice tone="neutral" icon={Info}>
+          Le salon est créé masqué. Il devient visible une fois l’abonnement payé ou activé manuellement depuis la liste des salons.
+        </Notice>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Owner Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Owner Email Address *
-              </label>
-              <input
-                type="email"
-                name="ownerEmail"
-                value={formData.ownerEmail}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                placeholder="owner@example.com"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                The owner must have an account on the platform
-              </p>
-            </div>
+        {error && (
+          <Notice tone="danger" icon={AlertCircle}>
+            <span role="alert">{error}</span>
+          </Notice>
+        )}
 
-            {/* Barbershop Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Barbershop Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                placeholder="Elite Barber Shop"
-              />
-            </div>
+        <Panel>
+          <form onSubmit={handleSubmit}>
+            <PanelBody className="space-y-8">
+              <fieldset className="space-y-4">
+                <legend className="font-display text-base font-semibold text-gray-900">Propriétaire</legend>
+                {field('ownerEmail', 'Email du propriétaire', {
+                  type: 'email',
+                  required: true,
+                  placeholder: 'proprietaire@exemple.fr',
+                  help: 'La personne doit déjà avoir un compte sur la plateforme.',
+                })}
+              </fieldset>
 
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                placeholder="Professional barbershop specializing in modern cuts and traditional styles..."
-              />
-            </div>
+              <fieldset className="space-y-4">
+                <legend className="font-display text-base font-semibold text-gray-900">Le salon</legend>
+                {field('name', 'Nom du salon', { required: true, placeholder: 'Ex : Salon Kitoko' })}
+                <div>
+                  <label htmlFor="new-shop-description" className={labelClass}>Description</label>
+                  <textarea
+                    id="new-shop-description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={4}
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {field('address', 'Adresse', { required: true, placeholder: '42 rue Myrha' })}
+                  {field('city', 'Ville', { required: true, placeholder: 'Paris' })}
+                </div>
+              </fieldset>
 
-            {/* Address & City */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address *
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                  placeholder="123 Main Street"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  City *
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                  placeholder="Paris"
-                />
-              </div>
-            </div>
+              <fieldset className="space-y-4">
+                <legend className="font-display text-base font-semibold text-gray-900">Contact</legend>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {field('phone', 'Téléphone', { type: 'tel', placeholder: '01 42 57 18 93' })}
+                  {field('email', 'Email', { type: 'email', placeholder: 'contact@salon.fr' })}
+                </div>
+                {field('website', 'Site web', { type: 'url', placeholder: 'https://www.salon.fr' })}
+              </fieldset>
+            </PanelBody>
 
-            {/* Contact Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                  placeholder="+33 1 23 45 67 89"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                  placeholder="contact@barbershop.com"
-                />
-              </div>
-            </div>
-
-            {/* Website */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Website
-              </label>
-              <input
-                type="url"
-                name="website"
-                value={formData.website}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                placeholder="https://www.barbershop.com"
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end space-x-4 pt-4">
-              <Link
-                href={`/${locale}/admin/barbershops`}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-              >
-                Cancel
+            <div className="flex flex-col-reverse gap-2 border-t border-gray-100 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+              <Link href={`/${locale}/admin/barbershops`} className={btn.secondary}>
+                Annuler
               </Link>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Creating...' : 'Create Barbershop'}
+              <button type="submit" disabled={loading} className={btn.primary}>
+                {loading && <Spinner className="h-3.5 w-3.5" />}
+                Créer le salon
               </button>
             </div>
           </form>
-        </div>
+        </Panel>
       </div>
     </div>
   );

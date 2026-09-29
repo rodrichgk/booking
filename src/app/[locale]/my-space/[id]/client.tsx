@@ -6,13 +6,45 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   Store, MapPin, Phone, Mail, Globe, Star, Calendar, Users,
-  Settings, CreditCard, Plus, Edit2, Trash2, Check, X,
-  AlertCircle, TrendingUp, Clock, ArrowLeft, Scissors, Euro, Tag, Image as ImageIcon
+  Settings, CreditCard, Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, UserPlus,
+  AlertCircle, TrendingUp, Clock, ArrowLeft, Scissors, ChevronRight, Image as ImageIcon
 } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
 import { useUploadThing } from '@/lib/uploadthing';
+import {
+  PageHeader, PageShell, Tabs, Panel, PanelHeader, PanelBody, SectionHeading,
+  StatGrid, Stat, Badge, Field, Avatar, EmptyState, Notice, Spinner,
+  btn, inputClass, labelClass, backLinkClass, formatEuro, type BadgeTone,
+} from '@/components/dashboard/ui';
+import { Modal } from '@/components/dashboard/modal';
+import { useConfirm } from '@/components/dashboard/confirm-dialog';
+
+const MAX_SERVICE_IMAGE_MB = 4;
+
+const SUBSCRIPTION_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  active: { label: 'Abonnement actif', tone: 'success' },
+  past_due: { label: 'Paiement en retard', tone: 'warning' },
+  expired: { label: 'Abonnement expiré', tone: 'danger' },
+  canceled: { label: 'Abonnement annulé', tone: 'neutral' },
+  inactive: { label: 'Sans abonnement', tone: 'neutral' },
+};
+
+const SERVICE_CATEGORIES = [
+  { id: 'haircut', label: 'Coupes' },
+  { id: 'beard', label: 'Barbe' },
+  { id: 'styling', label: 'Coiffure' },
+  { id: 'coloring', label: 'Coloration' },
+  { id: 'treatment', label: 'Soins' },
+  { id: 'combo', label: 'Forfaits' },
+];
+
+const BARBER_TYPES = ['Coiffeur', 'Coiffeuse', 'Tresses / Braids', 'Barbier', 'Coloriste', 'Mixte'];
+
+const checkboxClass = 'h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500';
+const timeInputClass =
+  'rounded-md border border-gray-300 bg-white px-2 py-1 text-xs tabular-nums text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20';
 
 interface OpeningHours {
   [key: string]: { open: string; close: string; closed: boolean };
@@ -93,6 +125,7 @@ export function ManageBarbershopClient({
   subscriptionPrice
 }: ManageBarbershopClientProps) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const router = useRouter();
   const searchParams = useSearchParams();
   type TabId = 'overview' | 'barbers' | 'services' | 'gallery' | 'schedule' | 'settings';
@@ -222,7 +255,13 @@ export function ManageBarbershopClient({
   };
 
   const handleClearBarberHours = async (barberId: string) => {
-    if (!confirm('Supprimer les horaires personnalisés ? Le coiffeur utilisera les horaires du salon.')) return;
+    const ok = await confirm({
+      title: 'Supprimer les horaires personnalisés ?',
+      description: 'Le coiffeur utilisera à nouveau les horaires du salon.',
+      confirmLabel: 'Supprimer',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setIsSavingBarberHours(true);
     try {
       const res = await fetch(`/api/barbers/${barberId}/update`, {
@@ -316,7 +355,8 @@ export function ManageBarbershopClient({
   };
 
   const handleDeleteGalleryImage = async (urlToDelete: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) return;
+    const ok = await confirm({ title: 'Supprimer cette image ?', confirmLabel: 'Supprimer', tone: 'danger' });
+    if (!ok) return;
 
     setIsDeletingGalleryImage(urlToDelete);
     try {
@@ -341,10 +381,11 @@ export function ManageBarbershopClient({
 
   // Calculate stats
   const totalBarbers = barbers.length;
-  const activeBarbers = barbers.filter(b => b.isActive).length;
-  const avgRating = barbers.length > 0
-    ? (barbers.reduce((sum, b) => sum + (parseFloat(b.rating || '0')), 0) / barbers.length).toFixed(1)
-    : '0';
+  // Fallback when the shop has no reviews yet: average of the barbers that do have a rating.
+  const ratedBarbers = barbers.filter(b => b.rating);
+  const avgRating = ratedBarbers.length > 0
+    ? (ratedBarbers.reduce((sum, b) => sum + parseFloat(b.rating!), 0) / ratedBarbers.length).toFixed(1)
+    : null;
 
   // Calculate monthly bookings
   const now = new Date();
@@ -361,11 +402,17 @@ export function ManageBarbershopClient({
   const handleToggleShopStatus = async () => {
     if (isToggling) return;
 
-    const confirmMsg = shopActive
-      ? 'Êtes-vous sûr de vouloir désactiver ce salon ? Il ne sera plus visible sur la plateforme.'
-      : 'Voulez-vous activer ce salon ?';
-
-    if (!confirm(confirmMsg)) return;
+    const ok = await confirm(
+      shopActive
+        ? {
+            title: 'Masquer ce salon ?',
+            description: 'Il ne sera plus visible sur la plateforme et les clients ne pourront plus réserver.',
+            confirmLabel: 'Masquer le salon',
+            tone: 'danger',
+          }
+        : { title: 'Rendre ce salon visible ?', confirmLabel: 'Rendre visible' }
+    );
+    if (!ok) return;
 
     setIsToggling(true);
     try {
@@ -402,6 +449,34 @@ export function ManageBarbershopClient({
     }
   };
 
+  const handleCancelSubscription = async () => {
+    const ok = await confirm({
+      title: 'Annuler l’abonnement ?',
+      description: 'Votre salon reste visible jusqu’à la fin de la période de facturation en cours.',
+      confirmLabel: 'Annuler l’abonnement',
+      cancelLabel: 'Garder',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch('/api/subscription/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopId: shop.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ variant: 'success', title: 'Succès', description: 'Votre abonnement sera annulé à la fin de la période en cours.' });
+        setTimeout(() => router.refresh(), 2000);
+      } else {
+        toast({ variant: 'error', title: 'Erreur', description: data.error || 'Une erreur est survenue' });
+      }
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
+      toast({ variant: 'error', title: 'Erreur', description: 'Une erreur est survenue' });
+    }
+  };
+
   const handleAddCoOwner = async () => {
     if (!coOwnerEmail.trim()) {
       toast({ variant: 'warning', title: 'Attention', description: 'Veuillez saisir un email' });
@@ -431,7 +506,13 @@ export function ManageBarbershopClient({
   };
 
   const handleRemoveCoOwner = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir retirer le co-propriétaire ?')) return;
+    const ok = await confirm({
+      title: 'Retirer le co-propriétaire ?',
+      description: 'Cette personne ne pourra plus gérer le salon.',
+      confirmLabel: 'Retirer',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setIsRemovingCoOwner(true);
     try {
       const res = await fetch(`/api/barbershops/${shop.id}/co-owner`, { method: 'DELETE' });
@@ -451,15 +532,14 @@ export function ManageBarbershopClient({
   };
 
   const handleDeleteShop = async () => {
-    const confirmMsg = 'ATTENTION: Cette action est irréversible. Êtes-vous sûr de vouloir supprimer ce salon ?\n\nTapez "SUPPRIMER" pour confirmer.';
-    const userInput = prompt(confirmMsg);
-
-    if (userInput !== 'SUPPRIMER') {
-      if (userInput !== null) {
-        alert('Suppression annulée');
-      }
-      return;
-    }
+    const ok = await confirm({
+      title: `Supprimer ${shop.name} ?`,
+      description: 'Le salon, ses services, son équipe, ses réservations et ses avis seront définitivement supprimés. Cette action est irréversible.',
+      confirmLabel: 'Supprimer définitivement',
+      tone: 'danger',
+      requireText: 'SUPPRIMER',
+    });
+    if (!ok) return;
 
     setIsDeleting(true);
     try {
@@ -577,9 +657,13 @@ export function ManageBarbershopClient({
   };
 
   const handleDeleteBarber = async (barberId: string, barberName: string) => {
-    if (!confirm(`Êtes-vous sûr de vouloir retirer ${barberName} de votre équipe ?`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Retirer ${barberName} de l'équipe ?`,
+      description: 'Son profil ne sera plus visible et il ne pourra plus recevoir de réservations. Son historique de rendez-vous est conservé.',
+      confirmLabel: 'Retirer',
+      tone: 'danger',
+    });
+    if (!ok) return;
 
     try {
       const res = await fetch(`/api/barbershop/barbers/${barberId}`, {
@@ -749,8 +833,8 @@ export function ManageBarbershopClient({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 4 * 1024 * 1024) {
-      toast({ variant: 'error', title: 'Erreur', description: 'Image trop volumineuse (max 4MB)' });
+    if (file.size > MAX_SERVICE_IMAGE_MB * 1024 * 1024) {
+      toast({ variant: 'error', title: 'Erreur', description: `Image trop volumineuse (max ${MAX_SERVICE_IMAGE_MB} Mo)` });
       return;
     }
 
@@ -975,439 +1059,396 @@ export function ManageBarbershopClient({
 
   const tabs = [
     { id: 'overview' as const, label: t('tabs.overview'), icon: TrendingUp },
-    { id: 'barbers' as const, label: t('tabs.team'), icon: Users },
-    { id: 'services' as const, label: t('tabs.services'), icon: Scissors },
+    { id: 'barbers' as const, label: t('tabs.team'), icon: Users, count: barbers.length },
+    { id: 'services' as const, label: t('tabs.services'), icon: Scissors, count: services.length },
     { id: 'gallery' as const, label: t('tabs.gallery'), icon: ImageIcon },
     { id: 'schedule' as const, label: 'Horaires', icon: Clock },
     { id: 'settings' as const, label: t('tabs.settings'), icon: Settings },
   ];
 
+  const subscription = SUBSCRIPTION_STATUS[subscriptionStatus] ?? SUBSCRIPTION_STATUS.inactive;
+  const activeServiceCount = services.filter(s => serviceStatuses[s.id]).length;
+  const uncategorised = services.filter(s => !SERVICE_CATEGORIES.some(c => c.id === s.category));
+
+  const renderServiceRow = (service: Service) => {
+    const isOn = serviceStatuses[service.id];
+    return (
+      <li key={service.id} className="flex items-center gap-4 px-5 py-4 sm:px-6">
+        {service.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={service.image} alt="" className="h-14 w-14 flex-shrink-0 rounded-lg object-cover ring-1 ring-gray-200" />
+        ) : (
+          <span className="inline-flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
+            <Scissors className="h-5 w-5 text-gray-400" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className={`font-medium ${isOn ? 'text-gray-900' : 'text-gray-500'}`}>{service.name}</h4>
+            {!isOn && <Badge>Désactivé</Badge>}
+          </div>
+          {service.description && <p className="mt-0.5 truncate text-sm text-gray-500">{service.description}</p>}
+          <p className="mt-1 text-sm tabular-nums text-gray-600">
+            <span className="font-medium text-gray-900">{formatEuro(service.price)}</span>
+            <span className="mx-2 text-gray-300">|</span>
+            {service.duration} min
+          </p>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <button onClick={() => handleToggleServiceStatus(service.id)} className={`${btn.ghost} ${btn.sm}`}>
+            {isOn ? 'Désactiver' : 'Activer'}
+          </button>
+          <button onClick={() => openEditServiceModal(service)} className={btn.icon} aria-label={`Modifier ${service.name}`}>
+            <Edit2 className="h-4 w-4" />
+          </button>
+        </div>
+      </li>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/my-space" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </Link>
-              <div>
-                <h1 className="text-3xl font-sans font-bold text-gray-900">{shop.name}</h1>
-                <div className="flex items-center space-x-4 mt-1">
-                  <div className="flex items-center space-x-1 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4" />
-                    <span>{shop.city}</span>
-                  </div>
-                  {shop.rating && (
-                    <div className="flex items-center space-x-1 text-sm text-gray-600">
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span>{shop.rating} ({shop.reviewCount} avis)</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+      <PageHeader
+        title={shop.name}
+        back={
+          <Link href="/my-space" className={backLinkClass} aria-label="Retour à mon espace">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        }
+        meta={
+          <>
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="h-4 w-4 text-gray-400" />
+              {shop.city}
+            </span>
+            {shop.rating && (
+              <span className="inline-flex items-center gap-1.5 tabular-nums">
+                <Star className="h-4 w-4 fill-primary-500 text-primary-500" />
+                {shop.rating}
+                <span className="text-gray-400">({shop.reviewCount} avis)</span>
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <Badge tone={shopActive ? 'success' : 'warning'} icon={shopActive ? Eye : EyeOff}>
+              {shopActive ? 'Visible' : 'Masqué'}
+            </Badge>
+            <Badge tone={subscription.tone} icon={CreditCard}>
+              {subscription.label}
+            </Badge>
+            <Link href={`/my-space/${shop.id}/bookings`} className={btn.primary}>
+              <Calendar className="h-4 w-4" />
+              Réservations
+            </Link>
+          </>
+        }
+      >
+        <Tabs tabs={tabs} active={activeTab} onChange={setTab} />
+      </PageHeader>
 
-            <div className="flex items-center space-x-3">
-              <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${shopActive ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-700'
-                }`}>
-                {shopActive ? '👁 Visible' : '👁 Masqué'}
-              </div>
-              <div className={`px-4 py-2 rounded-lg font-semibold text-sm ${subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' :
-                subscriptionStatus === 'expired' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                }`}>
-                {subscriptionStatus === 'active' && '✓ Abonné'}
-                {subscriptionStatus === 'expired' && '⚠ Expiré'}
-                {subscriptionStatus === 'inactive' && '✗ Non abonné'}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex overflow-x-auto scrollbar-hide mt-6 border-b border-gray-200 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => setTab(tab.id)}
-                className={`flex items-center space-x-2 px-3 sm:px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}>
-                <tab.icon className="w-4 h-4" />
-                <span className="text-sm sm:text-base">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <PageShell>
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Coiffeurs</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">{totalBarbers}</p>
-                    <p className="text-xs text-gray-500 mt-1">{activeBarbers} actifs</p>
-                  </div>
-                  <div className="p-3 bg-primary-100 rounded-lg">
-                    <Users className="w-6 h-6 text-primary-600" />
-                  </div>
-                </div>
-              </div>
+            {!shopActive && (
+              <Notice
+                tone="warning"
+                icon={EyeOff}
+                title="Votre salon est masqué"
+                action={
+                  <button onClick={() => setTab('settings')} className={`${btn.secondary} ${btn.sm}`}>
+                    Paramètres
+                  </button>
+                }
+              >
+                Les clients ne peuvent ni le voir ni réserver.
+              </Notice>
+            )}
+            {subscriptionStatus !== 'active' && (
+              <Notice
+                tone="danger"
+                icon={AlertCircle}
+                title={subscription.label}
+                action={
+                  <Link href={`/subscription?shopId=${shop.id}`} className={`${btn.primary} ${btn.sm}`}>
+                    Renouveler
+                  </Link>
+                }
+              >
+                Sans abonnement actif, votre salon n&apos;apparaît plus sur la plateforme.
+              </Notice>
+            )}
 
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Note Moyenne</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">{avgRating}</p>
-                    <p className="text-xs text-gray-500 mt-1">sur 5 étoiles</p>
-                  </div>
-                  <div className="p-3 bg-yellow-100 rounded-lg">
-                    <Star className="w-6 h-6 text-yellow-600 fill-yellow-600" />
-                  </div>
-                </div>
-              </div>
+            <StatGrid>
+              <Stat label="Réservations" icon={Calendar} value={monthlyBookings} hint="ce mois-ci" />
+              <Stat label="Coiffeurs" icon={Users} value={totalBarbers} hint="dans l’équipe" />
+              <Stat label="Services actifs" icon={Scissors} value={activeServiceCount} hint={`${services.length} au total`} />
+              <Stat
+                label="Note du salon"
+                icon={Star}
+                value={shop.rating ? parseFloat(shop.rating).toFixed(1) : avgRating ?? '-'}
+                hint={shop.rating ? `${shop.reviewCount ?? 0} avis clients` : 'Pas encore d’avis'}
+              />
+            </StatGrid>
 
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Réservations</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">{monthlyBookings}</p>
-                    <p className="text-xs text-gray-500 mt-1">ce mois</p>
-                  </div>
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <Calendar className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Informations du Salon</h2>
-                <button
-                  onClick={() => setIsEditingShop(true)}
-                  className="flex items-center space-x-2 px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                  <Edit2 className="w-4 h-4" />
-                  <span className="font-medium">Modifier</span>
-                </button>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Adresse</label>
-                    <div className="flex items-start space-x-2 mt-1">
-                      <MapPin className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
-                      <p className="text-gray-900">{shop.address}, {shop.city}</p>
-                    </div>
-                  </div>
-
-                  {shop.phone && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Téléphone</label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        <p className="text-gray-900">{shop.phone}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {shop.email && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Email</label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <p className="text-gray-900">{shop.email}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  {shop.website && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Site Web</label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Globe className="w-4 h-4 text-gray-400" />
-                        <a href={shop.website} target="_blank" rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-700">
-                          {shop.website}
+            <div className="grid items-start gap-6 lg:grid-cols-3">
+              <Panel className="lg:col-span-2">
+                <PanelHeader
+                  title="Informations du salon"
+                  actions={
+                    <button onClick={() => setIsEditingShop(true)} className={`${btn.secondary} ${btn.sm}`}>
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Modifier
+                    </button>
+                  }
+                />
+                <PanelBody>
+                  <dl className="grid gap-5 sm:grid-cols-2">
+                    <Field label="Adresse" icon={MapPin}>{shop.address}, {shop.city}</Field>
+                    <Field label="Téléphone" icon={Phone}>{shop.phone || <span className="text-gray-400">Non renseigné</span>}</Field>
+                    <Field label="Email" icon={Mail}>{shop.email || <span className="text-gray-400">Non renseigné</span>}</Field>
+                    <Field label="Site web" icon={Globe}>
+                      {shop.website ? (
+                        <a href={shop.website} target="_blank" rel="noopener noreferrer" className="text-primary-700 underline-offset-2 hover:underline">
+                          {shop.website.replace(/^https?:\/\//, '')}
                         </a>
-                      </div>
+                      ) : (
+                        <span className="text-gray-400">Non renseigné</span>
+                      )}
+                    </Field>
+                    <div className="sm:col-span-2">
+                      <Field label="Description">
+                        {shop.description || <span className="text-gray-400">Aucune description. Ajoutez-en une pour présenter votre salon.</span>}
+                      </Field>
                     </div>
-                  )}
+                  </dl>
+                </PanelBody>
+              </Panel>
 
-                  {shop.description && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Description</label>
-                      <p className="text-gray-900 mt-1">{shop.description}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4">
-              <Link href={`/my-space/${shop.id}/bookings`}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:border-primary-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Réservations</h3>
-                    <p className="text-sm text-gray-600 mt-1">Gérer les rendez-vous</p>
-                  </div>
-                  <Calendar className="w-8 h-8 text-primary-600" />
-                </div>
-              </Link>
-
-              <button onClick={() => setActiveTab('barbers')}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:border-primary-300 transition-colors text-left">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Équipe</h3>
-                    <p className="text-sm text-gray-600 mt-1">Gérer les coiffeurs</p>
-                  </div>
-                  <Users className="w-8 h-8 text-primary-600" />
-                </div>
-              </button>
-
-              <Link href={`/barbershops/${shop.id}`}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:border-primary-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Voir la Page</h3>
-                    <p className="text-sm text-gray-600 mt-1">Page publique</p>
-                  </div>
-                  <Store className="w-8 h-8 text-primary-600" />
-                </div>
-              </Link>
+              <Panel>
+                <PanelHeader title="Accès rapide" />
+                <ul className="divide-y divide-gray-100">
+                  {[
+                    { href: `/my-space/${shop.id}/bookings`, icon: Calendar, label: 'Réservations', hint: 'Consulter et gérer les rendez-vous' },
+                    { tab: 'barbers' as const, icon: Users, label: 'Équipe', hint: 'Ajouter ou modifier un coiffeur' },
+                    { tab: 'services' as const, icon: Scissors, label: 'Services', hint: 'Tarifs, durées et catégories' },
+                    { href: `/barbershops/${shop.id}`, icon: Store, label: 'Page publique', hint: 'Voir le salon comme un client' },
+                  ].map((item) => {
+                    const inner = (
+                      <>
+                        <item.icon className="h-5 w-5 flex-shrink-0 text-gray-400 group-hover:text-primary-600" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-gray-900">{item.label}</span>
+                          <span className="block truncate text-xs text-gray-500">{item.hint}</span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500" />
+                      </>
+                    );
+                    const cls = 'group flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-gray-50 sm:px-6';
+                    return (
+                      <li key={item.label}>
+                        {item.href ? (
+                          <Link href={item.href} className={cls}>{inner}</Link>
+                        ) : (
+                          <button onClick={() => setTab(item.tab!)} className={cls}>{inner}</button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Panel>
             </div>
           </div>
         )}
 
         {activeTab === 'barbers' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Équipe</h2>
-                <p className="text-gray-600 mt-1">Gérez les coiffeurs de votre salon</p>
-              </div>
-              <button
-                onClick={() => setIsAddingBarber(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                <Plus className="w-4 h-4" />
-                <span>Ajouter un Coiffeur</span>
-              </button>
-            </div>
+            <SectionHeading
+              title="Équipe"
+              description="Les coiffeurs qui reçoivent des réservations dans votre salon."
+              actions={
+                <button onClick={() => setIsAddingBarber(true)} className={btn.primary}>
+                  <Plus className="h-4 w-4" />
+                  Ajouter un coiffeur
+                </button>
+              }
+            />
 
             {barbers.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-200 text-center">
-                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun coiffeur</h3>
-                <p className="text-gray-600 mb-6">Commencez par ajouter votre premier coiffeur à votre équipe</p>
-                <button
-                  onClick={() => setIsAddingBarber(true)}
-                  className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                  Ajouter un Coiffeur
-                </button>
-              </div>
+              <Panel>
+                <EmptyState
+                  icon={Users}
+                  title="Aucun coiffeur pour l’instant"
+                  description="Ajoutez votre premier coiffeur pour que les clients puissent réserver avec lui."
+                  action={
+                    <button onClick={() => setIsAddingBarber(true)} className={btn.primary}>
+                      <Plus className="h-4 w-4" />
+                      Ajouter un coiffeur
+                    </button>
+                  }
+                />
+              </Panel>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {barbers.map((barber) => (
-                  <div key={barber.id} className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="relative group">
-                          {barber.profileImage ? (
-                            <img
-                              src={barber.profileImage}
-                              alt={barber.name || 'Barber'}
-                              className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold text-lg">
-                                {barber.name?.split(' ').map(n => n[0]).join('') || '?'}
-                              </span>
-                            </div>
+                  <Panel key={barber.id} className="flex flex-col">
+                    <div className="flex items-start gap-4 p-5">
+                      <label className="group relative cursor-pointer" title="Changer la photo">
+                        <Avatar name={barber.name} src={barber.profileImage} size="lg" />
+                        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-gray-900/50 opacity-0 transition-opacity group-hover:opacity-100">
+                          <ImageIcon className="h-4 w-4 text-white" />
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const uploadResult = await startBarberImageUpload([file]);
+                              if (!uploadResult || uploadResult.length === 0) {
+                                throw new Error('Échec du téléchargement');
+                              }
+                              await fetch(`/api/barbers/${barber.id}/update`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ profileImage: uploadResult[0].url }),
+                              });
+                              toast({ variant: 'success', title: 'Photo mise à jour' });
+                              setTimeout(() => router.refresh(), 1000);
+                            } catch (error) {
+                              toast({ variant: 'error', title: 'Erreur', description: 'Échec du téléchargement' });
+                            }
+                          }}
+                        />
+                      </label>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate font-medium text-gray-900">{barber.name}</h3>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                          {barber.barberType && <Badge>{barber.barberType}</Badge>}
+                          {barber.rating && (
+                            <span className="inline-flex items-center gap-1 tabular-nums">
+                              <Star className="h-3.5 w-3.5 fill-primary-500 text-primary-500" />
+                              {barber.rating}
+                            </span>
                           )}
-                          <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                try {
-                                  const uploadResult = await startBarberImageUpload([file]);
-                                  if (!uploadResult || uploadResult.length === 0) {
-                                    throw new Error('Échec du téléchargement');
-                                  }
-                                  await fetch(`/api/barbers/${barber.id}/update`, {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ profileImage: uploadResult[0].url }),
-                                  });
-                                  toast({ variant: 'success', title: 'Photo mise à jour' });
-                                  setTimeout(() => router.refresh(), 1000);
-                                } catch (error) {
-                                  toast({ variant: 'error', title: 'Erreur', description: 'Échec du téléchargement' });
-                                }
-                              }}
-                            />
-                            <ImageIcon className="w-4 h-4 text-white" />
-                          </label>
+                          {barber.experience ? <span>{barber.experience} ans d&apos;expérience</span> : null}
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{barber.name}</h3>
-                          {barber.barberType && (
-                            <span className="inline-block text-xs bg-accent-100 text-accent-700 px-2 py-0.5 rounded-full">{barber.barberType}</span>
-                          )}
-                          {barber.experience && (
-                            <p className="text-sm text-gray-600">{barber.experience} ans d'expérience</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className={`px-2 py-1 rounded-full text-xs font-semibold ${barber.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                        {barber.isActive ? 'Actif' : 'Inactif'}
                       </div>
                     </div>
 
-                    {barber.rating && (
-                      <div className="flex items-center space-x-1 mb-3">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-semibold">{barber.rating}</span>
-                      </div>
-                    )}
-
-                    {barber.specialties && barber.specialties.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
-                        {barber.specialties.slice(0, 2).map((specialty, index) => (
-                          <span key={index} className="px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-xs">
-                            {specialty}
-                          </span>
-                        ))}
-                        {barber.specialties.length > 2 && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                            +{barber.specialties.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-1.5 px-5 pb-4 text-sm text-gray-600">
                       {barber.email && (
-                        <div className="flex items-center text-gray-600">
-                          <Mail className="w-3 h-3 mr-2" />
+                        <p className="flex items-center gap-2 truncate">
+                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400" />
                           <span className="truncate">{barber.email}</span>
-                        </div>
+                        </p>
                       )}
                       {barber.phone && (
-                        <div className="flex items-center text-gray-600">
-                          <Phone className="w-3 h-3 mr-2" />
-                          <span>{barber.phone}</span>
-                        </div>
+                        <p className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                          {barber.phone}
+                        </p>
                       )}
+                      <p className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                        {barber.openingHours ? 'Horaires personnalisés' : 'Horaires du salon'}
+                      </p>
                     </div>
 
-                    {/* Barber hours indicator */}
-                    {barber.openingHours && (
-                      <div className="mt-3 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-lg flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        <span>Horaires personnalisés</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-100">
-                      <button
-                        onClick={() => openEditBarberModal(barber)}
-                        className="flex-1 flex items-center justify-center space-x-1 p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                        <Edit2 className="w-4 h-4" />
-                        <span className="text-sm">Modifier</span>
+                    <div className="mt-auto flex items-center gap-1 border-t border-gray-100 px-3 py-2">
+                      <button onClick={() => openEditBarberModal(barber)} className={`${btn.ghost} ${btn.sm}`}>
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Modifier
                       </button>
                       <button
-                        onClick={() => handleOpenBarberHoursEditor(barber)}
-                        className="flex-1 flex items-center justify-center space-x-1 p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-sm">Horaires</span>
+                        onClick={() => (editingBarberHoursId === barber.id ? setEditingBarberHoursId(null) : handleOpenBarberHoursEditor(barber))}
+                        className={`${btn.ghost} ${btn.sm}`}
+                        aria-expanded={editingBarberHoursId === barber.id}
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                        Horaires
                       </button>
                       <button
                         onClick={() => handleDeleteBarber(barber.id, barber.name || 'ce coiffeur')}
-                        className="flex-1 flex items-center justify-center space-x-1 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                        <span className="text-sm">Supprimer</span>
+                        className={`${btn.dangerGhost} ${btn.sm} ml-auto`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Retirer
                       </button>
                     </div>
 
-                    {/* Barber hours inline editor */}
                     {editingBarberHoursId === barber.id && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <h4 className="font-semibold text-gray-900 text-sm mb-3">Horaires de {barber.name}</h4>
-                        <p className="text-xs text-gray-500 mb-3">Ces horaires permettent au coiffeur de recevoir des réservations même les jours où le salon est fermé.</p>
-                        <div className="space-y-2">
-                          {Object.entries({
-                            monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi',
-                            thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche'
-                          }).map(([dayKey, dayLabel]) => (
-                            <div key={dayKey} className="flex items-center space-x-2">
-                              <label className="flex items-center space-x-1 w-20 flex-shrink-0">
+                      <div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
+                        <h4 className="text-sm font-medium text-gray-900">Horaires de {barber.name}</h4>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Permet de recevoir des réservations même les jours où le salon est fermé.
+                        </p>
+                        <div className="mt-3 space-y-2">
+                          {Object.entries(dayNames).map(([dayKey, dayLabel]) => (
+                            <div key={dayKey} className="flex items-center gap-2">
+                              <label className="flex w-24 flex-shrink-0 items-center gap-2 text-xs text-gray-700">
                                 <input
                                   type="checkbox"
                                   checked={!barberHours[dayKey]?.closed}
                                   onChange={(e) => handleBarberHoursChange(dayKey, 'closed', !e.target.checked)}
-                                  className="rounded text-primary-600"
+                                  className={checkboxClass}
                                 />
-                                <span className="text-xs text-gray-700">{dayLabel}</span>
+                                {dayLabel}
                               </label>
-                              {!barberHours[dayKey]?.closed && (
-                                <div className="flex items-center space-x-1">
+                              {barberHours[dayKey]?.closed ? (
+                                <span className="text-xs text-gray-400">Fermé</span>
+                              ) : (
+                                <div className="flex items-center gap-1">
                                   <input
                                     type="time"
                                     value={barberHours[dayKey]?.open || '09:00'}
                                     onChange={(e) => handleBarberHoursChange(dayKey, 'open', e.target.value)}
-                                    className="text-xs border border-gray-300 rounded px-1 py-0.5 text-gray-900 bg-white"
+                                    className={timeInputClass}
+                                    aria-label={`${dayLabel}, ouverture`}
                                   />
-                                  <span className="text-xs text-gray-400">-</span>
+                                  <span className="text-xs text-gray-400">à</span>
                                   <input
                                     type="time"
                                     value={barberHours[dayKey]?.close || '19:00'}
                                     onChange={(e) => handleBarberHoursChange(dayKey, 'close', e.target.value)}
-                                    className="text-xs border border-gray-300 rounded px-1 py-0.5 text-gray-900 bg-white"
+                                    className={timeInputClass}
+                                    aria-label={`${dayLabel}, fermeture`}
                                   />
                                 </div>
-                              )}
-                              {barberHours[dayKey]?.closed && (
-                                <span className="text-xs text-gray-400">Fermé</span>
                               )}
                             </div>
                           ))}
                         </div>
-                        <div className="flex items-center space-x-2 mt-3">
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => handleSaveBarberHours(barber.id)}
                             disabled={isSavingBarberHours}
-                            className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs rounded-lg font-medium transition-colors disabled:opacity-50">
-                            {isSavingBarberHours ? 'Enregistrement...' : 'Enregistrer'}
+                            className={`${btn.primary} ${btn.sm}`}
+                          >
+                            {isSavingBarberHours && <Spinner className="h-3 w-3" />}
+                            Enregistrer
+                          </button>
+                          <button onClick={() => setEditingBarberHoursId(null)} className={`${btn.secondary} ${btn.sm}`}>
+                            Annuler
                           </button>
                           {barber.openingHours && (
                             <button
                               onClick={() => handleClearBarberHours(barber.id)}
                               disabled={isSavingBarberHours}
-                              className="px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-lg font-medium hover:bg-red-100 transition-colors disabled:opacity-50">
-                              Supprimer horaires
+                              className={`${btn.dangerGhost} ${btn.sm} ml-auto`}
+                            >
+                              Revenir aux horaires du salon
                             </button>
                           )}
-                          <button
-                            onClick={() => setEditingBarberHoursId(null)}
-                            className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-lg font-medium hover:bg-gray-50 transition-colors">
-                            Annuler
-                          </button>
                         </div>
                       </div>
                     )}
-                  </div>
+                  </Panel>
                 ))}
               </div>
             )}
@@ -1416,109 +1457,49 @@ export function ManageBarbershopClient({
 
         {activeTab === 'services' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Services</h2>
-                <p className="text-gray-600 mt-1">Gérez les services proposés par votre salon</p>
-              </div>
-              <button
-                onClick={() => setIsAddingService(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                <Plus className="w-4 h-4" />
-                <span>Ajouter un Service</span>
-              </button>
-            </div>
-
-            <div className="grid gap-6">
-              {['haircut', 'beard', 'styling', 'coloring', 'treatment', 'combo'].map((category) => {
-                const categoryServices = services.filter(s => s.category === category);
-                if (categoryServices.length === 0) return null;
-
-                const categoryLabels: Record<string, string> = {
-                  'haircut': '💇 Coupes',
-                  'beard': '🧔 Barbe',
-                  'styling': '✨ Coiffure',
-                  'coloring': '🎨 Coloration',
-                  'treatment': '💆 Soins',
-                  'combo': '🎁 Forfaits',
-                };
-
-                return (
-                  <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-200">
-                      <h3 className="font-semibold text-gray-900 text-lg">{categoryLabels[category]}</h3>
-                    </div>
-                    <div className="divide-y divide-gray-100">
-                      {categoryServices.map((service) => (
-                        <div key={service.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4 flex-1">
-                              {service.image ? (
-                                <img
-                                  src={service.image}
-                                  alt={service.name}
-                                  className="w-16 h-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <Scissors className="w-6 h-6 text-gray-400" />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-3">
-                                  <h4 className="font-medium text-gray-900">{service.name}</h4>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                                    }`}>
-                                    {service.isActive ? 'Actif' : 'Inactif'}
-                                  </span>
-                                </div>
-                                {service.description && (
-                                  <p className="text-sm text-gray-600 mt-1 truncate">{service.description}</p>
-                                )}
-                                <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                                  <div className="flex items-center">
-                                    <Euro className="w-3 h-3 mr-1" />
-                                    <span className="font-medium text-gray-700">{service.price}€</span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    <span>{service.duration} min</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2 ml-4">
-                              <button
-                                onClick={() => openEditServiceModal(service)}
-                                className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleToggleServiceStatus(service.id)}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${serviceStatuses[service.id] ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                  }`}>
-                                {serviceStatuses[service.id] ? 'Désactiver' : 'Activer'}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {services.length === 0 && (
-              <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-200 text-center">
-                <Scissors className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun service</h3>
-                <p className="text-gray-600 mb-6">Commencez par ajouter les services proposés par votre salon</p>
-                <button
-                  onClick={() => setIsAddingService(true)}
-                  className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                  Ajouter un Service
+            <SectionHeading
+              title="Services"
+              description="Ce que les clients peuvent réserver, avec les tarifs et durées."
+              actions={
+                <button onClick={() => setIsAddingService(true)} className={btn.primary}>
+                  <Plus className="h-4 w-4" />
+                  Ajouter un service
                 </button>
+              }
+            />
+
+            {services.length === 0 ? (
+              <Panel>
+                <EmptyState
+                  icon={Scissors}
+                  title="Aucun service pour l’instant"
+                  description="Ajoutez vos prestations pour que les clients puissent réserver en ligne."
+                  action={
+                    <button onClick={() => setIsAddingService(true)} className={btn.primary}>
+                      <Plus className="h-4 w-4" />
+                      Ajouter un service
+                    </button>
+                  }
+                />
+              </Panel>
+            ) : (
+              <div className="space-y-4">
+                {SERVICE_CATEGORIES.map((category) => {
+                  const categoryServices = services.filter(s => s.category === category.id);
+                  if (categoryServices.length === 0) return null;
+                  return (
+                    <Panel key={category.id}>
+                      <PanelHeader title={category.label} description={`${categoryServices.length} service${categoryServices.length > 1 ? 's' : ''}`} />
+                      <ul className="divide-y divide-gray-100">{categoryServices.map(renderServiceRow)}</ul>
+                    </Panel>
+                  );
+                })}
+                {uncategorised.length > 0 && (
+                  <Panel>
+                    <PanelHeader title="Autres" description="Services sans catégorie. Modifiez-les pour les classer." />
+                    <ul className="divide-y divide-gray-100">{uncategorised.map(renderServiceRow)}</ul>
+                  </Panel>
+                )}
               </div>
             )}
           </div>
@@ -1526,842 +1507,548 @@ export function ManageBarbershopClient({
 
         {activeTab === 'gallery' && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{t('gallery.title')}</h2>
-              <p className="text-gray-600 mt-1">{t('gallery.subtitle')}</p>
-            </div>
+            <SectionHeading title={t('gallery.title')} description={t('gallery.subtitle')} />
 
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 bg-primary-100 rounded-lg">
-                  <ImageIcon className="w-5 h-5 text-primary-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{t('gallery.photosTitle')}</h3>
-                  <p className="text-sm text-gray-600">{t('gallery.photosSubtitle')}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                {shopImages.map((url, index) => (
-                  <div key={index} className="relative aspect-square group rounded-lg overflow-hidden border border-gray-200">
-                    <img
-                      src={url}
-                      alt={`Gallery ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button
-                        onClick={() => handleDeleteGalleryImage(url)}
-                        disabled={isDeletingGalleryImage === url}
-                        className="p-2 bg-white text-red-600 rounded-full hover:bg-red-50 transition-colors"
-                        title="Supprimer">
-                        {isDeletingGalleryImage === url ? (
-                          <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Trash2 className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
+            <Panel>
+              <PanelHeader
+                title={t('gallery.photosTitle')}
+                description={t('gallery.photosSubtitle')}
+                actions={<span className="text-sm tabular-nums text-gray-500">{shopImages.length}/10</span>}
+              />
+              <PanelBody className="space-y-5">
+                {shopImages.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {shopImages.map((url, index) => (
+                      <div key={url} className="group relative aspect-square overflow-hidden rounded-lg bg-gray-100 ring-1 ring-gray-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Photo ${index + 1} du salon`} className="h-full w-full object-cover" />
+                        <button
+                          onClick={() => handleDeleteGalleryImage(url)}
+                          disabled={isDeletingGalleryImage === url}
+                          className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-gray-700 opacity-0 shadow-sm transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+                          aria-label={`Supprimer la photo ${index + 1}`}
+                        >
+                          {isDeletingGalleryImage === url ? <Spinner className="h-3.5 w-3.5" /> : <Trash2 className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-
-                {shopImages.length === 0 && (
-                  <div className="col-span-full py-8 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                    <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">{t('gallery.noImages')}</p>
-                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">{t('gallery.noImages')}</p>
                 )}
-              </div>
 
-              {shopImages.length < 10 && (
-                <>
-                  <label className={`block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors cursor-pointer ${isUploadingGallery ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary-500 hover:bg-primary-50'
-                    }`}>
+                {shopImages.length < 10 && (
+                  <label
+                    className={`flex flex-col items-center rounded-xl border-2 border-dashed border-gray-300 px-6 py-8 text-center transition-colors ${
+                      isUploadingGallery ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-primary-400 hover:bg-primary-50/40'
+                    }`}
+                  >
                     <input
                       type="file"
                       multiple
                       accept="image/*"
                       onChange={handleGalleryUpload}
-                      className="hidden"
+                      className="sr-only"
                       disabled={isUploadingGallery}
                     />
                     {isUploadingGallery ? (
-                      <div className="flex flex-col items-center">
-                        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-3"></div>
-                        <p className="text-sm font-medium text-gray-700">Téléchargement en cours...</p>
-                      </div>
+                      <>
+                        <Spinner className="h-6 w-6 text-primary-600" />
+                        <p className="mt-3 text-sm font-medium text-gray-700">Téléchargement en cours...</p>
+                      </>
                     ) : (
                       <>
-                        <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-sm font-medium text-gray-700">{t('gallery.uploadTitle')}</p>
-                        <p className="text-xs text-gray-500 mt-1">{t('gallery.uploadFormats')}</p>
-                        <div className="mt-4 px-6 py-2 bg-primary-600 text-white rounded-lg font-medium inline-block">
-                          {t('gallery.uploadButton')}
-                        </div>
+                        <Upload className="h-6 w-6 text-gray-400" />
+                        <p className="mt-3 text-sm font-medium text-gray-900">{t('gallery.uploadTitle')}</p>
+                        <p className="mt-1 text-xs text-gray-500">{t('gallery.uploadFormats')}</p>
+                        <p className="mt-1 text-xs text-gray-500">{t('gallery.uploadNote')}</p>
                       </>
                     )}
                   </label>
-                  <p className="text-xs text-gray-500 mt-3 text-center">
-                    {t('gallery.uploadNote')} ({shopImages.length}/10 images)
-                  </p>
-                </>
-              )}
-            </div>
+                )}
+              </PanelBody>
+            </Panel>
           </div>
         )}
 
         {activeTab === 'schedule' && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Horaires d'ouverture</h2>
-              <p className="text-gray-600 mt-1">Gérez les horaires d'ouverture et les jours de fermeture</p>
-            </div>
+            <SectionHeading title="Horaires d’ouverture" description="Les créneaux proposés aux clients suivent ces horaires." />
 
-            {/* Opening Hours */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Clock className="w-5 h-5 mr-2 text-primary-600" />
-                Horaires hebdomadaires
-              </h3>
-              <div className="space-y-4">
-                {Object.entries(dayNames).map(([dayKey, dayLabel]) => (
-                  <div key={dayKey} className="flex items-center space-x-4 py-3 border-b border-gray-100 last:border-0">
-                    <div className="w-28 font-medium text-gray-700">{dayLabel}</div>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={!openingHours[dayKey]?.closed}
-                        onChange={(e) => handleOpeningHoursChange(dayKey, 'closed', !e.target.checked)}
-                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      />
-                      <span className="text-sm text-gray-600">Ouvert</span>
-                    </label>
-                    {!openingHours[dayKey]?.closed && (
-                      <>
-                        <div className="flex items-center space-x-2">
-                          <label className="text-sm text-gray-500">De</label>
+            <Panel>
+              <PanelHeader
+                title="Semaine type"
+                actions={
+                  <button onClick={handleSaveOpeningHours} disabled={isSavingHours} className={`${btn.primary} ${btn.sm}`}>
+                    {isSavingHours && <Spinner className="h-3 w-3" />}
+                    Enregistrer
+                  </button>
+                }
+              />
+              <ul className="divide-y divide-gray-100">
+                {Object.entries(dayNames).map(([dayKey, dayLabel]) => {
+                  const isClosed = openingHours[dayKey]?.closed;
+                  return (
+                    <li key={dayKey} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 sm:px-6">
+                      <span className="w-24 text-sm font-medium text-gray-900">{dayLabel}</span>
+                      <label className="flex items-center gap-2 text-sm text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={!isClosed}
+                          onChange={(e) => handleOpeningHoursChange(dayKey, 'closed', !e.target.checked)}
+                          className={checkboxClass}
+                        />
+                        Ouvert
+                      </label>
+                      {isClosed ? (
+                        <span className="text-sm text-gray-400">Fermé</span>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
                           <input
                             type="time"
                             value={openingHours[dayKey]?.open || '09:00'}
                             onChange={(e) => handleOpeningHoursChange(dayKey, 'open', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-primary-500"
+                            className={`${inputClass} w-auto`}
+                            aria-label={`${dayLabel}, ouverture`}
                           />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <label className="text-sm text-gray-500">à</label>
+                          à
                           <input
                             type="time"
                             value={openingHours[dayKey]?.close || '19:00'}
                             onChange={(e) => handleOpeningHoursChange(dayKey, 'close', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-primary-500"
+                            className={`${inputClass} w-auto`}
+                            aria-label={`${dayLabel}, fermeture`}
                           />
                         </div>
-                      </>
-                    )}
-                    {openingHours[dayKey]?.closed && (
-                      <span className="text-sm text-red-600 font-medium">Fermé</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={handleSaveOpeningHours}
-                  disabled={isSavingHours}
-                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {isSavingHours ? 'Enregistrement...' : 'Enregistrer les horaires'}
-                </button>
-              </div>
-            </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
 
-            {/* Closed Dates */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-red-600" />
-                Jours de fermeture exceptionnelle
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Ajoutez des dates spécifiques où le salon sera fermé (vacances, jours fériés, etc.)
-              </p>
-              <div className="flex items-center space-x-3 mb-4">
-                <input
-                  type="date"
-                  value={newClosedDate}
-                  onChange={(e) => setNewClosedDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500"
-                />
-                <button
-                  onClick={handleAddClosedDate}
-                  disabled={!newClosedDate}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Ajouter
-                </button>
-              </div>
-              {closedDates.length > 0 ? (
-                <div className="space-y-2">
-                  {closedDates.map((date) => (
-                    <div key={date} className="flex items-center justify-between py-2 px-4 bg-red-50 rounded-lg">
-                      <span className="text-gray-900">
-                        {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveClosedDate(date)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+            <Panel>
+              <PanelHeader
+                title="Fermetures exceptionnelles"
+                description="Vacances, jours fériés ou toute date où le salon sera fermé."
+              />
+              <PanelBody className="space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <div>
+                    <label htmlFor="closed-date" className={labelClass}>Date</label>
+                    <input
+                      id="closed-date"
+                      type="date"
+                      value={newClosedDate}
+                      onChange={(e) => setNewClosedDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className={`${inputClass} sm:w-56`}
+                    />
+                  </div>
+                  <button onClick={handleAddClosedDate} disabled={!newClosedDate} className={btn.secondary}>
+                    <Plus className="h-4 w-4" />
+                    Ajouter
+                  </button>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500 italic">Aucun jour de fermeture exceptionnelle programmé</p>
-              )}
-            </div>
+                {closedDates.length > 0 ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {closedDates.map((date) => (
+                      <li key={date} className="inline-flex items-center gap-1 rounded-full bg-gray-100 py-1 pl-3 pr-1 text-sm text-gray-800">
+                        {new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
+                        <button
+                          onClick={() => handleRemoveClosedDate(date)}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-900"
+                          aria-label="Retirer cette date"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">Aucune fermeture exceptionnelle prévue.</p>
+                )}
+              </PanelBody>
+            </Panel>
           </div>
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h2>
-              <p className="text-gray-600 mt-1">{t('settings.subtitle')}</p>
-            </div>
+          <div className="max-w-3xl space-y-6">
+            <SectionHeading title={t('settings.title')} description={t('settings.subtitle')} />
 
-            {/* Inactive shop warning */}
-            {!shopActive && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-orange-900">Salon désactivé</p>
-                    <p className="text-sm text-orange-700 mt-1">
-                      Votre salon n'est actuellement pas visible sur la plateforme. Les clients ne peuvent pas voir votre salon ni réserver de rendez-vous. Activez-le dans la zone de danger ci-dessous pour le rendre visible.
+            <Panel>
+              <PanelHeader
+                icon={CreditCard}
+                title="Abonnement"
+                description={`${formatEuro(subscriptionPrice)} par mois`}
+                actions={<Badge tone={subscription.tone}>{subscription.label}</Badge>}
+              />
+              <PanelBody className="space-y-4">
+                {subscriptionStatus !== 'active' && (
+                  <Notice tone="danger" icon={AlertCircle}>
+                    Votre salon n&apos;est plus visible sur la plateforme. Renouvelez votre abonnement pour continuer à recevoir des réservations.
+                  </Notice>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/subscription?shopId=${shop.id}`} className={btn.primary}>
+                    {subscriptionStatus === 'active' ? 'Gérer l’abonnement' : 'Renouveler l’abonnement'}
+                  </Link>
+                  {subscriptionStatus === 'active' && (
+                    <button onClick={handleCancelSubscription} className={btn.dangerGhost}>
+                      Annuler l&apos;abonnement
+                    </button>
+                  )}
+                </div>
+              </PanelBody>
+            </Panel>
+
+            <Panel>
+              <PanelHeader icon={UserPlus} title="Co-propriétaire" description="Une personne qui peut gérer ce salon avec vous." />
+              <PanelBody>
+                {shop.coOwnerId ? (
+                  <div className="flex items-center gap-3">
+                    <Avatar name={shop.coOwnerName} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">{shop.coOwnerName || 'Co-propriétaire'}</p>
+                      <p className="truncate text-sm text-gray-500">{shop.coOwnerEmail}</p>
+                    </div>
+                    <button onClick={handleRemoveCoOwner} disabled={isRemovingCoOwner} className={`${btn.dangerGhost} ${btn.sm}`}>
+                      {isRemovingCoOwner && <Spinner className="h-3 w-3" />}
+                      Retirer
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleAddCoOwner();
+                    }}
+                    className="space-y-2"
+                  >
+                    <label htmlFor="co-owner-email" className={labelClass}>Email du co-propriétaire</label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        id="co-owner-email"
+                        type="email"
+                        value={coOwnerEmail}
+                        onChange={(e) => setCoOwnerEmail(e.target.value)}
+                        placeholder="email@exemple.com"
+                        className={inputClass}
+                      />
+                      <button type="submit" disabled={isAddingCoOwner} className={btn.primary}>
+                        {isAddingCoOwner && <Spinner className="h-3.5 w-3.5" />}
+                        Ajouter
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">La personne doit déjà avoir un compte Orphelia.</p>
+                  </form>
+                )}
+              </PanelBody>
+            </Panel>
+
+            <Panel className="border-red-200">
+              <PanelHeader title="Zone sensible" description="Ces actions affectent la visibilité ou l’existence du salon." />
+              <ul className="divide-y divide-gray-100">
+                <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{shopActive ? 'Masquer le salon' : 'Rendre le salon visible'}</p>
+                    <p className="mt-0.5 text-sm text-gray-500">
+                      {shopActive
+                        ? 'Le salon disparaît de la plateforme. Vous pourrez le réactiver à tout moment.'
+                        : 'Le salon est actuellement masqué. Les clients ne peuvent ni le voir ni réserver.'}
                     </p>
                   </div>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-primary-100 rounded-lg">
-                    <CreditCard className="w-5 h-5 text-primary-600" />
-                  </div>
+                  <button onClick={handleToggleShopStatus} disabled={isToggling} className={shopActive ? btn.secondary : btn.primary}>
+                    {isToggling && <Spinner className="h-3.5 w-3.5" />}
+                    {shopActive ? 'Masquer' : 'Rendre visible'}
+                  </button>
+                </li>
+                <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                   <div>
-                    <h3 className="font-semibold text-gray-900">Abonnement</h3>
-                    <p className="text-sm text-gray-600">€{subscriptionPrice.toFixed(2)}/mois</p>
+                    <p className="text-sm font-medium text-gray-900">Supprimer le salon</p>
+                    <p className="mt-0.5 text-sm text-gray-500">Suppression définitive du salon et de toutes ses données.</p>
                   </div>
-                </div>
-                <div className={`px-4 py-2 rounded-lg font-semibold ${subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                  {subscriptionStatus === 'active' ? 'Actif' : 'Expiré'}
-                </div>
-              </div>
-              {subscriptionStatus !== 'active' && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-start space-x-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-red-900">Abonnement expiré</p>
-                      <p className="text-sm text-red-700 mt-1">
-                        Votre salon n'est plus visible sur la plateforme. Renouvelez votre abonnement pour continuer à recevoir des réservations.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="space-y-3">
-                <Link href={`/subscription?shopId=${shop.id}`}
-                  className="block w-full text-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                  {subscriptionStatus === 'active' ? 'Gérer l\'abonnement' : 'Renouveler l\'abonnement'}
-                </Link>
-                {subscriptionStatus === 'active' && (
-                  <button
-                    onClick={async () => {
-                      if (!confirm('Êtes-vous sûr de vouloir annuler votre abonnement ? Votre salon restera visible jusqu\'à la fin de la période de facturation en cours.')) {
-                        return;
-                      }
-                      try {
-                        const res = await fetch('/api/subscription/cancel', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ shopId: shop.id }),
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                          toast({
-                            variant: 'success',
-                            title: 'Succès',
-                            description: 'Votre abonnement sera annulé à la fin de la période en cours.',
-                          });
-                          setTimeout(() => router.refresh(), 2000);
-                        } else {
-                          toast({
-                            variant: 'error',
-                            title: 'Erreur',
-                            description: data.error || 'Une erreur est survenue',
-                          });
-                        }
-                      } catch (error) {
-                        console.error('Cancel subscription error:', error);
-                        toast({
-                          variant: 'error',
-                          title: 'Erreur',
-                          description: 'Une erreur est survenue',
-                        });
-                      }
-                    }}
-                    className="w-full px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
-                  >
-                    Annuler l'abonnement
+                  <button onClick={handleDeleteShop} disabled={isDeleting} className={btn.danger}>
+                    {isDeleting && <Spinner className="h-3.5 w-3.5" />}
+                    Supprimer
                   </button>
-                )}
-              </div>
-            </div>
-
-            {/* Co-owner Section */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Co-propriétaire</h3>
-                  <p className="text-sm text-gray-600">Ajouter une personne qui pourra gérer ce salon</p>
-                </div>
-              </div>
-
-              {shop.coOwnerId ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{shop.coOwnerName || 'Co-propriétaire'}</p>
-                      <p className="text-sm text-gray-600">{shop.coOwnerEmail}</p>
-                    </div>
-                    <button
-                      onClick={handleRemoveCoOwner}
-                      disabled={isRemovingCoOwner}
-                      className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                      {isRemovingCoOwner ? 'Retrait...' : 'Retirer'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-500">Aucun co-propriétaire. Ajoutez quelqu'un par son adresse email (il doit déjà avoir un compte).</p>
-                  <div className="flex space-x-2">
-                    <input
-                      type="email"
-                      value={coOwnerEmail}
-                      onChange={(e) => setCoOwnerEmail(e.target.value)}
-                      placeholder="email@exemple.com"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                    />
-                    <button
-                      onClick={handleAddCoOwner}
-                      disabled={isAddingCoOwner}
-                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                    >
-                      {isAddingCoOwner ? 'Ajout...' : 'Ajouter'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-red-200">
-              <h3 className="font-semibold text-red-900 mb-4">Zone de Danger</h3>
-              <div className="space-y-4">
-                <div>
-                  <button
-                    onClick={handleToggleShopStatus}
-                    disabled={isToggling}
-                    className="w-full px-4 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isToggling ? 'Traitement...' : shopActive ? 'Désactiver le Salon' : 'Activer le Salon'}
-                  </button>
-                  <p className="text-sm text-gray-600 mt-2">
-                    {shopActive ? 'Votre salon ne sera plus visible sur la plateforme' : 'Rendre votre salon visible sur la plateforme'}
-                  </p>
-                </div>
-                <div>
-                  <button
-                    onClick={handleDeleteShop}
-                    disabled={isDeleting}
-                    className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isDeleting ? 'Suppression...' : 'Supprimer le Salon'}
-                  </button>
-                  <p className="text-sm text-gray-600 mt-2">Cette action est irréversible</p>
-                </div>
-              </div>
-            </div>
+                </li>
+              </ul>
+            </Panel>
           </div>
         )}
-      </div>
+      </PageShell>
 
       <Footer />
 
-      {/* Edit Shop Modal */}
-      {isEditingShop && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">Modifier les Informations du Salon</h3>
-                <button
-                  onClick={() => setIsEditingShop(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
-            <form onSubmit={handleUpdateShop} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom du salon <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={shopName}
-                  onChange={(e) => setShopName(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Adresse <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={shopAddress}
-                    onChange={(e) => setShopAddress(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ville <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={shopCity}
-                    onChange={(e) => setShopCity(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                  <input
-                    type="tel"
-                    value={shopPhone}
-                    onChange={(e) => setShopPhone(e.target.value)}
-                    placeholder="+33612345678"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    value={shopEmail}
-                    onChange={(e) => setShopEmail(e.target.value)}
-                    placeholder="contact@salon.com"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Site Web</label>
-                <input
-                  type="url"
-                  value={shopWebsite}
-                  onChange={(e) => setShopWebsite(e.target.value)}
-                  placeholder="https://www.monsalon.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  value={shopDescription}
-                  onChange={(e) => setShopDescription(e.target.value)}
-                  rows={4}
-                  placeholder="Décrivez votre salon..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 resize-none"
-                />
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingShop(false)}
-                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUpdatingShop}
-                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isUpdatingShop ? 'Enregistrement...' : 'Enregistrer'}
-                </button>
-              </div>
-            </form>
+      {/* Edit shop */}
+      <Modal
+        open={isEditingShop}
+        onClose={() => setIsEditingShop(false)}
+        title="Informations du salon"
+        size="lg"
+        footer={
+          <>
+            <button type="button" onClick={() => setIsEditingShop(false)} className={btn.secondary}>
+              Annuler
+            </button>
+            <button type="submit" form="edit-shop-form" disabled={isUpdatingShop} className={btn.primary}>
+              {isUpdatingShop && <Spinner className="h-3.5 w-3.5" />}
+              Enregistrer
+            </button>
+          </>
+        }
+      >
+        <form id="edit-shop-form" onSubmit={handleUpdateShop} className="space-y-4">
+          <div>
+            <label htmlFor="shop-name" className={labelClass}>Nom du salon <Required /></label>
+            <input id="shop-name" type="text" value={shopName} onChange={(e) => setShopName(e.target.value)} required className={inputClass} />
           </div>
-        </div>
-      )}
-
-      {/* Add Barber Modal */}
-      {isAddingBarber && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">Ajouter un Coiffeur</h3>
-                <button
-                  onClick={() => setIsAddingBarber(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="shop-address" className={labelClass}>Adresse <Required /></label>
+              <input id="shop-address" type="text" value={shopAddress} onChange={(e) => setShopAddress(e.target.value)} required className={inputClass} />
             </div>
-            <form onSubmit={handleAddBarber} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom complet <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={barberName}
-                  onChange={(e) => setBarberName(e.target.value)}
-                  placeholder="Ex: Jean Dupont"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={barberEmail}
-                  onChange={(e) => setBarberEmail(e.target.value)}
-                  placeholder="jean.dupont@example.com"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Téléphone
-                </label>
-                <input
-                  type="tel"
-                  value={barberPhone}
-                  onChange={(e) => setBarberPhone(e.target.value)}
-                  placeholder="+33 6 12 34 56 78"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mot de passe <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  value={barberPassword}
-                  onChange={(e) => setBarberPassword(e.target.value)}
-                  placeholder="Minimum 6 caractères"
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-                <p className="text-xs text-gray-500 mt-1">Le coiffeur pourra se connecter avec cet email et ce mot de passe</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom d'utilisateur (identifiant)
-                </label>
-                <input
-                  type="text"
-                  value={barberUsername}
-                  onChange={(e) => setBarberUsername(e.target.value)}
-                  placeholder="Ex: jean.dupont"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-                <p className="text-xs text-gray-500 mt-1">Permet au coiffeur de se connecter par identifiant (utile si plusieurs coiffeurs partagent un email)</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de coiffeur
-                </label>
-                <select
-                  value={barberType}
-                  onChange={(e) => setBarberType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                >
-                  <option value="">-- Sélectionner --</option>
-                  <option value="Coiffeur">Coiffeur</option>
-                  <option value="Coiffeuse">Coiffeuse</option>
-                  <option value="Tresses / Braids">Tresses / Braids</option>
-                  <option value="Barbier">Barbier</option>
-                  <option value="Coloriste">Coloriste</option>
-                  <option value="Mixte">Mixte</option>
-                </select>
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsAddingBarber(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isSubmitting ? 'Ajout...' : 'Ajouter'}
-                </button>
-              </div>
-            </form>
+            <div>
+              <label htmlFor="shop-city" className={labelClass}>Ville <Required /></label>
+              <input id="shop-city" type="text" value={shopCity} onChange={(e) => setShopCity(e.target.value)} required className={inputClass} />
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Edit Barber Modal */}
-      {editingBarber && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">Modifier le Coiffeur</h3>
-                <button
-                  onClick={closeBarberModal}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="shop-phone" className={labelClass}>Téléphone</label>
+              <input id="shop-phone" type="tel" value={shopPhone} onChange={(e) => setShopPhone(e.target.value)} placeholder="06 12 34 56 78" className={inputClass} />
             </div>
-            <form onSubmit={handleEditBarber} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom complet <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={barberName}
-                  onChange={(e) => setBarberName(e.target.value)}
-                  placeholder="Ex: Jean Dupont"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Biographie
-                </label>
-                <textarea
-                  value={barberBio}
-                  onChange={(e) => setBarberBio(e.target.value)}
-                  placeholder="Décrivez l'expérience et les spécialités du coiffeur..."
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de coiffeur
-                </label>
-                <select
-                  value={barberType}
-                  onChange={(e) => setBarberType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                >
-                  <option value="">-- Sélectionner --</option>
-                  <option value="Coiffeur">Coiffeur</option>
-                  <option value="Coiffeuse">Coiffeuse</option>
-                  <option value="Tresses / Braids">Tresses / Braids</option>
-                  <option value="Barbier">Barbier</option>
-                  <option value="Coloriste">Coloriste</option>
-                  <option value="Mixte">Mixte</option>
-                </select>
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={closeBarberModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
-                </button>
-              </div>
-            </form>
+            <div>
+              <label htmlFor="shop-email" className={labelClass}>Email</label>
+              <input id="shop-email" type="email" value={shopEmail} onChange={(e) => setShopEmail(e.target.value)} placeholder="contact@salon.fr" className={inputClass} />
+            </div>
           </div>
-        </div>
-      )}
+          <div>
+            <label htmlFor="shop-website" className={labelClass}>Site web</label>
+            <input id="shop-website" type="url" value={shopWebsite} onChange={(e) => setShopWebsite(e.target.value)} placeholder="https://www.monsalon.fr" className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="shop-description" className={labelClass}>Description</label>
+            <textarea
+              id="shop-description"
+              value={shopDescription}
+              onChange={(e) => setShopDescription(e.target.value)}
+              rows={4}
+              placeholder="Présentez votre salon, votre style, vos spécialités..."
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+        </form>
+      </Modal>
 
-      {/* Add/Edit Service Modal */}
-      {(isAddingService || editingService) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {editingService ? 'Modifier le Service' : 'Ajouter un Service'}
-                </h3>
-                <button
-                  onClick={closeServiceModal}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+      {/* Add barber */}
+      <Modal
+        open={isAddingBarber}
+        onClose={closeBarberModal}
+        title="Ajouter un coiffeur"
+        description="Un compte coiffeur est créé avec ces identifiants."
+        footer={
+          <>
+            <button type="button" onClick={closeBarberModal} className={btn.secondary}>
+              Annuler
+            </button>
+            <button type="submit" form="add-barber-form" disabled={isSubmitting} className={btn.primary}>
+              {isSubmitting && <Spinner className="h-3.5 w-3.5" />}
+              Ajouter
+            </button>
+          </>
+        }
+      >
+        <form id="add-barber-form" onSubmit={handleAddBarber} className="space-y-4">
+          <div>
+            <label htmlFor="barber-name" className={labelClass}>Nom complet <Required /></label>
+            <input id="barber-name" type="text" value={barberName} onChange={(e) => setBarberName(e.target.value)} placeholder="Ex : Moussa Diallo" required className={inputClass} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="barber-email" className={labelClass}>Email <Required /></label>
+              <input id="barber-email" type="email" value={barberEmail} onChange={(e) => setBarberEmail(e.target.value)} placeholder="moussa@exemple.fr" required className={inputClass} />
             </div>
-            <form onSubmit={editingService ? handleEditService : handleAddService} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom du service <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={serviceName}
-                  onChange={(e) => setServiceName(e.target.value)}
-                  placeholder="Ex: Coupe Homme"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={serviceDescription}
-                  onChange={(e) => setServiceDescription(e.target.value)}
-                  placeholder="Description du service..."
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Prix (€) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={servicePrice}
-                    onChange={(e) => setServicePrice(e.target.value)}
-                    placeholder="29.90"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                  />
+            <div>
+              <label htmlFor="barber-phone" className={labelClass}>Téléphone</label>
+              <input id="barber-phone" type="tel" value={barberPhone} onChange={(e) => setBarberPhone(e.target.value)} placeholder="06 12 34 56 78" className={inputClass} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="barber-password" className={labelClass}>Mot de passe <Required /></label>
+            <input
+              id="barber-password"
+              type="password"
+              value={barberPassword}
+              onChange={(e) => setBarberPassword(e.target.value)}
+              required
+              minLength={6}
+              className={inputClass}
+              aria-describedby="barber-password-help"
+            />
+            <p id="barber-password-help" className="mt-1.5 text-xs text-gray-500">6 caractères minimum. Le coiffeur se connecte avec son email et ce mot de passe.</p>
+          </div>
+          <div>
+            <label htmlFor="barber-username" className={labelClass}>Identifiant</label>
+            <input
+              id="barber-username"
+              type="text"
+              value={barberUsername}
+              onChange={(e) => setBarberUsername(e.target.value)}
+              placeholder="Ex : moussa.d"
+              className={inputClass}
+              aria-describedby="barber-username-help"
+            />
+            <p id="barber-username-help" className="mt-1.5 text-xs text-gray-500">Facultatif. Utile si plusieurs coiffeurs partagent la même adresse email.</p>
+          </div>
+          <div>
+            <label htmlFor="barber-type" className={labelClass}>Type de coiffeur</label>
+            <BarberTypeSelect id="barber-type" value={barberType} onChange={setBarberType} />
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit barber */}
+      <Modal
+        open={!!editingBarber}
+        onClose={closeBarberModal}
+        title="Modifier le coiffeur"
+        footer={
+          <>
+            <button type="button" onClick={closeBarberModal} className={btn.secondary}>
+              Annuler
+            </button>
+            <button type="submit" form="edit-barber-form" disabled={isSubmitting} className={btn.primary}>
+              {isSubmitting && <Spinner className="h-3.5 w-3.5" />}
+              Enregistrer
+            </button>
+          </>
+        }
+      >
+        <form id="edit-barber-form" onSubmit={handleEditBarber} className="space-y-4">
+          <div>
+            <label htmlFor="edit-barber-name" className={labelClass}>Nom complet <Required /></label>
+            <input id="edit-barber-name" type="text" value={barberName} onChange={(e) => setBarberName(e.target.value)} required className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="edit-barber-type" className={labelClass}>Type de coiffeur</label>
+            <BarberTypeSelect id="edit-barber-type" value={barberType} onChange={setBarberType} />
+          </div>
+          <div>
+            <label htmlFor="edit-barber-bio" className={labelClass}>Biographie</label>
+            <textarea
+              id="edit-barber-bio"
+              value={barberBio}
+              onChange={(e) => setBarberBio(e.target.value)}
+              placeholder="Expérience, spécialités, style..."
+              rows={4}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add / edit service */}
+      <Modal
+        open={isAddingService || !!editingService}
+        onClose={closeServiceModal}
+        title={editingService ? 'Modifier le service' : 'Ajouter un service'}
+        footer={
+          <>
+            <button type="button" onClick={closeServiceModal} className={btn.secondary}>
+              Annuler
+            </button>
+            <button type="submit" form="service-form" disabled={isSubmitting || isUploadingServiceImage} className={btn.primary}>
+              {isSubmitting && <Spinner className="h-3.5 w-3.5" />}
+              {editingService ? 'Enregistrer' : 'Ajouter'}
+            </button>
+          </>
+        }
+      >
+        <form id="service-form" onSubmit={editingService ? handleEditService : handleAddService} className="space-y-4">
+          <div>
+            <label htmlFor="service-name" className={labelClass}>Nom du service <Required /></label>
+            <input id="service-name" type="text" value={serviceName} onChange={(e) => setServiceName(e.target.value)} placeholder="Ex : Coupe homme" required className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="service-description" className={labelClass}>Description</label>
+            <textarea
+              id="service-description"
+              value={serviceDescription}
+              onChange={(e) => setServiceDescription(e.target.value)}
+              rows={3}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="service-price" className={labelClass}>Prix (€) <Required /></label>
+              <input id="service-price" type="number" step="0.01" min="0" value={servicePrice} onChange={(e) => setServicePrice(e.target.value)} placeholder="25" required className={inputClass} />
+            </div>
+            <div>
+              <label htmlFor="service-duration" className={labelClass}>Durée (min) <Required /></label>
+              <input id="service-duration" type="number" min="5" step="5" value={serviceDuration} onChange={(e) => setServiceDuration(e.target.value)} placeholder="30" required className={inputClass} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="service-category" className={labelClass}>Catégorie <Required /></label>
+            <select id="service-category" value={serviceCategory} onChange={(e) => setServiceCategory(e.target.value)} required className={inputClass}>
+              {SERVICE_CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <span className={labelClass}>Image</span>
+            <div className="flex items-center gap-4">
+              {serviceImage ? (
+                <div className="relative h-20 w-20 overflow-hidden rounded-lg ring-1 ring-gray-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={serviceImage} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setServiceImage('')}
+                    className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/95 text-gray-700 shadow-sm hover:text-red-600"
+                    aria-label="Retirer l'image"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Durée (min) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    step="5"
-                    value={serviceDuration}
-                    onChange={(e) => setServiceDuration(e.target.value)}
-                    placeholder="30"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Catégorie <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={serviceCategory}
-                  onChange={(e) => setServiceCategory(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900">
-                  <option value="haircut">💇 Coupes</option>
-                  <option value="beard">🧔 Barbe</option>
-                  <option value="styling">✨ Coiffure</option>
-                  <option value="coloring">🎨 Coloration</option>
-                  <option value="treatment">💆 Soins</option>
-                  <option value="combo">🎁 Forfaits</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image du service
-                </label>
-                <div className="flex items-center space-x-4">
-                  {serviceImage ? (
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
-                      <img src={serviceImage} alt="Service" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setServiceImage('')}
-                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+              ) : (
+                <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-primary-400 hover:text-primary-600">
+                  <input type="file" accept="image/*" onChange={handleServiceImageChange} className="sr-only" disabled={isUploadingServiceImage} />
+                  {isUploadingServiceImage ? (
+                    <Spinner className="h-5 w-5" />
                   ) : (
-                    <label className="flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleServiceImageChange}
-                        className="hidden"
-                        disabled={isUploadingServiceImage}
-                      />
-                      {isUploadingServiceImage ? (
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-                      ) : (
-                        <>
-                          <ImageIcon className="w-6 h-6 text-gray-400" />
-                          <span className="text-xs text-gray-500 mt-1">Ajouter</span>
-                        </>
-                      )}
-                    </label>
+                    <>
+                      <Upload className="h-5 w-5" />
+                      <span className="mt-1 text-xs">Ajouter</span>
+                    </>
                   )}
-                  <p className="text-xs text-gray-500">JPG, PNG, WebP. Max 5MB</p>
-                </div>
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={closeServiceModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isSubmitting ? (editingService ? 'Modification...' : 'Ajout...') : (editingService ? 'Modifier' : 'Ajouter')}
-                </button>
-              </div>
-            </form>
+                </label>
+              )}
+              <p className="text-xs text-gray-500">JPG, PNG ou WebP. {MAX_SERVICE_IMAGE_MB} Mo maximum.</p>
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </div>
+  );
+}
+
+function Required() {
+  return <span className="text-red-600" aria-hidden="true">*</span>;
+}
+
+function BarberTypeSelect({ id, value, onChange }: { id: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+      <option value="">Non précisé</option>
+      {BARBER_TYPES.map((type) => (
+        <option key={type} value={type}>{type}</option>
+      ))}
+    </select>
   );
 }

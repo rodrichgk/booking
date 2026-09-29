@@ -2,9 +2,20 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Calendar, Clock, DollarSign, Star, Users, Camera, Loader2, MapPin, Phone, Scissors, X } from 'lucide-react';
+import { Calendar, Clock, Euro, Star, Camera, MapPin, Phone, Scissors, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUploadThing } from '@/lib/uploadthing';
+import { useConfirm } from '@/components/dashboard/confirm-dialog';
+import {
+  Panel, PanelHeader, StatGrid, Stat, Badge, Field, EmptyState, Spinner,
+  btn, inputClass, formatEuro, type BadgeTone,
+} from '@/components/dashboard/ui';
+
+// Confirmed upcoming appointments are the normal case and carry no badge.
+const STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  pending: { label: 'En attente', tone: 'warning' },
+  completed: { label: 'Terminé', tone: 'neutral' },
+};
 
 interface BarberProfile {
   id: string;
@@ -55,6 +66,7 @@ interface BarberSpaceClientProps {
 
 export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale, userName }: BarberSpaceClientProps) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [profileImage, setProfileImage] = useState(profile?.profileImage || null);
   const [bio, setBio] = useState(profile?.bio || '');
@@ -69,13 +81,6 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
       setIsUploadingImage(false);
     },
   });
-
-  const statsDisplay = [
-    { label: "Rendez-vous aujourd'hui", value: stats.bookingsToday.toString(), icon: Calendar, color: 'bg-slate-100 text-slate-700' },
-    { label: 'Cette semaine', value: stats.bookingsWeek.toString(), icon: Clock, color: 'bg-slate-100 text-slate-700' },
-    { label: 'Gains du mois', value: `€${stats.monthlyEarnings}`, icon: DollarSign, color: 'bg-slate-100 text-slate-700' },
-    { label: 'Note moyenne', value: stats.rating, icon: Star, color: 'bg-amber-50 text-amber-600' },
-  ];
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -141,7 +146,14 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
   };
 
   const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')) return;
+    const ok = await confirm({
+      title: 'Annuler ce rendez-vous ?',
+      description: 'Le client sera prévenu de l’annulation.',
+      confirmLabel: 'Annuler le rendez-vous',
+      cancelLabel: 'Garder',
+      tone: 'danger',
+    });
+    if (!ok) return;
 
     setCancellingBookingId(bookingId);
     try {
@@ -165,8 +177,7 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
   };
 
   const getBookingPrice = (booking: BarberBooking) => {
-    const price = booking.totalPrice || booking.servicePrice || '0';
-    return parseFloat(price).toFixed(2);
+    return booking.totalPrice || booking.servicePrice || '0';
   };
 
   const formatDate = (date: Date) => {
@@ -184,230 +195,164 @@ export function BarberSpaceClient({ profile, barbershop, bookings, stats, locale
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'Confirmé';
-      case 'pending': return 'En attente';
-      case 'completed': return 'Terminé';
-      case 'cancelled': return 'Annulé';
-      default: return status;
-    }
-  };
-
   if (!profile) {
     return (
-      <div className="text-center py-12">
-        <Scissors className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Profil non configuré</h2>
-        <p className="text-gray-600">
-          Vous n'êtes pas encore associé à un salon. Contactez l'administrateur de votre salon pour être ajouté.
-        </p>
-      </div>
+      <Panel>
+        <EmptyState
+          icon={Scissors}
+          title="Profil non configuré"
+          description="Vous n'êtes pas encore associé à un salon. Demandez au responsable de votre salon de vous ajouter à l'équipe."
+        />
+      </Panel>
     );
   }
 
+  const now = new Date();
+  const upcoming = bookingsList.filter(b => b.status !== 'cancelled');
+  const cancelled = bookingsList.filter(b => b.status === 'cancelled');
+  const nextBooking = upcoming.find(b => new Date(b.startTime) >= now);
+
   return (
     <div className="space-y-8">
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsDisplay.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-              </div>
-              <div className={`p-3 rounded-lg ${stat.color}`}>
-                <stat.icon className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <StatGrid>
+        <Stat label="Aujourd'hui" icon={Calendar} value={stats.bookingsToday} hint="rendez-vous" />
+        <Stat label="Cette semaine" icon={Clock} value={stats.bookingsWeek} hint="rendez-vous" />
+        <Stat label="Gains du mois" icon={Euro} value={formatEuro(stats.monthlyEarnings)} hint="rendez-vous terminés" />
+        <Stat label="Note" icon={Star} value={parseFloat(stats.rating) > 0 ? stats.rating : '-'} hint={parseFloat(stats.rating) > 0 ? 'sur 5' : 'Pas encore d’avis'} />
+      </StatGrid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Profile Section */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Profile Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Mon Profil</h3>
-
-            {/* Profile Image */}
-            <div className="flex flex-col items-center mb-6">
-              <div className="relative group">
-                {profileImage ? (
-                  <Image
-                    src={profileImage}
-                    alt={userName}
-                    width={120}
-                    height={120}
-                    className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 shadow-sm"
-                  />
-                ) : (
-                  <div className="w-28 h-28 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center border-2 border-gray-200 shadow-sm">
-                    <span className="text-3xl font-semibold text-white">
-                      {userName?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={isUploadingImage}
-                  />
-                  {isUploadingImage ? (
-                    <Loader2 className="w-6 h-6 text-white animate-spin" />
-                  ) : (
-                    <Camera className="w-6 h-6 text-white" />
-                  )}
-                </label>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">Cliquez pour changer</p>
-            </div>
-
-            {/* Barbershop Info */}
-            {barbershop && (
-              <div className="border-t border-gray-100 pt-4 mb-4">
-                <p className="text-sm text-gray-500 mb-1">Mon salon</p>
-                <p className="font-semibold text-gray-900">{barbershop.name}</p>
-                {barbershop.address && (
-                  <p className="text-sm text-gray-600 flex items-center mt-1">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    {barbershop.address}, {barbershop.city}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Bio */}
-            <div className="border-t border-gray-100 pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-gray-500">Biographie</p>
-                <button
-                  onClick={() => setIsEditingBio(!isEditingBio)}
-                  className="text-sm text-gray-600 hover:text-gray-900 font-medium"
-                >
-                  {isEditingBio ? 'Annuler' : 'Modifier'}
-                </button>
-              </div>
-              {isEditingBio ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm text-gray-900"
-                    rows={4}
-                    placeholder="Décrivez votre expérience, vos spécialités..."
-                  />
-                  <button
-                    onClick={handleSaveBio}
-                    disabled={isSavingBio}
-                    className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 text-sm font-medium transition-colors"
-                  >
-                    {isSavingBio ? 'Enregistrement...' : 'Enregistrer'}
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-700">
-                  {bio || 'Aucune biographie ajoutée'}
-                </p>
-              )}
-            </div>
-
-            {/* Experience & Rating */}
-            <div className="border-t border-gray-100 pt-4 mt-4 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Expérience</p>
-                <p className="font-semibold text-gray-900">
-                  {profile.experience ? `${profile.experience} ans` : 'Non renseigné'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Note</p>
-                <p className="font-semibold text-gray-900 flex items-center">
-                  <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                  {profile.rating || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bookings Section */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Mes Rendez-vous</h3>
-
-            {bookingsList.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">Aucun rendez-vous à venir</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {bookingsList.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{booking.customerName}</p>
-                        <p className="text-sm text-gray-600">{booking.serviceName}</p>
-                        <p className="text-sm text-gray-500">
-                          {formatDate(booking.startTime)} • {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-                        </p>
-                      </div>
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <Panel className="lg:col-span-2">
+          <PanelHeader
+            title="Mes rendez-vous"
+            description={nextBooking ? `Prochain : ${formatDate(nextBooking.startTime)} à ${formatTime(nextBooking.startTime)}` : undefined}
+          />
+          {upcoming.length === 0 ? (
+            <EmptyState icon={Calendar} title="Aucun rendez-vous à venir" description="Vos prochaines réservations apparaîtront ici." />
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {upcoming.map((booking) => {
+                const status = STATUS[booking.status];
+                return (
+                  <li key={booking.id} className="flex items-center gap-4 px-5 py-4 sm:px-6">
+                    <div className="w-20 flex-shrink-0">
+                      <p className="text-xs font-medium capitalize text-gray-500">{formatDate(booking.startTime)}</p>
+                      <p className="font-display text-base font-semibold tabular-nums text-gray-900">{formatTime(booking.startTime)}</p>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(booking.status)}`}>
-                          {getStatusLabel(booking.status)}
-                        </span>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">€{getBookingPrice(booking)}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-medium text-gray-900">{booking.customerName || 'Client'}</p>
+                        {status && <Badge tone={status.tone}>{status.label}</Badge>}
                       </div>
-                      {booking.status !== 'cancelled' && booking.status !== 'completed' && (
-                        <button
-                          onClick={() => handleCancelBooking(booking.id)}
-                          disabled={cancellingBookingId === booking.id}
-                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Annuler le rendez-vous"
-                        >
-                          {cancellingBookingId === booking.id ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                          ) : (
-                            <X className="w-5 h-5" />
-                          )}
-                        </button>
+                      <p className="truncate text-sm text-gray-500">
+                        {booking.serviceName || 'Service non précisé'}, jusqu&apos;à {formatTime(booking.endTime)}
+                      </p>
+                      {booking.customerPhone && (
+                        <a href={`tel:${booking.customerPhone}`} className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-primary-700">
+                          <Phone className="h-3.5 w-3.5 text-gray-400" />
+                          {booking.customerPhone}
+                        </a>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    <p className="hidden text-sm font-medium tabular-nums text-gray-900 sm:block">{formatEuro(getBookingPrice(booking))}</p>
+                    {booking.status !== 'completed' && (
+                      <button
+                        onClick={() => handleCancelBooking(booking.id)}
+                        disabled={cancellingBookingId === booking.id}
+                        className={btn.iconDanger}
+                        aria-label={`Annuler le rendez-vous de ${booking.customerName || 'ce client'}`}
+                      >
+                        {cancellingBookingId === booking.id ? <Spinner /> : <X className="h-4 w-4" />}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {cancelled.length > 0 && (
+            <p className="border-t border-gray-100 px-5 py-3 text-xs text-gray-500 sm:px-6">
+              {cancelled.length} rendez-vous annulé{cancelled.length > 1 ? 's' : ''} masqué{cancelled.length > 1 ? 's' : ''}.
+            </p>
+          )}
+        </Panel>
+
+        <Panel>
+          <PanelHeader title="Mon profil" />
+          <div className="flex flex-col items-center gap-3 border-b border-gray-100 px-5 py-6">
+            <label className="group relative cursor-pointer" title="Changer la photo">
+              {profileImage ? (
+                <Image src={profileImage} alt="" width={96} height={96} className="h-24 w-24 rounded-full object-cover ring-1 ring-gray-200" />
+              ) : (
+                <span className="inline-flex h-24 w-24 items-center justify-center rounded-full bg-primary-50 font-display text-3xl font-semibold text-primary-700 ring-1 ring-primary-100">
+                  {userName?.charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-gray-900/40 opacity-0 transition-opacity group-hover:opacity-100">
+                {isUploadingImage ? <Spinner className="h-5 w-5 text-white" /> : <Camera className="h-5 w-5 text-white" />}
+              </span>
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="sr-only" disabled={isUploadingImage} />
+            </label>
+            <div className="text-center">
+              <p className="font-medium text-gray-900">{userName}</p>
+              <p className="text-xs text-gray-500">Cliquez sur la photo pour la changer</p>
+            </div>
           </div>
-        </div>
+          <dl className="space-y-5 px-5 py-5 sm:px-6">
+            {barbershop && (
+              <Field label="Salon" icon={MapPin}>
+                <span className="font-medium">{barbershop.name}</span>
+                {barbershop.address && <span className="block text-gray-500">{barbershop.address}, {barbershop.city}</span>}
+              </Field>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Expérience">{profile.experience ? `${profile.experience} ans` : <span className="text-gray-400">Non renseignée</span>}</Field>
+              <Field label="Note">{profile.rating || <span className="text-gray-400">Aucune</span>}</Field>
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">Biographie</dt>
+                {!isEditingBio && (
+                  <button onClick={() => setIsEditingBio(true)} className={`${btn.ghost} ${btn.sm} -mr-3`}>
+                    Modifier
+                  </button>
+                )}
+              </div>
+              <dd className="mt-1">
+                {isEditingBio ? (
+                  <div className="space-y-2">
+                    <label htmlFor="barber-bio" className="sr-only">Biographie</label>
+                    <textarea
+                      id="barber-bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      className={`${inputClass} resize-none`}
+                      rows={4}
+                      placeholder="Votre expérience, vos spécialités, votre style..."
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={handleSaveBio} disabled={isSavingBio} className={`${btn.primary} ${btn.sm}`}>
+                        {isSavingBio && <Spinner className="h-3 w-3" />}
+                        Enregistrer
+                      </button>
+                      <button
+                        onClick={() => {
+                          setBio(profile.bio || '');
+                          setIsEditingBio(false);
+                        }}
+                        className={`${btn.secondary} ${btn.sm}`}
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-700">{bio || <span className="text-gray-400">Aucune biographie. Présentez-vous aux clients en quelques lignes.</span>}</p>
+                )}
+              </dd>
+            </div>
+          </dl>
+        </Panel>
       </div>
     </div>
   );

@@ -28,10 +28,10 @@ export default async function AddShopPage({ params }: { params: Promise<{ locale
   const subscriptionPrice = await getSubscriptionPrice();
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       <Header />
       <AddShopClient locale={locale} subscriptionPrice={subscriptionPrice} />
       <Footer />
-    </>
+    </div>
   );
 }

@@ -1,9 +1,13 @@
 'use client';
 
-import { Store, MapPin, Phone, Mail, Globe, AlertCircle, CheckCircle, XCircle, ArrowRight, Settings, User, Image as ImageIcon, Video, Calendar, Clock, Heart, Star, Sparkles, Plus } from 'lucide-react';
+import { Store, MapPin, ArrowRight, User, Calendar, CheckCircle, Plus, Star, ChevronRight, Scissors } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import {
+  Panel, PanelHeader, SectionHeading, StatGrid, Stat, Badge, EmptyState,
+  btn, formatEuro, type BadgeTone,
+} from '@/components/dashboard/ui';
 
 interface Barbershop {
   id: string;
@@ -57,564 +61,201 @@ interface MySpaceClientProps {
   subscriptionPrice: number;
 }
 
-export function MySpaceClient({
-  barbershops,
-  barberProfile,
-  bookings = [],
-  locale,
-  userRole,
-  userName,
-  subscriptionPrice
-}: MySpaceClientProps) {
+const SUBSCRIPTION: Record<string, { label: string; tone: BadgeTone }> = {
+  active: { label: 'Abonnement actif', tone: 'success' },
+  past_due: { label: 'Paiement en retard', tone: 'warning' },
+  expired: { label: 'Abonnement expiré', tone: 'danger' },
+  canceled: { label: 'Abonnement annulé', tone: 'neutral' },
+  inactive: { label: 'Sans abonnement', tone: 'neutral' },
+};
+
+const formatDay = (d: Date) =>
+  new Date(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const formatTime = (d: Date) =>
+  new Date(d).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+export function MySpaceClient({ barbershops, bookings = [], locale, subscriptionPrice }: MySpaceClientProps) {
   const t = useTranslations('mySpace');
-  const tCommon = useTranslations('common');
 
-  // Determine user type
-  const isBarber = !!barberProfile;
-  const isShopOwner = barbershops.length > 0;
-  const isCustomer = !isBarber && !isShopOwner;
-
-  // Customer view - show bookings and stats
-  if (isCustomer) {
-    const now = new Date();
-    const upcomingBookings = bookings.filter(b => new Date(b.startTime) >= now && b.status !== 'cancelled');
-    const completedBookings = bookings.filter(b => b.status === 'completed');
-    const cancelledBookings = bookings.filter(b => b.status === 'cancelled');
-
+  // Accounts that own or co-own at least one salon get the owner view.
+  if (barbershops.length > 0) {
+    const activeCount = barbershops.filter(b => b.subscriptionStatus === 'active').length;
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-        {/* Hero Section */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-display font-bold mb-2">👋 {t('welcome')}, {userName}!</h1>
-                <p className="text-primary-100 text-lg">{t('manageBookingsAndDiscover')}</p>
-              </div>
-              <Sparkles className="w-16 h-16 text-primary-200 hidden md:block" />
-            </div>
-          </div>
-        </div>
+      <div className="space-y-8">
+        <SectionHeading
+          title="Mes salons"
+          description="Gérez vos salons, leur équipe et leurs réservations."
+          actions={
+            <Link href={`/${locale}/my-space/add-shop`} className={btn.secondary}>
+              <Plus className="h-4 w-4" />
+              {t('addShop')}
+            </Link>
+          }
+        />
 
-        {/* Stats Cards */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('upcomingBookings')}</p>
-                  <p className="text-4xl font-bold text-gray-900 mt-2">{upcomingBookings.length}</p>
-                </div>
-                <div className="p-4 bg-blue-100 rounded-full">
-                  <Calendar className="w-8 h-8 text-blue-600" />
-                </div>
-              </div>
-            </div>
+        <StatGrid columns={3}>
+          <Stat label={t('totalLocations')} icon={Store} value={barbershops.length} />
+          <Stat label={t('activeShops')} icon={CheckCircle} value={activeCount} hint={activeCount < barbershops.length ? `${barbershops.length - activeCount} à renouveler` : 'Tous vos salons sont visibles'} tone={activeCount < barbershops.length ? 'attention' : 'default'} />
+          <Stat label={t('monthlyCost')} icon={Calendar} value={formatEuro(activeCount * subscriptionPrice)} hint={`${formatEuro(subscriptionPrice)} par salon`} />
+        </StatGrid>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('completedAppointmentsCount')}</p>
-                  <p className="text-4xl font-bold text-gray-900 mt-2">{completedBookings.length}</p>
-                </div>
-                <div className="p-4 bg-green-100 rounded-full">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-purple-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('totalBookings')}</p>
-                  <p className="text-4xl font-bold text-gray-900 mt-2">{bookings.length}</p>
-                </div>
-                <div className="p-4 bg-purple-100 rounded-full">
-                  <Star className="w-8 h-8 text-purple-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
-            {/* Upcoming Bookings */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
-                  <h2 className="text-2xl font-display font-bold text-gray-900">{t('upcomingAppointmentsTitle')}</h2>
-                </div>
-                <div className="p-6">
-                  {upcomingBookings.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 mb-4">{t('noUpcomingBookings')}</p>
-                      <Link
-                        href={`/${locale}/barbershops`}
-                        className="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"
-                      >
-                        <Store className="w-4 h-4 mr-2" />
-                        {t('bookNow')}
+        <Panel>
+          <ul className="divide-y divide-gray-100">
+            {barbershops.map((shop) => {
+              const status = SUBSCRIPTION[shop.subscriptionStatus] ?? SUBSCRIPTION.inactive;
+              const needsRenewal = shop.subscriptionStatus !== 'active';
+              return (
+                <li key={shop.id} className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:px-6">
+                  <span className="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                    <Store className="h-6 w-6" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="truncate font-display text-base font-semibold text-gray-900">{shop.name}</h3>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                      {!shop.isActive && shop.subscriptionStatus === 'active' && <Badge tone="warning">Masqué</Badge>}
+                    </div>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                        {shop.address}, {shop.city}
+                      </span>
+                      {shop.rating && (
+                        <span className="inline-flex items-center gap-1 tabular-nums">
+                          <Star className="h-3.5 w-3.5 fill-primary-500 text-primary-500" />
+                          {shop.rating}
+                          <span className="text-gray-400">({shop.reviewCount} {t('reviewsCount')})</span>
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex flex-shrink-0 flex-wrap gap-2">
+                    {needsRenewal && (
+                      <Link href={`/${locale}/subscription?shopId=${shop.id}`} className={btn.secondary}>
+                        {t('subscribeNow')}
                       </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {upcomingBookings.slice(0, 3).map((booking) => (
-                        <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-300 hover:shadow-md transition-all">
-                          <div className="flex items-start gap-4">
-                            {booking.barbershopImage && booking.barbershopImage[0] ? (
-                              <Image
-                                src={booking.barbershopImage[0]}
-                                alt={booking.barbershopName || 'Barbershop'}
-                                width={80}
-                                height={80}
-                                className="rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                                <Store className="w-8 h-8 text-gray-400" />
-                              </div>
-                            )}
-                            <div className="flex-1">
-                              <h3 className="font-bold text-gray-900 text-lg">{booking.barbershopName}</h3>
-                              <p className="text-sm text-gray-600 mb-2">
-                                <MapPin className="w-4 h-4 inline mr-1" />
-                                {booking.barbershopCity}
-                              </p>
-                              <div className="flex flex-wrap gap-3 text-sm">
-                                <span className="text-gray-700">
-                                  <Calendar className="w-4 h-4 inline mr-1" />
-                                  {new Date(booking.startTime).toLocaleDateString('fr-FR')}
-                                </span>
-                                <span className="text-gray-700">
-                                  <Clock className="w-4 h-4 inline mr-1" />
-                                  {new Date(booking.startTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                                <span className="font-semibold text-primary-600">{booking.totalPrice}€</span>
-                              </div>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {booking.serviceName} • {booking.barberName}
-                              </p>
-                            </div>
-                            <Link
-                              href={`/${locale}/barbershops/${booking.barbershopId}`}
-                              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
-                            >
-                              {t('view')}
-                            </Link>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Recent History */}
-              {completedBookings.length > 0 && (
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-8">
-                  <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-white">
-                    <h2 className="text-2xl font-display font-bold text-gray-900">{t('recentHistory')}</h2>
+                    )}
+                    <Link href={`/${locale}/my-space/${shop.id}`} className={btn.primary}>
+                      {t('manageShop')}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
                   </div>
-                  <div className="p-6">
-                    <div className="space-y-3">
-                      {completedBookings.slice(0, 3).map((booking) => (
-                        <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <p className="font-semibold text-gray-900">{booking.barbershopName}</p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(booking.startTime).toLocaleDateString('fr-FR')} • {booking.serviceName}
-                            </p>
-                          </div>
-                          <span className="text-green-600 font-semibold flex items-center">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            {t('completed')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Actions */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
-                  <h2 className="text-xl font-display font-bold text-gray-900">{t('quickActions')}</h2>
-                </div>
-                <div className="p-6 space-y-4">
-                  <Link
-                    href={`/${locale}/barbershops`}
-                    className="block p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all group"
-                  >
-                    <div className="flex items-center">
-                      <div className="p-3 bg-primary-100 rounded-lg mr-4 group-hover:bg-primary-200 transition-colors">
-                        <Store className="w-6 h-6 text-primary-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{t('findSalon')}</h3>
-                        <p className="text-sm text-gray-600">{t('discoverBestSalons')}</p>
-                      </div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href={`/${locale}/barbers`}
-                    className="block p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all group"
-                  >
-                    <div className="flex items-center">
-                      <div className="p-3 bg-purple-100 rounded-lg mr-4 group-hover:bg-purple-200 transition-colors">
-                        <User className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{t('proProfessionals')}</h3>
-                        <p className="text-sm text-gray-600">{t('findIdealBarber')}</p>
-                      </div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href={`/${locale}/my-space/add-shop`}
-                    className="block p-4 border-2 border-dashed border-amber-300 rounded-lg hover:border-amber-500 hover:bg-amber-50 transition-all group"
-                  >
-                    <div className="flex items-center">
-                      <div className="p-3 bg-amber-100 rounded-lg mr-4 group-hover:bg-amber-200 transition-colors">
-                        <Plus className="w-6 h-6 text-amber-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{t('addShop')}</h3>
-                        <p className="text-sm text-gray-600">{t('createYourBarbershop')}</p>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
       </div>
     );
   }
 
-  // Barber view - show profile and shop
-  if (isBarber && !isShopOwner) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900">{t('title')}</h1>
-                <p className="text-gray-600 mt-2">{t('barberProfile')}</p>
-              </div>
-              <Link
-                href={`/${locale}/profile`}
-                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-              >
-                {tCommon('back')}
-              </Link>
-            </div>
-          </div>
-        </div>
+  // Customer view
+  const now = new Date();
+  const upcoming = bookings
+    .filter(b => new Date(b.startTime) >= now && b.status !== 'cancelled')
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  const completed = bookings.filter(b => b.status === 'completed');
 
-        {/* Barber Profile Section */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">{t('barberProfile')}</h2>
-              <p className="text-gray-600 mt-1">{t('manageProfessionalProfile')}</p>
-            </div>
-
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Profile Image */}
-                <Link
-                  href={`/${locale}/my-space/barber/profile`}
-                  className="p-6 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="font-semibold text-gray-900 text-center mb-2">{t('profileImage')}</h3>
-                  <p className="text-sm text-gray-600 text-center">{t('updateProfilePicture')}</p>
-                </Link>
-
-                {/* Gallery */}
-                <Link
-                  href={`/${locale}/my-space/barber/gallery`}
-                  className="p-6 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="font-semibold text-gray-900 text-center mb-2">{t('gallery')}</h3>
-                  <p className="text-sm text-gray-600 text-center">
-                    {barberProfile?.galleryImages?.length || 0} {t('imagesCount')}
-                  </p>
-                </Link>
-
-                {/* Videos */}
-                <Link
-                  href={`/${locale}/my-space/barber/videos`}
-                  className="p-6 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="font-semibold text-gray-900 text-center mb-2">{t('videos')}</h3>
-                  <p className="text-sm text-gray-600 text-center">
-                    {barberProfile?.youtubeLinks?.length || 0} {t('videosCount')}
-                  </p>
-                </Link>
-              </div>
-            </div>
-
-            {/* Add Shop Section */}
-            <div className="p-6 border-t border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('createYourBarbershop')}</h2>
-              <p className="text-gray-600 mb-4">{t('noBarbershopsYet')}</p>
-              <Link
-                href={`/${locale}/my-space/add-shop`}
-                className="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                {t('addShop')}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Shop owner view (original My Barbershops functionality)
-  const handleSubscribe = (barbershopId: string) => {
-    window.location.href = `/${locale}/subscription?barbershopId=${barbershopId}`;
-  };
-
-  // No barbershops found for shop owner
-  if (barbershops.length === 0 && !isBarber) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center mb-8">
-            <Store className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('createYourBarbershop')}</h2>
-            <p className="text-gray-600 mb-2">
-              {t('noBarbershopsYet')}
-            </p>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-            <h3 className="font-semibold text-blue-900 mb-3">{t('howItWorksTitle')}</h3>
-            <ol className="space-y-3 text-blue-800">
-              <li className="flex items-start">
-                <span className="font-bold mr-3 text-blue-600">1.</span>
-                <span>{t('contactAdminStep')}</span>
-              </li>
-              <li className="flex items-start">
-                <span className="font-bold mr-3 text-blue-600">2.</span>
-                <span>{t('subscribeStep')}</span>
-              </li>
-              <li className="flex items-start">
-                <span className="font-bold mr-3 text-blue-600">3.</span>
-                <span>{t('addBarbersStep')}</span>
-              </li>
-            </ol>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> {t('subscriptionNote')}
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href={`/${locale}/profile`}
-              className="inline-flex items-center justify-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors"
-            >
-              {t('backToProfile')}
-            </Link>
-            <a
-              href="mailto:support@orphelia.com?subject=Create Barbershop"
-              className="inline-flex items-center justify-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              {t('contactAdmin')}
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Shop owner with barbershops
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900">{t('title')}</h1>
-              <p className="text-gray-600 mt-2">{t('myShop')}</p>
-            </div>
-            <Link
-              href={`/${locale}/profile`}
-              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-            >
-              {tCommon('back')}
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <StatGrid columns={3}>
+        <Stat label={t('upcomingBookings')} icon={Calendar} value={upcoming.length} />
+        <Stat label={t('completedAppointmentsCount')} icon={CheckCircle} value={completed.length} />
+        <Stat label={t('totalBookings')} icon={Scissors} value={bookings.length} hint="10 dernières réservations" />
+      </StatGrid>
 
-      {/* Stats Overview */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-600">{t('totalLocations')}</p>
-                  <p className="text-3xl font-bold text-blue-900 mt-2">{barbershops.length}</p>
-                </div>
-                <Store className="w-12 h-12 text-blue-600 opacity-50" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-600">{t('activeShops')}</p>
-                  <p className="text-3xl font-bold text-green-900 mt-2">
-                    {barbershops.filter(b => b.subscriptionStatus === 'active').length}
-                  </p>
-                </div>
-                <CheckCircle className="w-12 h-12 text-green-600 opacity-50" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-600">{t('inactiveShops')}</p>
-                  <p className="text-3xl font-bold text-red-900 mt-2">
-                    {barbershops.filter(b => b.subscriptionStatus !== 'active').length}
-                  </p>
-                </div>
-                <XCircle className="w-12 h-12 text-red-600 opacity-50" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-600">{t('monthlyCost')}</p>
-                  <p className="text-3xl font-bold text-purple-900 mt-2">
-                    €{(barbershops.filter(b => b.subscriptionStatus === 'active').length * subscriptionPrice).toFixed(2)}
-                  </p>
-                </div>
-                <Settings className="w-12 h-12 text-purple-600 opacity-50" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Barbershops Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {barbershops.map((barbershop) => (
-            <div
-              key={barbershop.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              {/* Status Banner */}
-              {barbershop.subscriptionStatus !== 'active' && (
-                <div className="bg-yellow-500 text-white px-4 py-2 text-sm font-medium flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-2" />
-                  {t('subscriptionRequired')}
-                </div>
-              )}
-              {barbershop.subscriptionStatus === 'active' && (
-                <div className="bg-green-500 text-white px-4 py-2 text-sm font-medium flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {t('activeAndVisible')}
-                </div>
-              )}
-
-              {/* Content */}
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{barbershop.name}</h3>
-                    <div className="flex items-center text-gray-600 text-sm">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {barbershop.city}
-                    </div>
-                  </div>
-                  <Store className="w-10 h-10 text-gray-300" />
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  {barbershop.address && (
-                    <p className="text-sm text-gray-600 flex items-start">
-                      <MapPin className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                      {barbershop.address}
-                    </p>
-                  )}
-                  {barbershop.phone && (
-                    <p className="text-sm text-gray-600 flex items-center">
-                      <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
-                      {barbershop.phone}
-                    </p>
-                  )}
-                  {barbershop.email && (
-                    <p className="text-sm text-gray-600 flex items-center">
-                      <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
-                      {barbershop.email}
-                    </p>
-                  )}
-                  {barbershop.website && (
-                    <p className="text-sm text-gray-600 flex items-center">
-                      <Globe className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <a href={barbershop.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary-600">
-                        {t('website')}
-                      </a>
-                    </p>
-                  )}
-                </div>
-
-                {/* Rating */}
-                {barbershop.rating && (
-                  <div className="flex items-center mb-4">
-                    <span className="text-yellow-500 text-lg font-bold mr-1">★</span>
-                    <span className="text-gray-900 font-semibold">{barbershop.rating}</span>
-                    <span className="text-gray-500 text-sm ml-1">({barbershop.reviewCount} {t('reviewsCount')})</span>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Link
-                    href={`/${locale}/my-space/${barbershop.id}`}
-                    className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
-                  >
-                    {t('manageShop')}
-                    <ArrowRight className="w-4 h-4 ml-2" />
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Panel>
+            <PanelHeader title={t('upcomingAppointmentsTitle')} />
+            {upcoming.length === 0 ? (
+              <EmptyState
+                icon={Calendar}
+                title={t('noUpcomingBookings')}
+                description="Trouvez un salon près de chez vous et réservez en quelques clics."
+                action={
+                  <Link href={`/${locale}/barbershops`} className={btn.primary}>
+                    {t('bookNow')}
                   </Link>
-                  {barbershop.subscriptionStatus !== 'active' && (
-                    <button
-                      onClick={() => handleSubscribe(barbershop.id)}
-                      className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
+                }
+              />
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {upcoming.slice(0, 5).map((booking) => (
+                  <li key={booking.id}>
+                    <Link
+                      href={`/${locale}/barbershops/${booking.barbershopId}`}
+                      className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50 sm:px-6"
                     >
-                      {t('subscribeNow')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+                      {booking.barbershopImage?.[0] ? (
+                        <Image src={booking.barbershopImage[0]} alt="" width={56} height={56} className="h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
+                      ) : (
+                        <span className="inline-flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                          <Store className="h-6 w-6 text-gray-400" />
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium capitalize text-primary-700">
+                          {formatDay(booking.startTime)}, {formatTime(booking.startTime)}
+                        </p>
+                        <p className="truncate font-medium text-gray-900">{booking.barbershopName}</p>
+                        <p className="truncate text-sm text-gray-500">
+                          {[booking.serviceName, booking.barberName, booking.barbershopCity].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                      <span className="hidden text-sm font-medium tabular-nums text-gray-900 sm:block">{formatEuro(booking.totalPrice)}</span>
+                      <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300 group-hover:text-gray-500" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          {completed.length > 0 && (
+            <Panel>
+              <PanelHeader title={t('recentHistory')} />
+              <ul className="divide-y divide-gray-100">
+                {completed.slice(0, 5).map((booking) => (
+                  <li key={booking.id} className="flex items-center justify-between gap-4 px-5 py-3 sm:px-6">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-900">{booking.barbershopName}</p>
+                      <p className="truncate text-sm text-gray-500">
+                        {new Date(booking.startTime).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {booking.serviceName ? `, ${booking.serviceName}` : ''}
+                      </p>
+                    </div>
+                    <Link href={`/${locale}/barbershops/${booking.barbershopId}`} className={`${btn.ghost} ${btn.sm}`}>
+                      Réserver à nouveau
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
         </div>
+
+        <Panel>
+          <PanelHeader title={t('quickActions')} />
+          <ul className="divide-y divide-gray-100">
+            {[
+              { href: `/${locale}/barbershops`, icon: Store, title: t('findSalon'), desc: t('discoverBestSalons') },
+              { href: `/${locale}/barbers`, icon: User, title: t('proProfessionals'), desc: t('findIdealBarber') },
+              { href: `/${locale}/my-space/add-shop`, icon: Plus, title: t('addShop'), desc: t('createYourBarbershop') },
+            ].map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-gray-50 sm:px-6">
+                  <item.icon className="h-5 w-5 flex-shrink-0 text-gray-400 group-hover:text-primary-600" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-gray-900">{item.title}</span>
+                    <span className="block truncate text-xs text-gray-500">{item.desc}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       </div>
     </div>
   );

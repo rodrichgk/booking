@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  Store, Search, Filter, DollarSign, CheckCircle, XCircle, Clock, Star,
-  MoreVertical, Mail, Phone, MapPin, Calendar, Edit, Eye, Ban, CreditCard
-} from 'lucide-react';
-import Image from 'next/image';
+import { Store, Search, Star, Mail, Phone, MapPin, Eye, EyeOff, Plus, Scissors, TrendingUp, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/components/dashboard/confirm-dialog';
+import {
+  PageHeader, PageShell, Tabs, Panel, StatGrid, Stat, Badge, EmptyState, Spinner,
+  btn, inputClass, formatEuro, type BadgeTone,
+} from '@/components/dashboard/ui';
 
 interface Barbershop {
   id: string;
@@ -24,419 +26,266 @@ interface Barbershop {
   reviewCount: number;
   isActive: boolean;
   createdAt: string;
-  ownerName: string;
-  ownerEmail: string;
+  ownerName: string | null;
+  ownerEmail: string | null;
   ownerPhone: string;
   barberCount: number;
   subscriptionStatus: string;
   subscriptionExpiry: string;
 }
 
-interface Stat {
-  label: string;
-  value: string;
-  icon: string;
-  color: string;
-}
-
 interface BarbershopManagementClientProps {
   initialBarbershops: Barbershop[];
-  initialStats: Stat[];
   locale: string;
   currentUserRole: string;
   subscriptionPrice: number;
 }
 
-const renderIcon = (iconName: string, className: string) => {
-  const iconMap: { [key: string]: any } = {
-    Store,
-    CheckCircle,
-    XCircle,
-    Clock,
-    Star,
-    DollarSign,
-    Search,
-    Filter,
-    MoreVertical,
-    Mail,
-    Phone,
-    MapPin,
-    Calendar,
-    Edit,
-    Eye,
-    Ban,
-    CreditCard,
-  };
+type StatusFilter = 'all' | 'active' | 'attention' | 'inactive';
 
-  const IconComponent = iconMap[iconName];
-  return IconComponent ? <IconComponent className={className} /> : null;
+const SUBSCRIPTION: Record<string, { label: string; tone: BadgeTone }> = {
+  active: { label: 'Actif', tone: 'success' },
+  past_due: { label: 'Paiement en retard', tone: 'warning' },
+  expired: { label: 'Expiré', tone: 'danger' },
+  canceled: { label: 'Annulé', tone: 'neutral' },
+  inactive: { label: 'En attente', tone: 'neutral' },
 };
 
-export function BarbershopManagementClient({
-  initialBarbershops,
-  initialStats,
-  locale,
-  currentUserRole,
-  subscriptionPrice
-}: BarbershopManagementClientProps) {
+// Shops an admin should look at: payment problems or lapsed subscriptions.
+const needsAttention = (s: string) => s === 'past_due' || s === 'expired' || s === 'canceled';
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+
+export function BarbershopManagementClient({ initialBarbershops, locale, subscriptionPrice }: BarbershopManagementClientProps) {
   const t = useTranslations('admin');
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const [barbershops, setBarbershops] = useState(initialBarbershops);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const filteredBarbershops = barbershops.filter(barbershop => {
-    const matchesSearch =
-      barbershop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      barbershop.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      barbershop.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      barbershop.address.toLowerCase().includes(searchTerm.toLowerCase());
+  const summary = useMemo(() => {
+    const active = barbershops.filter(b => b.subscriptionStatus === 'active');
+    const rated = barbershops.filter(b => parseFloat(b.rating) > 0);
+    return {
+      active: active.length,
+      visible: barbershops.filter(b => b.isActive).length,
+      attention: barbershops.filter(b => needsAttention(b.subscriptionStatus)).length,
+      inactive: barbershops.filter(b => b.subscriptionStatus === 'inactive').length,
+      barbers: barbershops.reduce((acc, b) => acc + (Number(b.barberCount) || 0), 0),
+      avgRating: rated.length ? rated.reduce((acc, b) => acc + parseFloat(b.rating), 0) / rated.length : null,
+    };
+  }, [barbershops]);
 
-    const matchesStatus = statusFilter === 'all' || barbershop.subscriptionStatus === statusFilter;
+  const filtered = barbershops.filter((shop) => {
+    const q = searchTerm.trim().toLowerCase();
+    const matchesSearch = !q || [shop.name, shop.ownerName, shop.ownerEmail, shop.city, shop.address]
+      .some((value) => value?.toLowerCase().includes(q));
+    const matchesStatus =
+      statusFilter === 'all'
+      || (statusFilter === 'active' && shop.subscriptionStatus === 'active')
+      || (statusFilter === 'attention' && needsAttention(shop.subscriptionStatus))
+      || (statusFilter === 'inactive' && shop.subscriptionStatus === 'inactive');
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string, isActive: boolean) => {
-    switch (status) {
-      case 'active':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            {t('active')}
-          </span>
-        );
-      case 'expired':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircle className="w-3 h-3 mr-1" />
-            {t('expired')}
-          </span>
-        );
-      case 'inactive':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="w-3 h-3 mr-1" />
-            {t('pending')}
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            Inconnu
-          </span>
-        );
-    }
-  };
+  const handleVisibilityToggle = async (shop: Barbershop) => {
+    const ok = await confirm(
+      shop.isActive
+        ? { title: `Masquer ${shop.name} ?`, description: 'Le salon ne sera plus visible pour les clients.', confirmLabel: 'Masquer', tone: 'danger' }
+        : { title: `Rendre ${shop.name} visible ?`, confirmLabel: 'Rendre visible' }
+    );
+    if (!ok) return;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  const handleStatusToggle = async (barbershopId: string, currentStatus: boolean) => {
-    const action = currentStatus ? 'deactivate' : 'activate';
-    const confirmMsg = currentStatus
-      ? 'Êtes-vous sûr de vouloir désactiver ce salon ? Il ne sera plus visible pour les clients.'
-      : 'Activer ce salon ?';
-
-    if (!confirm(confirmMsg)) return;
-
-    setLoading(true);
+    setBusyId(shop.id);
     try {
-      const response = await fetch(`/api/barbershops/${barbershopId}/toggle-status`, {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setBarbershops(barbershops.map(b =>
-          b.id === barbershopId ? { ...b, isActive: data.isActive } : b
-        ));
-        alert(data.message);
-      } else {
-        alert(data.error || 'Failed to update status');
-      }
-    } catch (error) {
-      console.error('Failed to update barbershop status:', error);
-      alert('An error occurred');
+      const response = await fetch(`/api/barbershops/${shop.id}/toggle-status`, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Mise à jour impossible');
+      setBarbershops(prev => prev.map(b => (b.id === shop.id ? { ...b, isActive: data.isActive } : b)));
+      toast({ variant: 'success', title: data.message || 'Visibilité mise à jour' });
+    } catch (err) {
+      toast({ variant: 'error', title: 'Erreur', description: err instanceof Error ? err.message : 'Une erreur est survenue' });
     } finally {
-      setLoading(false);
+      setBusyId(null);
     }
   };
 
-  const handleSubscriptionToggle = async (barbershopId: string, action: 'activate' | 'deactivate' | 'expire') => {
-    const messages: Record<string, string> = {
-      activate: 'Activer l\'abonnement pour 30 jours ?',
-      deactivate: 'Désactiver l\'abonnement (pour tester le checkout) ?',
-      expire: 'Marquer l\'abonnement comme expiré ?',
-    };
+  const handleSubscriptionToggle = async (shop: Barbershop) => {
+    const action = shop.subscriptionStatus === 'active' ? 'deactivate' : 'activate';
+    const ok = await confirm(
+      action === 'activate'
+        ? { title: `Activer l’abonnement de ${shop.name} ?`, description: 'L’abonnement est activé manuellement pour 30 jours, sans paiement.', confirmLabel: 'Activer 30 jours' }
+        : { title: `Désactiver l’abonnement de ${shop.name} ?`, description: 'Le salon devra repasser par le paiement pour redevenir actif.', confirmLabel: 'Désactiver', tone: 'danger' }
+    );
+    if (!ok) return;
 
-    if (!confirm(messages[action])) return;
-
-    setLoading(true);
+    setBusyId(shop.id);
     try {
-      const response = await fetch(`/api/admin/barbershops/${barbershopId}/subscription`, {
+      const response = await fetch(`/api/admin/barbershops/${shop.id}/subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert(`✓ ${data.message}`);
-        window.location.reload();
-      } else {
-        alert(data.error || 'Failed to update subscription');
-      }
-    } catch (error) {
-      console.error('Failed to update subscription:', error);
-      alert('An error occurred');
-    } finally {
-      setLoading(false);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Mise à jour impossible');
+      toast({ variant: 'success', title: data.message || 'Abonnement mis à jour' });
+      window.location.reload();
+    } catch (err) {
+      toast({ variant: 'error', title: 'Erreur', description: err instanceof Error ? err.message : 'Une erreur est survenue' });
+      setBusyId(null);
     }
   };
 
-  const handleSubscriptionRenewal = async (barbershopId: string) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/${locale}/api/admin/barbershops/${barbershopId}/renew`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        // Refresh the barbershops list
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Failed to renew subscription:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const tabs: { id: StatusFilter; label: string; count: number }[] = [
+    { id: 'all', label: 'Tous', count: barbershops.length },
+    { id: 'active', label: 'Actifs', count: summary.active },
+    { id: 'attention', label: 'À régulariser', count: summary.attention },
+    { id: 'inactive', label: 'En attente', count: summary.inactive },
+  ];
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Gestion des Salons</h1>
-                <p className="text-gray-600 mt-1">Gérer les salons et abonnements €{subscriptionPrice.toFixed(2)}/mois</p>
-              </div>
-              <Link
-                href={`/${locale}/admin/barbershops/new`}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Ajouter un Salon
-              </Link>
-            </div>
-          </div>
+
+      <PageHeader
+        title="Salons"
+        description={`Abonnement à ${formatEuro(subscriptionPrice)} par mois et par salon.`}
+        actions={
+          <Link href={`/${locale}/admin/barbershops/new`} className={btn.primary}>
+            <Plus className="h-4 w-4" />
+            Ajouter un salon
+          </Link>
+        }
+      >
+        <Tabs tabs={tabs} active={statusFilter} onChange={setStatusFilter} />
+      </PageHeader>
+
+      <PageShell className="space-y-6">
+        <StatGrid>
+          <Stat label="Abonnements actifs" icon={CheckCircle} value={summary.active} hint={`${summary.visible} salons visibles`} />
+          <Stat label="Revenu mensuel" icon={TrendingUp} value={formatEuro(summary.active * subscriptionPrice)} hint="abonnements actifs" />
+          <Stat label="Coiffeurs" icon={Scissors} value={summary.barbers} hint="dans tous les salons" />
+          <Stat label="Note moyenne" icon={Star} value={summary.avgRating ? summary.avgRating.toFixed(1) : '-'} hint="salons ayant des avis" />
+        </StatGrid>
+
+        <div className="relative max-w-md">
+          <label htmlFor="shop-search" className="sr-only">{t('searchBarbershops')}</label>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            id="shop-search"
+            type="search"
+            placeholder={t('searchBarbershops')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`${inputClass} pl-9`}
+          />
         </div>
 
-        {/* Stats Grid */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {initialStats.map((stat) => (
-              <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                  </div>
-                  <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
-                    {renderIcon(stat.icon, `w-6 h-6 text-${stat.color}-600`)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Filters */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder={t('searchBarbershops')}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-              </div>
-              <div className="sm:w-48">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
-                >
-                  <option value="all">{t('allStatus')}</option>
-                  <option value="active">{t('active')}</option>
-                  <option value="expired">{t('expired')}</option>
-                  <option value="inactive">{t('pending')}</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Barbershops Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8 overflow-hidden">
+        <Panel className="overflow-hidden">
+          {filtered.length === 0 ? (
+            <EmptyState icon={Store} title={t('noBarbershopsFound')} description={t('tryDifferentFilter')} />
+          ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salon
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Propriétaire
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Localisation
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Abonnement
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stats
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th scope="col" className="px-5 py-3 sm:px-6">Salon</th>
+                    <th scope="col" className="hidden px-4 py-3 md:table-cell">Propriétaire</th>
+                    <th scope="col" className="px-4 py-3">Abonnement</th>
+                    <th scope="col" className="hidden px-4 py-3 lg:table-cell">Activité</th>
+                    <th scope="col" className="px-4 py-3"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredBarbershops.map((barbershop) => (
-                    <tr key={barbershop.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{barbershop.name}</div>
-                          <div className="text-sm text-gray-500">ID: {barbershop.id.slice(0, 8)}...</div>
-                          {barbershop.website && (
-                            <a
-                              href={barbershop.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-primary-600 hover:text-primary-800"
-                            >
-                              Website
-                            </a>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((shop) => {
+                    const sub = SUBSCRIPTION[shop.subscriptionStatus] ?? { label: shop.subscriptionStatus, tone: 'neutral' as BadgeTone };
+                    const busy = busyId === shop.id;
+                    return (
+                      <tr key={shop.id} className="align-top hover:bg-gray-50/60">
+                        <td className="px-5 py-4 sm:px-6">
+                          <p className="font-medium text-gray-900">{shop.name}</p>
+                          <p className="mt-0.5 flex items-center gap-1.5 text-gray-500">
+                            <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                            <span className="truncate">{shop.city}</span>
+                          </p>
+                          {!shop.isActive && (
+                            <Badge tone="warning" icon={EyeOff} className="mt-1.5">Masqué</Badge>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{barbershop.ownerName}</div>
-                        <div className="text-sm text-gray-500 flex items-center mt-1">
-                          <Mail className="w-3 h-3 mr-1 text-gray-400" />
-                          {barbershop.ownerEmail}
-                        </div>
-                        {barbershop.ownerPhone && (
-                          <div className="text-sm text-gray-500 flex items-center mt-1">
-                            <Phone className="w-3 h-3 mr-1 text-gray-400" />
-                            {barbershop.ownerPhone}
+                        </td>
+                        <td className="hidden px-4 py-4 md:table-cell">
+                          {shop.ownerName ? (
+                            <>
+                              <p className="text-gray-900">{shop.ownerName}</p>
+                              <p className="mt-0.5 flex items-center gap-1.5 text-gray-500">
+                                <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                {shop.ownerEmail}
+                              </p>
+                              {shop.ownerPhone && (
+                                <p className="mt-0.5 flex items-center gap-1.5 text-gray-500">
+                                  <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                  {shop.ownerPhone}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-gray-400">Aucun propriétaire</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          <Badge tone={sub.tone}>{sub.label}</Badge>
+                          <p className="mt-1 whitespace-nowrap text-xs tabular-nums text-gray-500">
+                            {shop.subscriptionStatus === 'active' ? 'Jusqu’au' : 'Échéance'} {formatDate(shop.subscriptionExpiry)}
+                          </p>
+                        </td>
+                        <td className="hidden px-4 py-4 text-gray-600 lg:table-cell">
+                          <p className="flex items-center gap-1.5 tabular-nums">
+                            <Star className="h-3.5 w-3.5 text-gray-400" />
+                            {parseFloat(shop.rating) > 0 ? `${parseFloat(shop.rating).toFixed(1)} (${shop.reviewCount} avis)` : 'Pas d’avis'}
+                          </p>
+                          <p className="mt-0.5 flex items-center gap-1.5 tabular-nums">
+                            <Scissors className="h-3.5 w-3.5 text-gray-400" />
+                            {shop.barberCount} coiffeur{Number(shop.barberCount) > 1 ? 's' : ''}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleSubscriptionToggle(shop)}
+                                disabled={busy}
+                                className={`${btn.ghost} ${btn.sm}`}
+                                title={shop.subscriptionStatus === 'active' ? 'Suspendre l’abonnement' : 'Activer l’abonnement 30 jours'}
+                              >
+                                {busy && <Spinner className="h-3 w-3" />}
+                                {shop.subscriptionStatus === 'active' ? 'Suspendre' : 'Activer'}
+                              </button>
+                              <button
+                                onClick={() => handleVisibilityToggle(shop)}
+                                disabled={busy}
+                                className={btn.icon}
+                                aria-label={shop.isActive ? `Masquer ${shop.name}` : `Rendre ${shop.name} visible`}
+                                title={shop.isActive ? 'Masquer' : 'Rendre visible'}
+                              >
+                                {shop.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                              <Link href={`/${locale}/my-space/${shop.id}`} className={`${btn.secondary} ${btn.sm} ml-1`}>
+                                Gérer
+                              </Link>
                           </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 flex items-center">
-                          <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                          {barbershop.city}
-                        </div>
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
-                          {barbershop.address}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="space-y-2">
-                          {getStatusBadge(barbershop.subscriptionStatus, barbershop.isActive)}
-                          <div className="text-xs text-gray-500">
-                            {t('expires')}: {formatDate(barbershop.subscriptionExpiry)}
-                          </div>
-                          <div className="text-xs font-medium text-primary-600">
-                            €{subscriptionPrice.toFixed(2)}/mois
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          <div className="flex items-center">
-                            <Star className="w-4 h-4 mr-1 text-yellow-400" />
-                            {parseFloat(barbershop.rating || '0').toFixed(1)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {barbershop.reviewCount} avis
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-900 mt-1">
-                          <div className="flex items-center">
-                            <Store className="w-4 h-4 mr-1 text-gray-400" />
-                            {barbershop.barberCount} coiffeurs
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex flex-col space-y-2">
-                          <Link
-                            href={`/${locale}/my-space/${barbershop.id}`}
-                            className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-medium transition-colors text-center"
-                          >
-                            Gérer
-                          </Link>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => barbershop.subscriptionStatus !== 'active'
-                                ? handleSubscriptionToggle(barbershop.id, 'activate')
-                                : handleSubscriptionToggle(barbershop.id, 'deactivate')
-                              }
-                              disabled={loading}
-                              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${barbershop.subscriptionStatus === 'active'
-                                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                }`}
-                            >
-                              {barbershop.subscriptionStatus === 'active' ? '⊘ Off' : '✓ On'}
-                            </button>
-                            <button
-                              onClick={() => handleStatusToggle(barbershop.id, barbershop.isActive)}
-                              disabled={loading}
-                              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${barbershop.isActive
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                }`}
-                            >
-                              {barbershop.isActive ? '👁 Hide' : '👁 Show'}
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+          )}
+        </Panel>
+      </PageShell>
 
-            {filteredBarbershops.length === 0 && (
-              <div className="text-center py-12">
-                <Store className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">{t('noBarbershopsFound')}</h3>
-                <p className="mt-1 text-sm text-gray-500">{t('tryDifferentFilter')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
       <Footer />
-    </>
+    </div>
   );
 }

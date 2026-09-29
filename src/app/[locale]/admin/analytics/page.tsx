@@ -35,7 +35,6 @@ export default async function SystemAnalyticsPage({ params }: { params: Promise<
   const now = new Date();
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
   const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   // User analytics
   const totalUsers = await db.select({ count: sql<number>`count(*)` }).from(users);
@@ -69,26 +68,15 @@ export default async function SystemAnalyticsPage({ params }: { params: Promise<
     .select({ count: sql<number>`count(*)` })
     .from(bookings)
     .where(gte(bookings.createdAt, lastWeek));
-  const bookingsToday = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(bookings)
-    .where(gte(bookings.createdAt, yesterday));
 
   // Revenue analytics (based on active barbershops * subscription price)
   const subscriptionPrice = await getSubscriptionPrice();
-  const monthlyRevenue = (activeBarbershops[0]?.count || 0) * subscriptionPrice;
-  const yearlyRevenue = monthlyRevenue * 12;
 
   // Review analytics
   const totalReviews = await db.select({ count: sql<number>`count(*)` }).from(reviews);
   const avgRating = await db
     .select({ avg: sql<number>`AVG(${reviews.rating})` })
     .from(reviews);
-
-  // Growth metrics
-  const userGrowthRate = newUsersLastMonth[0]?.count || 0;
-  const barbershopGrowthRate = newBarbershopsLastMonth[0]?.count || 0;
-  const bookingGrowthRate = bookingsLastMonth[0]?.count || 0;
 
   // Top performing barbershops
   const topBarbershops = await db
@@ -130,7 +118,7 @@ export default async function SystemAnalyticsPage({ params }: { params: Promise<
   const recentBookings = await db
     .select({
       type: sql<string>`'booking'`.as('type'),
-      name: sql<string>`'Booking #' || SUBSTRING(${bookings.id}::text, 1, 8)`.as('name'),
+      name: sql<string>`'Réservation #' || SUBSTRING(${bookings.id}::text, 1, 8)`.as('name'),
       createdAt: bookings.createdAt,
     })
     .from(bookings)
@@ -142,26 +130,27 @@ export default async function SystemAnalyticsPage({ params }: { params: Promise<
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 20);
 
-  const t = await getTranslations({ locale, namespace: 'admin' });
-
-  const overviewStats = [
-    { label: t('totalUsers'), value: String(Number(totalUsers[0]?.count) || 0), icon: 'Users', color: 'blue', change: `+${Number(newUsersLastMonth[0]?.count) || 0} ${t('thisMonth')}` },
-    { label: t('totalBarbershops'), value: String(Number(totalBarbershops[0]?.count) || 0), icon: 'Store', color: 'green', change: `+${Number(newBarbershopsLastMonth[0]?.count) || 0} ${t('thisMonth')}` },
-    { label: t('totalBookings'), value: String(Number(totalBookings[0]?.count) || 0), icon: 'Calendar', color: 'purple', change: `+${Number(bookingsLastMonth[0]?.count) || 0} ${t('thisMonth')}` },
-    { label: t('monthlyRevenue'), value: `€${Math.round(monthlyRevenue)}`, icon: 'DollarSign', color: 'yellow', change: `€${Math.round(yearlyRevenue)}/${t('perYear')}` },
-    { label: t('avgRating'), value: (Number(avgRating[0]?.avg) || 0).toFixed(1), icon: 'Star', color: 'orange', change: `${Number(totalReviews[0]?.count) || 0} ${t('reviews')}` },
-    { label: t('activeBarbershops'), value: String(Number(activeBarbershops[0]?.count) || 0), icon: 'Activity', color: 'emerald', change: `${Math.round((Number(activeBarbershops[0]?.count) || 0) / (Number(totalBarbershops[0]?.count) || 1) * 100)}% ${t('active')}` },
-  ];
+  const n = (rows: { count: number }[]) => Number(rows[0]?.count) || 0;
+  const metrics = {
+    totalUsers: n(totalUsers),
+    newUsers30d: n(newUsersLastMonth),
+    totalBarbershops: n(totalBarbershops),
+    visibleBarbershops: n(activeBarbershops),
+    newBarbershops30d: n(newBarbershopsLastMonth),
+    totalBookings: n(totalBookings),
+    bookings30d: n(bookingsLastMonth),
+    bookings7d: n(bookingsLastWeek),
+    monthlyRevenue: n(activeBarbershops) * subscriptionPrice,
+    totalReviews: n(totalReviews),
+    avgRating: Number(avgRating[0]?.avg) || 0,
+  };
 
   return (
-    <div className="min-h-screen bg-white">
-      <AnalyticsClient
-        overviewStats={overviewStats as any}
-        topBarbershops={topBarbershops as any}
-        recentActivity={recentActivity as any}
-        locale={locale}
-        currentUserRole={userRole}
-      />
-    </div>
+    <AnalyticsClient
+      metrics={metrics}
+      topBarbershops={topBarbershops as any}
+      recentActivity={recentActivity as any}
+      locale={locale}
+    />
   );
 }

@@ -57,7 +57,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
     }
 
     return (
-        <div className="min-h-screen bg-white flex flex-col">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <Header />
             <main className="flex-1">
                 <CoursesClient

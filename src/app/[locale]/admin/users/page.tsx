@@ -3,8 +3,8 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { db } from '@/lib/db';
-import { users, accounts, sessions } from '@/lib/db/schema';
-import { eq, desc, and, ilike, sql } from 'drizzle-orm';
+import { users } from '@/lib/db/schema';
+import { desc } from 'drizzle-orm';
 import { Users, Search, Filter, MoreVertical, Shield, Crown, Scissors, User } from 'lucide-react';
 import { UserManagementClient } from './client';
 
@@ -31,7 +31,8 @@ export default async function UserManagementPage({ params }: { params: Promise<{
     redirect(`/${locale}/profile`);
   }
 
-  // Fetch real user data with stats
+  // Only the `user` table is queried: the NextAuth `accounts`/`sessions` tables
+  // don't exist in production (sessions are JWT-based), so joining them crashes.
   const allUsers = await db
     .select({
       id: users.id,
@@ -42,49 +43,15 @@ export default async function UserManagementPage({ params }: { params: Promise<{
       image: users.image,
       emailVerified: users.emailVerified,
       createdAt: users.createdAt,
-      lastLogin: sql<string>`MAX(${sessions.expires})`.as('last_login'),
-      provider: sql<string>`ARRAY_AGG(DISTINCT ${accounts.provider})`.as('providers'),
     })
     .from(users)
-    .leftJoin(accounts, eq(users.id, accounts.userId))
-    .leftJoin(sessions, eq(users.id, sessions.userId))
-    .groupBy(users.id)
     .orderBy(desc(users.createdAt));
 
-  // Get user statistics
-  const totalUsers = allUsers.length;
-  const devUsers = allUsers.filter(u => u.role === 'dev').length;
-  const adminUsers = allUsers.filter(u => u.role === 'admin').length;
-  const barberUsers = allUsers.filter(u => u.role === 'barber').length;
-  const customerUsers = allUsers.filter(u => u.role === 'customer').length;
-  const verifiedUsers = allUsers.filter(u => u.emailVerified).length;
-  const usersThisMonth = allUsers.filter(u => {
-    const createdAt = new Date(u.createdAt);
-    const thisMonth = new Date();
-    return createdAt.getMonth() === thisMonth.getMonth() && 
-           createdAt.getFullYear() === thisMonth.getFullYear();
-  }).length;
-
-  const t = await getTranslations({ locale, namespace: 'admin' });
-  
-  const stats = [
-    { label: t('total'), value: totalUsers, icon: 'Users', color: 'blue' },
-    { label: t('devs'), value: devUsers, icon: 'Shield', color: 'red' },
-    { label: t('admins'), value: adminUsers, icon: 'Crown', color: 'yellow' },
-    { label: t('barbers'), value: barberUsers, icon: 'Scissors', color: 'green' },
-    { label: t('customers'), value: customerUsers, icon: 'User', color: 'gray' },
-    { label: t('verifiedUsers'), value: verifiedUsers, icon: 'Users', color: 'emerald' },
-    { label: t('thisMonth'), value: usersThisMonth, icon: 'Users', color: 'indigo' },
-  ];
-
   return (
-    <div className="min-h-screen bg-white">
-      <UserManagementClient 
-        initialUsers={allUsers as any}
-        initialStats={stats as any}
-        locale={locale}
-        currentUserRole={userRole}
-      />
-    </div>
+    <UserManagementClient
+      initialUsers={allUsers as any}
+      locale={locale}
+      currentUserRole={userRole}
+    />
   );
 }

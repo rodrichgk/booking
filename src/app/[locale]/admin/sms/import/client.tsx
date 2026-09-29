@@ -3,11 +3,23 @@
 import { useState, useCallback } from 'react';
 import {
   Upload, FileText, ArrowRight, Download, Check, X, AlertCircle,
-  ChevronDown, Users, Phone, User, RefreshCw, Send
+  ChevronDown, Users, Phone, User, RefreshCw, Send, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
+import { useToast } from '@/hooks/use-toast';
+import { PageHeader, backLinkClass } from '@/components/dashboard/ui';
+
+const STEPS = [
+  { id: 'upload', label: 'Fichier' },
+  { id: 'ranking', label: 'Classement' },
+  { id: 'zero-filter', label: 'Valeurs nulles' },
+  { id: 'mapping', label: 'Colonnes' },
+  { id: 'filter', label: 'Téléphones' },
+  { id: 'preview', label: 'Aperçu' },
+  { id: 'complete', label: 'Terminé' },
+] as const;
 
 interface CSVImportClientProps {
   locale: string;
@@ -46,6 +58,7 @@ const TARGET_FIELDS = [
 ];
 
 export function CSVImportClient({ locale }: CSVImportClientProps) {
+  const { toast } = useToast();
   const [step, setStep] = useState<'upload' | 'ranking' | 'zero-filter' | 'mapping' | 'filter' | 'preview' | 'complete'>('upload');
   const [fileName, setFileName] = useState('');
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
@@ -356,7 +369,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
   const copyPhoneNumbers = () => {
     const phones = getPhoneNumbers();
     navigator.clipboard.writeText(phones.join('\n'));
-    alert(`${phones.length} numéros copiés dans le presse-papiers!`);
+    toast({ variant: 'success', title: `${phones.length} numéros copiés` });
   };
 
   // Reset and start over
@@ -383,55 +396,35 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
     <>
       <Header />
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Import CSV</h1>
-                <p className="text-gray-600 mt-1">Importez et formatez vos contacts depuis un fichier CSV</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Link
-                  href={`/${locale}/admin/sms`}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
-                >
-                  ← Marketing SMS
-                </Link>
-              </div>
-            </div>
-
-            {/* Progress Steps */}
-            <div className="flex items-center mt-6 space-x-4 overflow-x-auto">
-              {['upload', 'ranking', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].map((s, index) => (
-                <div key={s} className="flex items-center flex-shrink-0">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step === s ? 'bg-primary-600 text-white' :
-                    ['upload', 'ranking', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {['upload', 'ranking', 'zero-filter', 'mapping', 'filter', 'preview', 'complete'].indexOf(step) > index ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                  <span className={`ml-2 text-sm ${step === s ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
-                    {s === 'upload' && 'Upload'}
-                    {s === 'ranking' && 'Classement'}
-                    {s === 'zero-filter' && 'Filtrer zéros'}
-                    {s === 'mapping' && 'Mapping'}
-                    {s === 'filter' && 'Filtrer tél.'}
-                    {s === 'preview' && 'Aperçu'}
-                    {s === 'complete' && 'Terminé'}
+        <PageHeader
+          title="Importer des contacts"
+          description="Nettoyez un fichier CSV avant une campagne SMS."
+          back={
+            <Link href={`/${locale}/admin/sms`} className={backLinkClass} aria-label="Retour aux campagnes SMS">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          }
+        >
+          <ol className="-mx-4 mt-6 flex overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0" aria-label="Étapes">
+            {STEPS.map((s, index) => {
+              const current = STEPS.findIndex((x) => x.id === step);
+              const state = index < current ? "done" : index === current ? "current" : "todo";
+              return (
+                <li key={s.id} className="flex flex-shrink-0 items-center" aria-current={state === "current" ? "step" : undefined}>
+                  <span
+                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${
+                      state === "current" ? "bg-primary-600 text-white" : state === "done" ? "bg-primary-50 text-primary-700" : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {state === "done" ? <Check className="h-3.5 w-3.5" /> : index + 1}
                   </span>
-                  {index < 6 && <ArrowRight className="w-4 h-4 mx-4 text-gray-300" />}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+                  <span className={`ml-2 text-sm ${state === "current" ? "font-medium text-gray-900" : "text-gray-500"}`}>{s.label}</span>
+                  {index < STEPS.length - 1 && <span aria-hidden="true" className="mx-3 h-px w-6 bg-gray-200" />}
+                </li>
+              );
+            })}
+          </ol>
+        </PageHeader>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {error && (
@@ -443,7 +436,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
 
           {/* Step 1: Upload */}
           {step === 'upload' && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+            <div className="bg-white rounded-xl border border-gray-200 p-8">
               <div className="text-center">
                 <Upload className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Importer un fichier CSV</h2>
@@ -472,7 +465,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           {/* Step 2: Ranking */}
           {step === 'ranking' && parsedData && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Classer et limiter les contacts</h2>
@@ -488,15 +481,15 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   </button>
                 </div>
 
-                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
-                  <h3 className="text-sm font-medium text-orange-800 mb-3">
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">
                     Sélectionnez un champ pour classer les contacts par valeur décroissante et garder les meilleurs
                   </h3>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <select
                       value={rankField}
                       onChange={(e) => setRankField(e.target.value)}
-                      className="flex-1 w-full sm:w-auto px-3 py-2 border border-orange-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-orange-500"
+                      className="flex-1 w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="">-- Sélectionner un champ --</option>
                       {parsedData.headers.map(header => (
@@ -504,26 +497,26 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                       ))}
                     </select>
                     <div className="flex items-center gap-2">
-                      <label className="text-sm text-orange-800 whitespace-nowrap">Max :</label>
+                      <label className="text-sm text-gray-900 whitespace-nowrap">Max :</label>
                       <input
                         type="number"
                         value={rankLimit}
                         onChange={(e) => setRankLimit(Math.max(1, parseInt(e.target.value) || 1))}
                         min={1}
-                        className="w-24 px-3 py-2 border border-orange-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-orange-500"
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                     {rankField && (
                       <button
                         onClick={applyRanking}
-                        className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
+                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
                       >
                         Garder les top {rankLimit}
                       </button>
                     )}
                   </div>
                   {rankField && (
-                    <p className="text-sm text-orange-700 mt-2">
+                    <p className="text-sm text-gray-900 mt-2">
                       {parsedData.rows.length > rankLimit
                         ? `${parsedData.rows.length - rankLimit} ligne(s) seront supprimées (les ${rankLimit} avec la plus haute valeur dans "${rankField}" seront gardées)`
                         : `Le fichier contient ${parsedData.rows.length} lignes, inférieur ou égal à la limite de ${rankLimit}`
@@ -541,7 +534,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                         <tr className="bg-gray-50">
                           <th className="px-3 py-2 text-left text-gray-700 font-medium">#</th>
                           {parsedData.headers.map(header => (
-                            <th key={header} className={`px-3 py-2 text-left text-gray-700 font-medium ${header === rankField ? 'bg-orange-100' : ''}`}>
+                            <th key={header} className={`px-3 py-2 text-left text-gray-700 font-medium ${header === rankField ? 'bg-primary-50' : ''}`}>
                               {header}
                             </th>
                           ))}
@@ -585,7 +578,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   {rankField && (
                     <button
                       onClick={applyRanking}
-                      className="flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                      className="flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
                     >
                       Appliquer le classement
                       <ArrowRight className="w-4 h-4 ml-2" />
@@ -599,7 +592,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           {/* Step 3: Zero-value Filter */}
           {step === 'zero-filter' && parsedData && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Filtrer les lignes avec valeur "0"</h2>
@@ -615,15 +608,15 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                   </button>
                 </div>
 
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg mb-6">
-                  <h3 className="text-sm font-medium text-purple-800 mb-3">
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">
                     Sélectionnez un champ pour supprimer les lignes où la valeur est "0"
                   </h3>
                   <div className="flex items-center gap-3">
                     <select
                       value={zeroFilterField}
                       onChange={(e) => setZeroFilterField(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-purple-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="">-- Sélectionner un champ --</option>
                       {parsedData.headers.map(header => (
@@ -633,14 +626,14 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     {zeroFilterField && getZeroValueCount() > 0 && (
                       <button
                         onClick={filterZeroValues}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
+                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
                       >
                         Supprimer {getZeroValueCount()} ligne(s)
                       </button>
                     )}
                   </div>
                   {zeroFilterField && (
-                    <p className="text-sm text-purple-700 mt-2">
+                    <p className="text-sm text-gray-900 mt-2">
                       {getZeroValueCount() > 0
                         ? `${getZeroValueCount()} ligne(s) ont la valeur "0" dans "${zeroFilterField}"`
                         : `Aucune ligne avec "0" dans "${zeroFilterField}"`
@@ -655,7 +648,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     <thead>
                       <tr className="bg-gray-50">
                         {parsedData.headers.map(header => (
-                          <th key={header} className={`px-3 py-2 text-left text-gray-700 font-medium ${header === zeroFilterField ? 'bg-purple-100' : ''}`}>
+                          <th key={header} className={`px-3 py-2 text-left text-gray-700 font-medium ${header === zeroFilterField ? 'bg-primary-50' : ''}`}>
                             {header}
                           </th>
                         ))}
@@ -699,7 +692,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           {/* Step 3: Field Mapping */}
           {step === 'mapping' && parsedData && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Mapper les colonnes</h2>
@@ -784,7 +777,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           {/* Step 4: Phone Filter */}
           {step === 'filter' && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Filtrer les contacts</h2>
@@ -802,17 +795,17 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="p-4 bg-blue-50 rounded-lg text-center">
-                    <Users className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-blue-700">{mappedContacts.length}</p>
-                    <p className="text-sm text-blue-600">Contacts total</p>
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <Users className="w-6 h-6 text-gray-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-900">{mappedContacts.length}</p>
+                    <p className="text-sm text-gray-500">Contacts total</p>
                   </div>
-                  <div className="p-4 bg-green-50 rounded-lg text-center">
-                    <Phone className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-green-700">
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <Phone className="w-6 h-6 text-gray-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-900">
                       {mappedContacts.length - contactsWithoutPhone}
                     </p>
-                    <p className="text-sm text-green-600">Avec téléphone</p>
+                    <p className="text-sm text-gray-500">Avec téléphone</p>
                   </div>
                   <div className="p-4 bg-red-50 rounded-lg text-center">
                     <AlertCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
@@ -910,7 +903,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           {/* Step 4: Preview */}
           {step === 'preview' && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Aperçu des contacts formatés</h2>
@@ -930,22 +923,22 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                  <div className="p-4 bg-blue-50 rounded-lg text-center">
-                    <Users className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-blue-700">{mappedContacts.length}</p>
-                    <p className="text-sm text-blue-600">Contacts</p>
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <Users className="w-6 h-6 text-gray-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-900">{mappedContacts.length}</p>
+                    <p className="text-sm text-gray-500">Contacts</p>
                   </div>
-                  <div className="p-4 bg-green-50 rounded-lg text-center">
-                    <Phone className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-green-700">{getPhoneNumbers().length}</p>
-                    <p className="text-sm text-green-600">Tél. uniques</p>
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <Phone className="w-6 h-6 text-gray-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-900">{getPhoneNumbers().length}</p>
+                    <p className="text-sm text-gray-500">Tél. uniques</p>
                   </div>
-                  <div className="p-4 bg-purple-50 rounded-lg text-center">
-                    <Phone className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-purple-700">
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <Phone className="w-6 h-6 text-gray-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-900">
                       {mappedContacts.filter(c => c.phone1).length}
                     </p>
-                    <p className="text-sm text-purple-600">Avec Tél. 1</p>
+                    <p className="text-sm text-gray-500">Avec Tél. 1</p>
                   </div>
                   <div className="p-4 bg-amber-50 rounded-lg text-center">
                     <Phone className="w-6 h-6 text-amber-600 mx-auto mb-2" />
@@ -954,12 +947,12 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                     </p>
                     <p className="text-sm text-amber-600">Avec Tél. 2</p>
                   </div>
-                  <div className="p-4 bg-teal-50 rounded-lg text-center">
-                    <Phone className="w-6 h-6 text-teal-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-teal-700">
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <Phone className="w-6 h-6 text-gray-500 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-900">
                       {mappedContacts.filter(c => c.phone3).length}
                     </p>
-                    <p className="text-sm text-teal-600">Avec Tél. 3</p>
+                    <p className="text-sm text-gray-500">Avec Tél. 3</p>
                   </div>
                 </div>
 
@@ -1027,7 +1020,7 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
                       sessionStorage.setItem('smsImportedContacts', JSON.stringify(smsContacts));
                       window.location.href = `/${locale}/admin/sms?imported=true`;
                     }}
-                    className="flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                    className="flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
                   >
                     <Send className="w-4 h-4 mr-2" />
                     Envoyer SMS à ces contacts
@@ -1039,9 +1032,9 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
 
           {/* Step 4: Complete */}
           {step === 'complete' && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-green-600" />
+            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+              <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-gray-500" />
               </div>
               <h2 className="text-2xl font-semibold text-gray-900 mb-2">Export terminé!</h2>
               <p className="text-gray-600 mb-6">
@@ -1068,12 +1061,12 @@ export function CSVImportClient({ locale }: CSVImportClientProps) {
           )}
 
           {/* Help Box */}
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="mt-8 bg-gray-50 border border-gray-200 rounded-xl p-6">
             <div className="flex items-start">
-              <AlertCircle className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+              <AlertCircle className="w-6 h-6 text-gray-500 mt-0.5 mr-3 flex-shrink-0" />
               <div>
-                <h3 className="text-blue-800 font-medium">Comment ça marche?</h3>
-                <ol className="mt-2 text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                <h3 className="text-gray-900 font-medium">Comment ça marche?</h3>
+                <ol className="mt-2 text-sm text-gray-900 space-y-1 list-decimal list-inside">
                   <li>Uploadez votre fichier CSV (peu importe les noms de colonnes)</li>
                   <li>Mappez chaque colonne de votre fichier vers les champs souhaités</li>
                   <li>Vérifiez l'aperçu des données formatées</li>
