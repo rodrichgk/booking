@@ -1,16 +1,16 @@
-import { getTranslations } from 'next-intl/server';
 import { db } from '@/lib/db';
 import { barbers, users, barbershops } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { BarbersClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'barbershop' });
-  
+  const fr = locale === 'fr';
   return {
-    title: 'Barbers & Hairdressers - Find Your Perfect Stylist',
-    description: 'Discover expert barbers and hairdressers specializing in afro and natural hair care',
+    title: fr ? 'Coiffeurs et coiffeuses spécialistes afro' : 'Afro hair stylists',
+    description: fr
+      ? 'Trouvez un coiffeur ou une coiffeuse spécialiste des cheveux afro, bouclés et texturés.'
+      : 'Find a stylist specialised in afro, curly and textured hair.',
   };
 }
 
@@ -21,9 +21,10 @@ export default async function BarbersPage({ params }: { params: Promise<{ locale
   const allBarbers = await db
     .select({
       id: barbers.id,
-      name: users.name,
-      email: users.email,
-      phone: users.phone,
+      // Public page: display name and photo only, never the account email/phone.
+      name: sql<string>`COALESCE(${barbers.name}, ${users.name})`,
+      profileImage: barbers.profileImage,
+      barberType: barbers.barberType,
       specialties: barbers.specialties,
       experience: barbers.experience,
       rating: barbers.rating,

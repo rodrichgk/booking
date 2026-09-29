@@ -27,6 +27,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.uploadthing.com',
       },
+      {
+        // UploadThing v7 file URLs (https://<app-id>.ufs.sh/f/<key>)
+        protocol: 'https',
+        hostname: '**.ufs.sh',
+      },
     ],
   },
 };

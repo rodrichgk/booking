@@ -3,8 +3,22 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbershops, barbers, users, services } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { BarbershopDetailClient } from './client';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const [shop] = await db
+    .select({ name: barbershops.name, city: barbershops.city, description: barbershops.description })
+    .from(barbershops)
+    .where(eq(barbershops.id, id))
+    .limit(1);
+  if (!shop) return {};
+  return {
+    title: `${shop.name}, ${shop.city}`,
+    description: shop.description?.slice(0, 160) || `Réservez chez ${shop.name} à ${shop.city}.`,
+  };
+}
 
 export default async function BarbershopDetailsPage({ 
   params 
@@ -30,6 +44,7 @@ export default async function BarbershopDetailsPage({
       rating: barbershops.rating,
       reviewCount: barbershops.reviewCount,
       isActive: barbershops.isActive,
+      openingHours: barbershops.openingHours,
     })
     .from(barbershops)
     .where(eq(barbershops.id, id))
@@ -43,8 +58,9 @@ export default async function BarbershopDetailsPage({
   const shopBarbers = await db
     .select({
       id: barbers.id,
-      name: users.name,
-      email: users.email,
+      // The display name set by the salon wins over the account name. No email: this is public.
+      name: sql<string>`COALESCE(${barbers.name}, ${users.name})`,
+      profileImage: barbers.profileImage,
       barberType: barbers.barberType,
       specialties: barbers.specialties,
       experience: barbers.experience,
@@ -68,7 +84,7 @@ export default async function BarbershopDetailsPage({
       isActive: services.isActive,
     })
     .from(services)
-    .where(eq(services.barbershopId, id));
+    .where(and(eq(services.barbershopId, id), sql`${services.isActive} IS NOT FALSE`));
 
   return <BarbershopDetailClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} isAuthenticated={isAuthenticated} />;
 }

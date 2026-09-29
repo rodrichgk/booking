@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Link } from '@/routing';
-import { Calendar, Clock, User, ArrowLeft, Check, AlertCircle, Scissors, Euro, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, CalendarCheck, MapPin, Users } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
-
-interface OpeningHours {
-  [key: string]: { open: string; close: string; closed: boolean };
-}
+import { PublicShell, Media } from '@/components/public/ui';
+import { btn, formatEuro, inputClass, Spinner } from '@/components/dashboard/ui';
+import { SERVICE_CATEGORIES, formatDuration } from '@/lib/service-categories';
+import { frTime, type OpeningHours } from '@/lib/opening-hours';
+import { cn } from '@/lib/utils';
 
 interface Barbershop {
   id: string;
@@ -23,6 +25,8 @@ interface Barbershop {
 interface Barber {
   id: string;
   name: string | null;
+  profileImage?: string | null;
+  barberType?: string | null;
   specialties: string[] | null;
   isActive: boolean;
   openingHours?: OpeningHours | null;
@@ -53,692 +57,602 @@ interface BookingClientProps {
   closedDates?: string[];
 }
 
-const localDateKey = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+type StepId = 'service' | 'barber' | 'datetime' | 'details';
+type Busy = { barberId: string | null; start: number; end: number };
 
-// Generate available dates for the next 7 days
-// If a barber is selected and has their own hours, show days they work even if salon is closed
-const generateAvailableDates = (
-  shopOpeningHours: OpeningHours | null,
-  selectedBarberData: Barber | undefined,
-  closedDates: string[] = []
-) => {
-  const dates = [];
-  const today = new Date();
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const ON_SITE = 'on-site';
+const ANY = 'any';
+const DEFAULT_DURATION = 60;
+const SLOT_STEP = 30;
+const DAYS_PER_PAGE = 14;
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-  for (let i = 0; i < 90; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-
-    const dayName = days[date.getDay()];
-
-    // Exceptional closures close the whole salon, barbers included
-    if (closedDates.includes(localDateKey(date))) {
-      continue;
-    }
-
-    // Check if barber has their own hours for this day
-    const barberHours = selectedBarberData?.openingHours;
-    if (barberHours && barberHours[dayName] && !barberHours[dayName].closed) {
-      dates.push(date);
-      continue;
-    }
-
-    // If barber has hours but is closed this day, skip
-    if (barberHours && barberHours[dayName]?.closed) {
-      continue;
-    }
-
-    // Fallback to shop hours
-    if (shopOpeningHours && shopOpeningHours[dayName]?.closed) {
-      continue;
-    }
-
-    dates.push(date);
-  }
-
-  return dates;
+const localKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + (m || 0);
 };
+const toHHMM = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+const atTime = (dateKey: string, hhmm: string) => new Date(`${dateKey}T${hhmm}:00`);
 
-// Generate time slots based on barber's hours (priority) or shop's opening hours
-const generateTimeSlots = (
-  selectedDate: Date | null,
-  shopOpeningHours: OpeningHours | null,
-  barberOpeningHours: OpeningHours | null | undefined
-) => {
-  const slots: string[] = [];
-  if (!selectedDate) return slots;
+/** Hours that apply on a day: the barber's own weekly hours win over the salon's. */
+function hoursFor(date: Date, shopHours: OpeningHours | null, barber?: Barber) {
+  const day = DAY_KEYS[date.getDay()];
+  const own = barber?.openingHours?.[day];
+  if (own) return own.closed ? null : own;
+  const shop = shopHours?.[day];
+  if (shop) return shop.closed ? null : shop;
+  return shopHours ? null : { open: '09:00', close: '19:00', closed: false };
+}
 
-  const now = new Date();
-  const isToday =
-    selectedDate.getDate() === now.getDate() &&
-    selectedDate.getMonth() === now.getMonth() &&
-    selectedDate.getFullYear() === now.getFullYear();
-
-  const currentHour = now.getHours();
-  const currentMinutes = now.getMinutes();
-
-  // Get day name for opening hours lookup
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const dayName = days[selectedDate.getDay()];
-
-  // Default hours if no opening hours set
-  let openHour = 9;
-  let closeHour = 19;
-
-  // Barber hours take priority over shop hours
-  const effectiveHours = barberOpeningHours?.[dayName] ?? shopOpeningHours?.[dayName];
-
-  if (effectiveHours) {
-    if (effectiveHours.closed) {
-      return slots;
-    }
-    const [openH] = effectiveHours.open.split(':').map(Number);
-    const [closeH] = effectiveHours.close.split(':').map(Number);
-    openHour = openH;
-    closeHour = closeH;
-  }
-
-  for (let hour = openHour; hour < closeHour; hour++) {
-    // Add :00 slot
-    if (!isToday || hour > currentHour || (hour === currentHour && currentMinutes < 0)) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-    }
-
-    // Add :30 slot
-    if (hour < closeHour - 1 || (hour === closeHour - 1)) {
-      if (!isToday || hour > currentHour || (hour === currentHour && currentMinutes < 30)) {
-        slots.push(`${hour.toString().padStart(2, '0')}:30`);
-      }
-    }
-  }
-  return slots;
-};
-
-export function BookingClient({ shop, barbers, services, locale, userInfo, closedDates = [] }: BookingClientProps) {
+export function BookingClient({ shop, barbers, services, userInfo, closedDates = [] }: BookingClientProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<'service' | 'barber' | 'date' | 'time' | 'confirm'>('service');
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const activeBarbers = barbers.filter((b) => b.isActive);
+  const hasBarbers = activeBarbers.length > 0;
+
+  // Links can preselect a service (?serviceId=) and/or a barber (?barberId=).
+  const initialService = services.some((s) => s.id === searchParams.get('serviceId')) ? searchParams.get('serviceId') : null;
+  const initialBarber = activeBarbers.some((b) => b.id === searchParams.get('barberId')) ? searchParams.get('barberId') : null;
+
+  const [serviceId, setServiceId] = useState<string | null>(initialService);
+  const [barberId, setBarberId] = useState<string | null>(initialBarber);
+  const [dateKey, setDateKey] = useState<string | null>(null);
+  const [time, setTime] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [busy, setBusy] = useState<Busy[]>([]);
+  const [loadingBusy, setLoadingBusy] = useState(false);
   const [customerName, setCustomerName] = useState(userInfo?.name || '');
   const [customerEmail, setCustomerEmail] = useState(userInfo?.email || '');
   const [customerPhone, setCustomerPhone] = useState(userInfo?.phone || '');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
-  const activeBarbers = barbers.filter(b => b.isActive);
-  const selectedBarberObj = activeBarbers.find(b => b.id === selectedBarber);
-  const availableDates = generateAvailableDates(shop.openingHours, selectedBarberObj, closedDates);
-  const availableTimeSlots = generateTimeSlots(selectedDate, shop.openingHours, selectedBarberObj?.openingHours);
+  const steps: StepId[] = hasBarbers ? ['service', 'barber', 'datetime', 'details'] : ['service', 'datetime', 'details'];
+  const firstOpen = !serviceId ? 'service' : hasBarbers && !barberId ? 'barber' : 'datetime';
+  const [open, setOpen] = useState<StepId>(firstOpen);
 
-  const formatDate = (date: Date) => {
-    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-  };
+  const serviceGroups = useMemo(() => {
+    const groups: { id: string; label: string; items: Service[] }[] = SERVICE_CATEGORIES.map((c) => ({
+      id: c.id,
+      label: c.label,
+      items: services.filter((s) => s.category === c.id),
+    }));
+    groups.push({ id: 'other', label: 'Autres', items: services.filter((s) => !SERVICE_CATEGORIES.some((c) => c.id === s.category)) });
+    return groups.filter((g) => g.items.length > 0);
+  }, [services]);
 
-  const canProceed = () => {
-    if (step === 'service') return selectedService !== null;
-    if (step === 'barber' && activeBarbers.length > 0) return selectedBarber !== null;
-    if (step === 'date') return selectedDate !== null;
-    if (step === 'time') return selectedTime !== null;
-    if (step === 'confirm') return customerName && customerEmail && customerPhone;
-    return false;
-  };
+  const service = services.find((s) => s.id === serviceId);
+  const barber = activeBarbers.find((b) => b.id === barberId);
+  const duration = service?.duration ?? DEFAULT_DURATION;
 
-  const handleNext = async () => {
-    if (step === 'service') {
-      if (activeBarbers.length > 0) {
-        setStep('barber');
-      } else {
-        setStep('date');
+  // Consecutive days, closed ones kept (disabled) so the calendar reads naturally.
+  const days = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 60 }, (_, i) => {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const key = localKey(d);
+      const open = !closedDates.includes(key) && !!hoursFor(d, shop.openingHours, barber);
+      return { date: d, key, open };
+    });
+  }, [closedDates, shop.openingHours, barber]);
+
+  // Load taken slots for the chosen day
+  useEffect(() => {
+    if (!dateKey) return;
+    let active = true;
+    setLoadingBusy(true);
+    const from = atTime(dateKey, '00:00');
+    const to = new Date(from.getTime() + 86_400_000);
+    fetch(`/api/barbershops/${shop.id}/availability?from=${from.toISOString()}&to=${to.toISOString()}`)
+      .then((res) => (res.ok ? res.json() : { busy: [] }))
+      .then((data) => {
+        if (!active) return;
+        setBusy((data.busy || []).map((b: { barberId: string | null; start: string; end: string }) => ({ barberId: b.barberId, start: Date.parse(b.start), end: Date.parse(b.end) })));
+      })
+      .catch(() => active && setBusy([]))
+      .finally(() => active && setLoadingBusy(false));
+    return () => {
+      active = false;
+    };
+  }, [dateKey, shop.id]);
+
+  const slots = useMemo(() => {
+    if (!dateKey) return [];
+    const date = atTime(dateKey, '00:00');
+    const hours = hoursFor(date, shop.openingHours, barber);
+    if (!hours) return [];
+    const now = Date.now();
+    const out: { time: string; available: boolean }[] = [];
+    for (let m = toMinutes(hours.open); m + duration <= toMinutes(hours.close); m += SLOT_STEP) {
+      const start = atTime(dateKey, toHHMM(m)).getTime();
+      if (start <= now) continue;
+      const end = start + duration * 60_000;
+      const overlaps = (b: Busy) => start < b.end && end > b.start;
+      let available = true;
+      if (barber) {
+        available = !busy.some((b) => b.barberId === barber.id && overlaps(b));
+      } else if (hasBarbers) {
+        // "No preference": free as long as at least one barber is.
+        available = activeBarbers.some((a) => !busy.some((b) => b.barberId === a.id && overlaps(b)));
       }
+      out.push({ time: toHHMM(m), available });
     }
-    else if (step === 'barber') setStep('date');
-    else if (step === 'date') setStep('time');
-    else if (step === 'time') setStep('confirm');
-    else if (step === 'confirm') {
-      setIsSubmitting(true);
-      setError(null);
+    return out;
+  }, [dateKey, shop.openingHours, barber, busy, duration, hasBarbers, activeBarbers]);
 
-      try {
-        // Create appointment date-time
-        const appointmentDateTime = new Date(selectedDate!);
-        const [hours, minutes] = selectedTime!.split(':');
-        appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+  const done: Record<StepId, boolean> = {
+    service: !!serviceId,
+    barber: !hasBarbers || !!barberId,
+    datetime: !!dateKey && !!time,
+    details: !!customerName.trim() && !!customerEmail.trim() && !!customerPhone.trim(),
+  };
+  const canConfirm = steps.every((s) => done[s]);
 
-        const response = await fetch('/api/bookings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            barbershopId: shop.id,
-            barberId: selectedBarber === 'on-site' ? null : selectedBarber,
-            serviceId: selectedService === 'on-site' ? null : selectedService,
-            appointmentDate: appointmentDateTime.toISOString(),
-            customerName,
-            customerEmail,
-            customerPhone,
-            notes: selectedService === 'on-site' || selectedBarber === 'on-site'
-              ? `${notes ? notes + '\n' : ''}[À choisir sur place: ${selectedService === 'on-site' ? 'Service' : ''}${selectedService === 'on-site' && selectedBarber === 'on-site' ? ', ' : ''}${selectedBarber === 'on-site' ? 'Coiffeur' : ''}]`
-              : notes,
-          }),
-        });
+  const goNext = (from: StepId) => {
+    const next = steps[steps.indexOf(from) + 1];
+    if (next) setOpen(next);
+  };
 
-        const data = await response.json();
+  const dateLabel = dateKey
+    ? atTime(dateKey, '00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+    : null;
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to create booking');
-        }
-
-        setSuccess(true);
-        toast({
-          title: "✅ Réservation confirmée!",
-          description: `Votre rendez-vous a été confirmé pour le ${formatDate(selectedDate!)} à ${selectedTime}`,
-          variant: "success",
-        });
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
-        setError(errorMessage);
-        toast({
-          title: "❌ Erreur de réservation",
-          description: errorMessage,
-          variant: "error",
-        });
-      } finally {
-        setIsSubmitting(false);
+  const handleConfirm = async () => {
+    if (!canConfirm || !dateKey || !time) return;
+    setIsSubmitting(true);
+    setError(null);
+    const onSite = [serviceId === ON_SITE && 'prestation', barberId === ANY && hasBarbers && 'coiffeur'].filter(Boolean);
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barbershopId: shop.id,
+          barberId: barber ? barber.id : null,
+          serviceId: service ? service.id : null,
+          appointmentDate: atTime(dateKey, time).toISOString(),
+          customerName: customerName.trim(),
+          customerEmail: customerEmail.trim(),
+          customerPhone: customerPhone.trim(),
+          notes: onSite.length ? `${notes ? `${notes}\n` : ''}[À choisir sur place : ${onSite.join(', ')}]` : notes,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'La réservation a échoué');
+      setConfirmed(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Une erreur est survenue';
+      setError(message);
+      toast({ variant: 'error', title: 'Réservation impossible', description: message });
+      // A slot taken in the meantime: send the customer back to pick another one.
+      if (response409(message)) {
+        setTime(null);
+        setOpen('datetime');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleBack = () => {
-    if (step === 'barber') setStep('service');
-    else if (step === 'date' && activeBarbers.length > 0) setStep('barber');
-    else if (step === 'date') setStep('service');
-    else if (step === 'time') setStep('date');
-    else if (step === 'confirm') setStep('time');
-  };
+  const summary = (
+    <dl className="space-y-3 text-sm">
+      <SummaryRow label="Prestation" value={service ? service.name : serviceId === ON_SITE ? 'À choisir sur place' : null} />
+      {hasBarbers && <SummaryRow label="Coiffeur" value={barber ? barber.name : barberId === ANY ? 'Pas de préférence' : null} />}
+      <SummaryRow label="Date" value={dateLabel && time ? `${dateLabel} à ${frTime(time)}` : null} capitalize />
+      {service && (
+        <div className="flex items-baseline justify-between border-t border-gray-100 pt-3">
+          <dt className="text-gray-600">{formatDuration(service.duration)}</dt>
+          <dd className="font-display text-lg font-semibold tabular-nums text-gray-900">{formatEuro(service.price)}</dd>
+        </div>
+      )}
+    </dl>
+  );
 
-  const selectedBarberData = activeBarbers.find(b => b.id === selectedBarber);
+  if (confirmed) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <PublicShell>
+          <div className="mx-auto max-w-lg py-16">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-green-600">
+              <CalendarCheck className="h-6 w-6" />
+            </span>
+            <h1 className="mt-5 font-display text-3xl font-semibold tracking-tight text-gray-900">C’est réservé</h1>
+            <p className="mt-2 text-gray-600">
+              Un email de confirmation a été envoyé à <strong className="font-medium text-gray-900">{customerEmail}</strong>.
+            </p>
+            <div className="mt-8 rounded-xl border border-gray-200 bg-white p-5">
+              <p className="font-medium text-gray-900">{shop.name}</p>
+              <p className="mb-4 flex items-center gap-1.5 text-sm text-gray-600">
+                <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                {shop.address}, {shop.city}
+              </p>
+              {summary}
+            </div>
+            <div className="mt-8 flex flex-wrap gap-2">
+              <Link href={`/barbershops/${shop.id}`} className={btn.primary}>Retour au salon</Link>
+              <Link href="/my-space" className={btn.secondary}>Mes rendez-vous</Link>
+            </div>
+          </div>
+        </PublicShell>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Page Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center space-x-4">
-            <Link
-              href={`/barbershops/${shop.id}`}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+      <PublicShell>
+        <nav aria-label="Fil d’Ariane" className="flex items-center gap-1.5 pt-6 text-sm text-gray-500">
+          <Link href="/barbershops" className="hover:text-gray-900">Salons</Link>
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          <Link href={`/barbershops/${shop.id}`} className="truncate hover:text-gray-900">{shop.name}</Link>
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="text-gray-900">Réservation</span>
+        </nav>
+        <h1 className="pt-3 font-display text-3xl font-semibold tracking-tight text-gray-900">Réserver chez {shop.name}</h1>
+
+        <div className="grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <ol className="space-y-3">
+            {/* 1. Service */}
+            <Step
+              index={steps.indexOf('service') + 1}
+              title="Prestation"
+              open={open === 'service'}
+              done={done.service}
+              summary={service ? `${service.name}, ${formatEuro(service.price)}` : serviceId === ON_SITE ? 'À choisir sur place' : undefined}
+              onEdit={() => setOpen('service')}
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-sans font-bold text-gray-900">Réserver un rendez-vous</h1>
-              <p className="text-gray-600 mt-1">{shop.name} - {shop.city}</p>
-            </div>
-          </div>
-
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center space-x-2 sm:space-x-4 mt-6 overflow-x-auto pb-2">
-            {/* Service Step */}
-            <div className={`flex items-center flex-shrink-0 ${step === 'service' ? 'text-primary-600' : 'text-green-600'}`}>
-              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'service' ? 'bg-primary-600 text-white' : 'bg-green-600 text-white'}`}>
-                {step === 'service' ? '1' : <Check className="w-4 h-4 sm:w-5 sm:h-5" />}
-              </div>
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Service</span>
-            </div>
-            <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
-
-            {/* Barber Step (conditional) */}
-            {activeBarbers.length > 0 && (
-              <>
-                <div className={`flex items-center flex-shrink-0 ${step === 'barber' ? 'text-primary-600' : (step === 'date' || step === 'time' || step === 'confirm') ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'barber' ? 'bg-primary-600 text-white' : (step === 'date' || step === 'time' || step === 'confirm') ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
-                    {(step === 'date' || step === 'time' || step === 'confirm') ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : '2'}
-                  </div>
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">Coiffeur</span>
-                </div>
-                <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
-              </>
-            )}
-
-            {/* Date Step */}
-            <div className={`flex items-center flex-shrink-0 ${step === 'date' ? 'text-primary-600' : (step === 'time' || step === 'confirm') ? 'text-green-600' : 'text-gray-400'}`}>
-              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'date' ? 'bg-primary-600 text-white' : (step === 'time' || step === 'confirm') ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
-                {(step === 'time' || step === 'confirm') ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : activeBarbers.length > 0 ? '3' : '2'}
-              </div>
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Date</span>
-            </div>
-            <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
-
-            {/* Time Step */}
-            <div className={`flex items-center flex-shrink-0 ${step === 'time' ? 'text-primary-600' : step === 'confirm' ? 'text-green-600' : 'text-gray-400'}`}>
-              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'time' ? 'bg-primary-600 text-white' : step === 'confirm' ? 'bg-green-600 text-white' : 'bg-gray-300'}`}>
-                {step === 'confirm' ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : activeBarbers.length > 0 ? '4' : '3'}
-              </div>
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden xs:inline">Heure</span>
-            </div>
-            <div className="w-4 sm:w-12 h-0.5 bg-gray-300 flex-shrink-0" />
-
-            {/* Confirm Step */}
-            <div className={`flex items-center flex-shrink-0 ${step === 'confirm' ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step === 'confirm' ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>
-                {activeBarbers.length > 0 ? '5' : '4'}
-              </div>
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">Confirmer</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Success State */}
-        {success ? (
-          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-200 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Réservation confirmée!</h2>
-            <p className="text-gray-600 mb-6">
-              Un email de confirmation a été envoyé à <strong>{customerEmail}</strong>
-            </p>
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-              <h3 className="font-semibold text-gray-900 mb-3">Détails de votre rendez-vous</h3>
-              <div className="space-y-2 text-sm">
-                {/* Service */}
-                <div className="flex items-center text-gray-700">
-                  <Scissors className="w-4 h-4 mr-2" />
-                  <span>
-                    {selectedService === 'on-site'
-                      ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
-                      : services.find(s => s.id === selectedService)?.name || 'Service'}
-                  </span>
-                </div>
-                {/* Barber */}
-                <div className="flex items-center text-gray-700">
-                  <User className="w-4 h-4 mr-2" />
-                  <span>
-                    {selectedBarber === 'on-site'
-                      ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
-                      : selectedBarberData?.name || 'Coiffeur'}
-                  </span>
-                </div>
-                <div className="flex items-center text-gray-700">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <span>{selectedDate && formatDate(selectedDate)}</span>
-                </div>
-                <div className="flex items-center text-gray-700">
-                  <Clock className="w-4 h-4 mr-2" />
-                  <span>{selectedTime}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-4 justify-center">
-              <Link
-                href={`/barbershops/${shop.id}`}
-                className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Retour au salon
-              </Link>
-              <Link
-                href="/barbershops"
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-              >
-                Explorer d'autres salons
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-red-900">Erreur</p>
-                    <p className="text-sm text-red-700 mt-1">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Select Service Step */}
-            {step === 'service' && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez un service</h2>
-
-                {/* Choose on site option */}
-                <button
-                  onClick={() => setSelectedService('on-site')}
-                  className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${selectedService === 'on-site'
-                    ? 'border-amber-500 bg-amber-50'
-                    : 'border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'
-                    }`}
-                >
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-xl">🏠</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Je choisirai sur place</h4>
-                      <p className="text-sm text-gray-600">Je déciderai du service au salon</p>
-                    </div>
-                    {selectedService === 'on-site' && (
-                      <Check className="w-5 h-5 text-amber-600 ml-auto" />
-                    )}
-                  </div>
-                </button>
-
-                {services.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Scissors className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600">Aucun service disponible pour le moment</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Group services by category */}
-                    {['haircut', 'beard', 'styling', 'coloring', 'treatment', 'combo'].map((category) => {
-                      const categoryServices = services.filter(s => s.category === category);
-                      if (categoryServices.length === 0) return null;
-
-                      const categoryLabels: Record<string, string> = {
-                        'haircut': '💇 Coupes',
-                        'beard': '🧔 Barbe',
-                        'styling': '✨ Coiffure',
-                        'coloring': '🎨 Coloration',
-                        'treatment': '💆 Soins',
-                        'combo': '🎁 Forfaits',
-                      };
-
-                      return (
-                        <div key={category} className="space-y-2">
-                          <h3 className="font-semibold text-gray-700 text-sm">{categoryLabels[category]}</h3>
-                          <div className="grid md:grid-cols-2 gap-3">
-                            {categoryServices.map((service) => (
-                              <button
-                                key={service.id}
-                                onClick={() => setSelectedService(service.id)}
-                                className={`p-4 rounded-lg border-2 transition-all text-left ${selectedService === service.id
-                                  ? 'border-primary-600 bg-primary-50'
-                                  : 'border-gray-200 hover:border-primary-300'
-                                  }`}
-                              >
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900">{service.name}</h4>
-                                    {service.description && (
-                                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{service.description}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                                  <div className="flex items-center text-primary-600 font-semibold">
-                                    <Euro className="w-4 h-4 mr-1" />
-                                    <span>{service.price}€</span>
-                                  </div>
-                                  <div className="flex items-center text-gray-500 text-sm">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    <span>{service.duration} min</span>
-                                  </div>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Select Barber Step */}
-            {step === 'barber' && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez votre coiffeur</h2>
-
-                {/* Choose on site option */}
-                <button
-                  onClick={() => setSelectedBarber('on-site')}
-                  className={`w-full p-4 rounded-lg border-2 transition-all text-left mb-4 ${selectedBarber === 'on-site'
-                    ? 'border-amber-500 bg-amber-50'
-                    : 'border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'
-                    }`}
-                >
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-xl">🏠</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Je choisirai sur place</h4>
-                      <p className="text-sm text-gray-600">Je déciderai du coiffeur au salon</p>
-                    </div>
-                    {selectedBarber === 'on-site' && (
-                      <Check className="w-5 h-5 text-amber-600 ml-auto" />
-                    )}
-                  </div>
-                </button>
-
-                {activeBarbers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600">Aucun coiffeur disponible pour le moment</p>
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {activeBarbers.map((barber) => (
-                      <button
-                        key={barber.id}
-                        onClick={() => setSelectedBarber(barber.id)}
-                        className={`p-4 rounded-lg border-2 transition-all text-left ${selectedBarber === barber.id
-                          ? 'border-primary-600 bg-primary-50'
-                          : 'border-gray-200 hover:border-primary-300'
-                          }`}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white font-bold">
-                              {barber.name?.split(' ').map(n => n[0]).join('') || '?'}
+              <div className="space-y-6">
+                {serviceGroups.map((group) => (
+                    <div key={group.id}>
+                      <p className="mb-2 text-sm font-medium text-gray-500">{group.label}</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {group.items.map((s) => (
+                          <Choice
+                            key={s.id}
+                            selected={serviceId === s.id}
+                            onClick={() => {
+                              setServiceId(s.id);
+                              setTime(null);
+                              goNext('service');
+                            }}
+                          >
+                            <span className="flex items-baseline justify-between gap-3">
+                              <span className="font-medium text-gray-900">{s.name}</span>
+                              <span className="flex-shrink-0 text-sm font-medium tabular-nums text-gray-900">{formatEuro(s.price)}</span>
                             </span>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{barber.name}</h3>
-                            {barber.specialties && barber.specialties.length > 0 && (
-                              <p className="text-sm text-gray-600">{barber.specialties[0]}</p>
-                            )}
-                          </div>
-                          {selectedBarber === barber.id && (
-                            <Check className="w-5 h-5 text-primary-600" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Select Date Step */}
-            {step === 'date' && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez une date</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {availableDates.map((date, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedDate(date)}
-                      className={`p-4 rounded-lg border-2 transition-all ${selectedDate?.toDateString() === date.toDateString()
-                        ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-300'
-                        }`}
-                    >
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">{formatDate(date)}</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">{date.getDate()}</p>
+                            {s.description && <span className="mt-0.5 line-clamp-2 block text-sm text-gray-600">{s.description}</span>}
+                            <span className="mt-1 block text-xs text-gray-500">{formatDuration(s.duration)}</span>
+                          </Choice>
+                        ))}
                       </div>
-                    </button>
+                    </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Select Time Step */}
-            {step === 'time' && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Choisissez une heure</h2>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                  {availableTimeSlots.map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`p-3 rounded-lg border-2 transition-all ${selectedTime === time
-                        ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-300'
-                        }`}
-                    >
-                      <p className="text-center font-semibold text-gray-900">{time}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Confirm Step */}
-            {step === 'confirm' && (
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Confirmez votre réservation</h2>
-
-                {/* Booking Summary */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                  <h3 className="font-semibold text-gray-900 mb-3">Résumé</h3>
-                  <div className="space-y-2 text-sm">
-                    {/* Service */}
-                    <div className="flex items-center text-gray-700">
-                      <Scissors className="w-4 h-4 mr-2" />
-                      <span>
-                        {selectedService === 'on-site'
-                          ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
-                          : services.find(s => s.id === selectedService)?.name || 'Service'}
-                      </span>
-                    </div>
-                    {/* Barber */}
-                    <div className="flex items-center text-gray-700">
-                      <User className="w-4 h-4 mr-2" />
-                      <span>
-                        {selectedBarber === 'on-site'
-                          ? <span className="text-amber-600 font-medium">🏠 À choisir sur place</span>
-                          : selectedBarberData?.name || 'Coiffeur'}
-                      </span>
-                    </div>
-                    <div className="flex items-center text-gray-700">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      <span>{selectedDate && formatDate(selectedDate)}</span>
-                    </div>
-                    <div className="flex items-center text-gray-700">
-                      <Clock className="w-4 h-4 mr-2" />
-                      <span>{selectedTime}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Customer Info Form */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nom complet *
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                      placeholder="Votre nom"
-                      disabled={!!userInfo?.name}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                      placeholder="votre@email.com"
-                      disabled={!!userInfo?.email}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Téléphone *
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                      placeholder="+33 6 12 34 56 78"
-                      disabled={!!userInfo?.phone}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notes (optionnel)
-                    </label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                      placeholder="Des demandes particulières?"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 pt-6 border-t border-gray-200">
-              {step !== 'service' && (
-                <button
-                  onClick={handleBack}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors order-2 sm:order-1"
+                <Choice
+                  dashed
+                  selected={serviceId === ON_SITE}
+                  onClick={() => {
+                    setServiceId(ON_SITE);
+                    setTime(null);
+                    goNext('service');
+                  }}
                 >
-                  Retour
-                </button>
-              )}
-              <button
-                onClick={handleNext}
-                disabled={!canProceed() || isSubmitting}
-                className={`sm:ml-auto px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 ${canProceed() && !isSubmitting
-                  ? 'bg-primary-600 hover:bg-primary-700 text-white'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  <span className="font-medium text-gray-900">Je choisirai sur place</span>
+                  <span className="block text-sm text-gray-600">Un créneau d’une heure est réservé ; vous choisissez la prestation au salon.</span>
+                </Choice>
+              </div>
+            </Step>
+
+            {/* 2. Barber */}
+            {hasBarbers && (
+              <Step
+                index={steps.indexOf('barber') + 1}
+                title="Coiffeur"
+                open={open === 'barber'}
+                done={done.barber}
+                summary={barber ? barber.name ?? undefined : barberId === ANY ? 'Pas de préférence' : undefined}
+                onEdit={() => setOpen('barber')}
+                locked={!done.service}
               >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? 'En cours...' : step === 'confirm' ? 'Confirmer' : 'Suivant'}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Choice
+                    selected={barberId === ANY}
+                    onClick={() => {
+                      setBarberId(ANY);
+                      setTime(null);
+                      goNext('barber');
+                    }}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                        <Users className="h-5 w-5" />
+                      </span>
+                      <span>
+                        <span className="block font-medium text-gray-900">Pas de préférence</span>
+                        <span className="block text-sm text-gray-600">Le premier coiffeur disponible</span>
+                      </span>
+                    </span>
+                  </Choice>
+                  {activeBarbers.map((b) => (
+                    <Choice
+                      key={b.id}
+                      selected={barberId === b.id}
+                      onClick={() => {
+                        setBarberId(b.id);
+                        setTime(null);
+                        goNext('barber');
+                      }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Media src={b.profileImage} name={b.name || 'Coiffeur'} rounded="rounded-full" className="h-11 w-11 flex-shrink-0" sizes="44px" />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-gray-900">{b.name}</span>
+                          <span className="block truncate text-sm text-gray-600">{b.barberType || b.specialties?.[0] || 'Coiffeur'}</span>
+                        </span>
+                      </span>
+                    </Choice>
+                  ))}
+                </div>
+              </Step>
+            )}
+
+            {/* 3. Date & time */}
+            <Step
+              index={steps.indexOf('datetime') + 1}
+              title="Date et heure"
+              open={open === 'datetime'}
+              done={done.datetime}
+              summary={dateLabel && time ? `${dateLabel} à ${frTime(time)}` : undefined}
+              onEdit={() => setOpen('datetime')}
+              locked={!done.service || !done.barber}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-medium capitalize text-gray-900">
+                  {days[page * DAYS_PER_PAGE].date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                </p>
+                <div className="flex gap-1">
+                  <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className={btn.icon} aria-label="Dates précédentes">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(Math.ceil(days.length / DAYS_PER_PAGE) - 1, p + 1))}
+                    disabled={(page + 1) * DAYS_PER_PAGE >= days.length}
+                    className={btn.icon}
+                    aria-label="Dates suivantes"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {days.slice(page * DAYS_PER_PAGE, (page + 1) * DAYS_PER_PAGE).map((d) => {
+                  const selected = d.key === dateKey;
+                  return (
+                    <button
+                      key={d.key}
+                      disabled={!d.open}
+                      onClick={() => {
+                        setDateKey(d.key);
+                        setTime(null);
+                      }}
+                      aria-pressed={selected}
+                      aria-label={d.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (d.open ? '' : ', fermé')}
+                      className={cn(
+                        'flex flex-col items-center rounded-lg border py-2 text-center transition-colors',
+                        selected
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : d.open
+                            ? 'border-gray-200 bg-white text-gray-900 hover:border-gray-400'
+                            : 'cursor-not-allowed border-transparent text-gray-300'
+                      )}
+                    >
+                      <span className={cn('text-[11px] uppercase', selected ? 'text-white/70' : 'text-gray-500')}>
+                        {d.date.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')}
+                      </span>
+                      <span className="font-display text-base font-semibold tabular-nums">{d.date.getDate()}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {dateKey && (
+                <div className="mt-6">
+                  <p className="mb-2 text-sm font-medium capitalize text-gray-900">{dateLabel}</p>
+                  {loadingBusy ? (
+                    <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+                      {Array.from({ length: 12 }).map((_, i) => <div key={i} className="h-10 animate-pulse rounded-lg bg-gray-100" />)}
+                    </div>
+                  ) : slots.length === 0 || slots.every((s) => !s.available) ? (
+                    <p className="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">Plus de créneau disponible ce jour-là. Essayez une autre date.</p>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+                      {slots.map((slot) => (
+                        <button
+                          key={slot.time}
+                          disabled={!slot.available}
+                          onClick={() => {
+                            setTime(slot.time);
+                            goNext('datetime');
+                          }}
+                          aria-pressed={time === slot.time}
+                          className={cn(
+                            'h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors',
+                            time === slot.time
+                              ? 'border-gray-900 bg-gray-900 text-white'
+                              : slot.available
+                                ? 'border-gray-200 bg-white text-gray-900 hover:border-gray-400'
+                                : 'cursor-not-allowed border-transparent bg-gray-50 text-gray-300 line-through'
+                          )}
+                        >
+                          {frTime(slot.time)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Step>
+
+            {/* 4. Contact */}
+            <Step
+              index={steps.indexOf('details') + 1}
+              title="Vos coordonnées"
+              open={open === 'details'}
+              done={done.details && open !== 'details'}
+              summary={done.details ? `${customerName}, ${customerPhone}` : undefined}
+              onEdit={() => setOpen('details')}
+              locked={!done.datetime}
+            >
+              <form
+                className="grid gap-4 sm:grid-cols-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleConfirm();
+                }}
+              >
+                <Field id="bk-name" label="Nom complet" value={customerName} onChange={setCustomerName} autoComplete="name" required />
+                <Field id="bk-phone" label="Téléphone" type="tel" value={customerPhone} onChange={setCustomerPhone} autoComplete="tel" placeholder="06 12 34 56 78" required />
+                <Field id="bk-email" label="Email" type="email" value={customerEmail} onChange={setCustomerEmail} autoComplete="email" placeholder="vous@exemple.fr" required className="sm:col-span-2" />
+                <div className="sm:col-span-2">
+                  <label htmlFor="bk-notes" className="mb-1.5 block text-sm font-medium text-gray-800">
+                    Précisions <span className="font-normal text-gray-500">(facultatif)</span>
+                  </label>
+                  <textarea
+                    id="bk-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Longueur de cheveux, style souhaité, allergies..."
+                    className={cn(inputClass, 'resize-none')}
+                  />
+                </div>
+                <button type="submit" className="hidden" aria-hidden="true" tabIndex={-1} />
+              </form>
+            </Step>
+          </ol>
+
+          <aside className="lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <p className="font-display text-base font-semibold text-gray-900">{shop.name}</p>
+              <p className="mb-4 flex items-center gap-1.5 text-sm text-gray-600">
+                <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                <span className="truncate">{shop.address}, {shop.city}</span>
+              </p>
+              {summary}
+              {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+              <button onClick={handleConfirm} disabled={!canConfirm || isSubmitting} className={cn(btn.primary, 'mt-5 w-full py-2.5')}>
+                {isSubmitting && <Spinner className="h-4 w-4" />}
+                Confirmer la réservation
               </button>
+              <p className="mt-3 text-center text-xs text-gray-500">Paiement au salon. Confirmation par email.</p>
             </div>
-          </div>
-        )}
-      </div>
+          </aside>
+        </div>
+      </PublicShell>
 
       <Footer />
+    </div>
+  );
+}
+
+// The booking API answers 409 with this wording when the slot or day is gone.
+const response409 = (message: string) => /déjà une réservation|fermé ce jour/i.test(message);
+
+function Step({
+  index,
+  title,
+  open,
+  done,
+  summary,
+  onEdit,
+  locked,
+  children,
+}: {
+  index: number;
+  title: string;
+  open: boolean;
+  done: boolean;
+  summary?: string;
+  onEdit: () => void;
+  locked?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className={cn('rounded-xl border bg-white', open ? 'border-gray-300' : 'border-gray-200')}>
+      <div className="flex items-center gap-3 px-5 py-4">
+        <span
+          className={cn(
+            'inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums',
+            done && !open ? 'bg-primary-50 text-primary-700' : open ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'
+          )}
+        >
+          {done && !open ? <Check className="h-4 w-4" /> : index}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className={cn('font-display text-base font-semibold', locked && !open ? 'text-gray-400' : 'text-gray-900')}>{title}</h2>
+          {!open && summary && <p className="truncate text-sm text-gray-600 first-letter:uppercase">{summary}</p>}
+        </div>
+        {!open && done && (
+          <button onClick={onEdit} className={cn(btn.ghost, btn.sm)}>
+            Modifier
+          </button>
+        )}
+      </div>
+      {open && <div className="border-t border-gray-100 px-5 pb-5 pt-4">{children}</div>}
+    </li>
+  );
+}
+
+function Choice({ selected, onClick, dashed, children }: { selected: boolean; onClick: () => void; dashed?: boolean; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        'block w-full rounded-lg border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+        selected ? 'border-primary-500 bg-primary-50/60 ring-1 ring-primary-500' : dashed ? 'border-dashed border-gray-300 hover:border-gray-400' : 'border-gray-200 hover:border-gray-400'
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SummaryRow({ label, value, capitalize }: { label: string; value: string | null | undefined; capitalize?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-gray-500">{label}</dt>
+      <dd className={cn('text-right', value ? 'text-gray-900' : 'text-gray-400', capitalize && value && 'first-letter:uppercase')}>{value || 'À choisir'}</dd>
+    </div>
+  );
+}
+
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  className,
+  ...props
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'className' | 'id'>) {
+  return (
+    <div className={className}>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-gray-800">{label}</label>
+      <input id={id} value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} {...props} />
     </div>
   );
 }

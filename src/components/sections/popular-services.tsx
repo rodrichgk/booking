@@ -9,6 +9,7 @@ const servicesData = {
   fr: [
     {
       id: '1',
+      href: '/services?category=haircut',
       name: 'Coupes Cheveux Naturels',
       description: 'Coupes expertes pour toutes les textures et types de boucles',
       icon: Scissors,
@@ -19,6 +20,7 @@ const servicesData = {
     },
     {
       id: '2',
+      href: '/services?search=tresses',
       name: 'Coiffures Protectrices',
       description: 'Tresses, twists et styles qui protègent vos cheveux naturels',
       icon: Sparkles,
@@ -29,6 +31,7 @@ const servicesData = {
     },
     {
       id: '3',
+      href: '/services?search=locks',
       name: 'Entretien Locks',
       description: 'Soins professionnels pour locks à chaque étape de développement',
       icon: Zap,
@@ -39,6 +42,7 @@ const servicesData = {
     },
     {
       id: '4',
+      href: '/services?category=coloring',
       name: 'Coloration & Mèches',
       description: 'Techniques de coloration sûres pour cheveux texturés et naturels',
       icon: Palette,
@@ -51,6 +55,7 @@ const servicesData = {
   en: [
     {
       id: '1',
+      href: '/services?category=haircut',
       name: 'Natural Hair Cuts',
       description: 'Expert cuts for all textures and curl types',
       icon: Scissors,
@@ -61,6 +66,7 @@ const servicesData = {
     },
     {
       id: '2',
+      href: '/services?search=tresses',
       name: 'Protective Styles',
       description: 'Braids, twists and styles that protect your natural hair',
       icon: Sparkles,
@@ -71,6 +77,7 @@ const servicesData = {
     },
     {
       id: '3',
+      href: '/services?search=locks',
       name: 'Locs Maintenance',
       description: 'Professional care for locs at every stage of development',
       icon: Zap,
@@ -81,6 +88,7 @@ const servicesData = {
     },
     {
       id: '4',
+      href: '/services?category=coloring',
       name: 'Color & Highlights',
       description: 'Safe coloring techniques for textured and natural hair',
       icon: Palette,
@@ -168,7 +176,7 @@ export function PopularServices() {
                     </div>
 
                     <Link
-                      href={`/services/${service.id}`}
+                      href={service.href}
                       className="w-full bg-gray-50 hover:bg-primary-50 text-gray-900 hover:text-primary-700 text-center py-2 px-4 rounded-lg font-medium transition-all duration-200 block"
                     >
                       {t.book}

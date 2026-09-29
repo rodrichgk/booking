@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import { db } from '@/lib/db';
-import { barbers, users, barbershops, services, bookings } from '@/lib/db/schema';
+import { barbers, users, barbershops, services } from '@/lib/db/schema';
 import { eq, sql, and } from 'drizzle-orm';
 import { BarberProfileClient } from './client';
 
@@ -10,22 +9,23 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   
   const [barber] = await db
     .select({
-      name: users.name,
+      name: sql<string>`COALESCE(${barbers.name}, ${users.name})`,
+      shop: barbershops.name,
+      city: barbershops.city,
     })
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))
+    .innerJoin(barbershops, eq(barbers.barbershopId, barbershops.id))
     .where(eq(barbers.id, id))
     .limit(1);
 
   if (!barber) {
-    return {
-      title: 'Barber Not Found',
-    };
+    return { title: locale === 'fr' ? 'Coiffeur introuvable' : 'Stylist not found' };
   }
 
   return {
-    title: `${barber.name} - Professional Barber Profile`,
-    description: `View ${barber.name}'s portfolio, ratings, and book an appointment`,
+    title: `${barber.name}, ${barber.shop} (${barber.city})`,
+    description: `Découvrez le travail de ${barber.name} chez ${barber.shop} et réservez en ligne.`,
   };
 }
 
@@ -42,9 +42,9 @@ export default async function BarberProfilePage({
       id: barbers.id,
       userId: barbers.userId,
       barbershopId: barbers.barbershopId,
-      name: users.name,
-      email: users.email,
-      phone: users.phone,
+      // Public page: never send the barber's account email/phone to the browser.
+      name: sql<string>`COALESCE(${barbers.name}, ${users.name})`,
+      barberType: barbers.barberType,
       profileImage: barbers.profileImage,
       galleryImages: barbers.galleryImages,
       youtubeLinks: barbers.youtubeLinks,
@@ -57,6 +57,7 @@ export default async function BarberProfilePage({
       barbershopAddress: barbershops.address,
       barbershopCity: barbershops.city,
       barbershopPhone: barbershops.phone,
+      barbershopOpeningHours: barbershops.openingHours,
       barbershopIsActive: barbershops.isActive,
     })
     .from(barbers)
@@ -68,15 +69,6 @@ export default async function BarberProfilePage({
   if (!barberData || !barberData.isActive || !barberData.barbershopIsActive) {
     notFound();
   }
-
-  // Get barber's statistics
-  const [stats] = await db
-    .select({
-      totalBookings: sql<number>`COUNT(DISTINCT ${bookings.id})`.as('total_bookings'),
-      completedBookings: sql<number>`COUNT(DISTINCT CASE WHEN ${bookings.status} = 'completed' THEN ${bookings.id} END)`.as('completed_bookings'),
-    })
-    .from(bookings)
-    .where(eq(bookings.barberId, id));
 
   // Get services available at this barber's shop
   const shopServices = await db
@@ -99,10 +91,6 @@ export default async function BarberProfilePage({
   return (
     <BarberProfileClient 
       barber={barberData as any}
-      stats={{
-        totalBookings: stats?.totalBookings || 0,
-        completedBookings: stats?.completedBookings || 0,
-      }}
       services={shopServices as any}
       locale={locale}
     />

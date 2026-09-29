@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { db } from '@/lib/db';
 import { barbershops } from '@/lib/db/schema';
 import { eq, or, gt, and } from 'drizzle-orm';
@@ -6,11 +6,13 @@ import { BarbershopsClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'barbershop' });
+  const fr = locale === 'fr';
 
   return {
-    title: 'Barbershops - Find Your Perfect Salon',
-    description: 'Discover expert barbershops specializing in afro and natural hair care',
+    title: fr ? 'Salons de coiffure afro et texturés' : 'Afro and textured hair salons',
+    description: fr
+      ? 'Trouvez un salon spécialisé dans les cheveux afro, bouclés et texturés et réservez en ligne.'
+      : 'Find a salon specialised in afro, curly and textured hair and book online.',
   };
 }
 
@@ -73,5 +75,9 @@ export default async function BarbershopsPage({ params }: { params: Promise<{ lo
     return true;
   });
 
-  return <BarbershopsClient barbershops={validBarbershops as any} locale={locale} />;
+  return (
+    <Suspense>
+      <BarbershopsClient barbershops={validBarbershops as any} locale={locale} />
+    </Suspense>
+  );
 }
