@@ -147,7 +147,7 @@ export function DatabaseManagementClient({ dbStats }: DatabaseManagementClientPr
               <div>
                 <h3 className="text-sm font-medium text-gray-900">Export SQL manuel</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Nécessite <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">pg_dump</code> sur le serveur. Fonctionne en local, pas sur Vercel.
+                  Toutes les données, sous forme d’instructions INSERT. Le fichier contient des mots de passe chiffrés : conservez-le en lieu sûr.
                 </p>
                 <button onClick={handleBackup} disabled={isBackingUp} className={`${btn.secondary} mt-3`}>
                   {isBackingUp ? <Spinner className="h-3.5 w-3.5" /> : <Download className="h-4 w-4" />}

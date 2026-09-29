@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Resend } from 'resend';
+import { getEmailFrom } from '@/lib/settings';
 
 // Lazy initialization of Resend
 let resendInstance: Resend | null = null;
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
         const resend = getResend();
 
         const { data, error } = await resend.emails.send({
-            from: 'Orphelia <noreply@orphelia.net>',
+            from: await getEmailFrom(),
             to: [to],
             subject: '✓ Email de Test - Orphelia',
             html: `

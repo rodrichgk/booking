@@ -4,6 +4,7 @@ import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
 import crypto from 'crypto';
+import { getEmailFrom } from '@/lib/settings';
 
 // Lazy initialization of Resend
 let resendInstance: Resend | null = null;
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
             const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`;
 
             await resend.emails.send({
-                from: 'Orphelia <onboarding@resend.dev>', // Update with your sender
+                from: await getEmailFrom(),
                 to: email,
                 subject: 'Réinitialisation de votre mot de passe - Orphelia',
                 html: `

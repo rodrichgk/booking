@@ -38,7 +38,7 @@ export function FeaturedBarbershops() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/barbershops?activeOnly=true&limit=3')
+    fetch('/api/barbershops/featured')
       .then((res) => (res.ok ? res.json() : { barbershops: [] }))
       .then((data) => {
         if (active) setShops(Array.isArray(data.barbershops) ? data.barbershops : []);

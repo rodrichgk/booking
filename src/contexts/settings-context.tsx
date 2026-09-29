@@ -6,20 +6,16 @@ interface PublicSettings {
     subscriptionPrice: number;
     currency: string;
     siteName: string;
-    siteUrl: string;
     maintenanceMode: boolean;
-    darkMode: boolean;
-    primaryColor: string;
+    passwordMinLength: number;
 }
 
 const defaultSettings: PublicSettings = {
     subscriptionPrice: 29.9,
     currency: 'EUR',
     siteName: 'Orphelia',
-    siteUrl: 'https://www.orphelia.net',
     maintenanceMode: false,
-    darkMode: false,
-    primaryColor: '#6366f1',
+    passwordMinLength: 8,
 };
 
 const SettingsContext = createContext<PublicSettings>(defaultSettings);
@@ -53,20 +49,6 @@ export function SettingsProvider({ children, initialSettings }: SettingsProvider
 
         fetchSettings();
     }, []);
-
-    // Apply dark mode to document
-    useEffect(() => {
-        if (settings.darkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [settings.darkMode]);
-
-    // Apply primary color as CSS variable
-    useEffect(() => {
-        document.documentElement.style.setProperty('--primary-color', settings.primaryColor);
-    }, [settings.primaryColor]);
 
     return (
         <SettingsContext.Provider value={settings}>

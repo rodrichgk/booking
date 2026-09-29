@@ -78,6 +78,17 @@ export const barbershops = pgTable('barbershops', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Exceptional closing days of a barbershop (holidays, vacations...).
+// Kept in its own table rather than a barbershops column so that deploying
+// before running /api/migrate never breaks existing barbershop queries.
+export const barbershopClosures = pgTable('barbershop_closures', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  barbershopId: uuid('barbershop_id').references(() => barbershops.id, { onDelete: 'cascade' }).notNull(),
+  date: varchar('date', { length: 10 }).notNull(), // YYYY-MM-DD, salon local date
+  reason: varchar('reason', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Barbers table
 export const barbers = pgTable('barbers', {
   id: uuid('id').defaultRandom().primaryKey(),

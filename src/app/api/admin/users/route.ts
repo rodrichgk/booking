@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { getPasswordMinLength } from '@/lib/settings';
 
 // POST - Create a new user
 export async function POST(request: Request) {
@@ -49,6 +50,14 @@ export async function POST(request: Request) {
     // Only dev can create dev users
     if (role === 'dev' && userRole !== 'dev') {
       return NextResponse.json({ error: 'Only dev can create dev users' }, { status: 403 });
+    }
+
+    const minLength = await getPasswordMinLength();
+    if (typeof password !== 'string' || password.length < minLength) {
+      return NextResponse.json(
+        { error: `Le mot de passe doit contenir au moins ${minLength} caractères` },
+        { status: 400 }
+      );
     }
 
     // Hash password

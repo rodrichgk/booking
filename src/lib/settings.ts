@@ -39,7 +39,7 @@ const DEFAULT_SETTINGS = {
         primaryColor: '#6366f1',
         darkMode: false,
         compactMode: false,
-        featuredMode: 'manual' as const,
+        featuredMode: 'manual' as 'manual' | 'popularity' | 'rating',
         featuredBarbershopIds: [] as string[],
     },
 };
@@ -117,6 +117,35 @@ export async function getSubscriptionPrice(): Promise<number> {
 export async function getSubscriptionPriceCents(): Promise<number> {
     const price = await getSubscriptionPrice();
     return Math.round(price * 100);
+}
+
+const DEFAULT_EMAIL_FROM = 'Orphelia <noreply@orphelia.net>';
+
+/**
+ * "Name <address>" used as the From of every transactional email, taken from
+ * the admin Email settings. Falls back to the default if the stored values
+ * are empty or malformed. The address must be verified in Resend.
+ */
+export async function getEmailFrom(): Promise<string> {
+    const email = await getSetting('email');
+    const address = email.senderEmail?.trim();
+    const name = (email.senderName?.trim() || 'Orphelia').replace(/[<>"]/g, '');
+    if (!address || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address)) {
+        return DEFAULT_EMAIL_FROM;
+    }
+    return `${name} <${address}>`;
+}
+
+export async function getPasswordMinLength(): Promise<number> {
+    const security = await getSetting('security');
+    const value = Number(security.passwordMinLength);
+    return Number.isFinite(value) && value >= 6 ? Math.min(value, 64) : 8;
+}
+
+export async function getMaxLoginAttempts(): Promise<number> {
+    const security = await getSetting('security');
+    const value = Number(security.maxLoginAttempts);
+    return Number.isFinite(value) && value >= 3 ? Math.min(value, 50) : 5;
 }
 
 export async function isMaintenanceMode(): Promise<boolean> {

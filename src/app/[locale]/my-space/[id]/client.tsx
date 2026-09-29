@@ -20,6 +20,7 @@ import {
 } from '@/components/dashboard/ui';
 import { Modal } from '@/components/dashboard/modal';
 import { useConfirm } from '@/components/dashboard/confirm-dialog';
+import { useSettings } from '@/contexts/settings-context';
 
 const MAX_SERVICE_IMAGE_MB = 4;
 
@@ -113,6 +114,7 @@ interface ManageBarbershopClientProps {
   subscriptionStatus: 'active' | 'expired' | 'inactive' | 'past_due' | 'canceled';
   locale: string;
   subscriptionPrice: number;
+  closures: { date: string; reason: string | null }[];
 }
 
 export function ManageBarbershopClient({
@@ -122,10 +124,12 @@ export function ManageBarbershopClient({
   bookings,
   subscriptionStatus,
   locale,
-  subscriptionPrice
+  subscriptionPrice,
+  closures: initialClosures,
 }: ManageBarbershopClientProps) {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const { passwordMinLength } = useSettings();
   const router = useRouter();
   const searchParams = useSearchParams();
   type TabId = 'overview' | 'barbers' | 'services' | 'gallery' | 'schedule' | 'settings';
@@ -211,8 +215,10 @@ export function ManageBarbershopClient({
   };
   const [openingHours, setOpeningHours] = useState<OpeningHours>(shop.openingHours || defaultOpeningHours);
   const [isSavingHours, setIsSavingHours] = useState(false);
-  const [closedDates, setClosedDates] = useState<string[]>([]);
+  const [closures, setClosures] = useState(initialClosures);
   const [newClosedDate, setNewClosedDate] = useState('');
+  const [newClosedReason, setNewClosedReason] = useState('');
+  const [savingClosure, setSavingClosure] = useState<string | null>(null);
 
   // Per-barber opening hours states
   const [editingBarberHoursId, setEditingBarberHoursId] = useState<string | null>(null);
@@ -1036,16 +1042,50 @@ export function ManageBarbershopClient({
     }
   };
 
-  const handleAddClosedDate = () => {
-    if (newClosedDate && !closedDates.includes(newClosedDate)) {
-      setClosedDates(prev => [...prev, newClosedDate].sort());
-      setNewClosedDate('');
+  // Closures are saved immediately; the API returns the updated upcoming list.
+  const updateClosures = async (key: string, request: () => Promise<Response>, success: string) => {
+    setSavingClosure(key);
+    try {
+      const res = await request();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error);
+      setClosures(data.closures || []);
+      toast({ variant: 'success', title: success });
+      return true;
+    } catch (error) {
+      toast({ variant: 'error', title: 'Erreur', description: error instanceof Error && error.message ? error.message : 'Une erreur est survenue' });
+      return false;
+    } finally {
+      setSavingClosure(null);
     }
   };
 
-  const handleRemoveClosedDate = (date: string) => {
-    setClosedDates(prev => prev.filter(d => d !== date));
+  const handleAddClosedDate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClosedDate) return;
+    const ok = await updateClosures(
+      'new',
+      () => fetch(`/api/barbershops/${shop.id}/closures`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: newClosedDate, reason: newClosedReason }),
+      }),
+      'Fermeture enregistrée'
+    );
+    if (ok) {
+      setNewClosedDate('');
+      setNewClosedReason('');
+    }
   };
+
+  const handleRemoveClosedDate = (date: string) =>
+    updateClosures(
+      date,
+      () => fetch(`/api/barbershops/${shop.id}/closures?date=${date}`, { method: 'DELETE' }),
+      'Fermeture supprimée'
+    );
+
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const dayNames: { [key: string]: string } = {
     monday: 'Lundi',
@@ -1633,40 +1673,59 @@ export function ManageBarbershopClient({
                 description="Vacances, jours fériés ou toute date où le salon sera fermé."
               />
               <PanelBody className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <form onSubmit={handleAddClosedDate} className="flex flex-col gap-2 sm:flex-row sm:items-end">
                   <div>
                     <label htmlFor="closed-date" className={labelClass}>Date</label>
                     <input
                       id="closed-date"
                       type="date"
+                      required
                       value={newClosedDate}
                       onChange={(e) => setNewClosedDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      className={`${inputClass} sm:w-56`}
+                      min={todayKey}
+                      className={`${inputClass} sm:w-44`}
                     />
                   </div>
-                  <button onClick={handleAddClosedDate} disabled={!newClosedDate} className={btn.secondary}>
-                    <Plus className="h-4 w-4" />
+                  <div className="flex-1">
+                    <label htmlFor="closed-reason" className={labelClass}>Motif <span className="font-normal text-gray-500">(facultatif)</span></label>
+                    <input
+                      id="closed-reason"
+                      type="text"
+                      value={newClosedReason}
+                      onChange={(e) => setNewClosedReason(e.target.value)}
+                      placeholder="Ex : congés d’été"
+                      maxLength={255}
+                      className={inputClass}
+                    />
+                  </div>
+                  <button type="submit" disabled={!newClosedDate || savingClosure === 'new'} className={btn.secondary}>
+                    {savingClosure === 'new' ? <Spinner className="h-3.5 w-3.5" /> : <Plus className="h-4 w-4" />}
                     Ajouter
                   </button>
-                </div>
-                {closedDates.length > 0 ? (
-                  <ul className="flex flex-wrap gap-2">
-                    {closedDates.map((date) => (
-                      <li key={date} className="inline-flex items-center gap-1 rounded-full bg-gray-100 py-1 pl-3 pr-1 text-sm text-gray-800">
-                        {new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
+                </form>
+                {closures.length > 0 ? (
+                  <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                    {closures.map((closure) => (
+                      <li key={closure.date} className="flex items-center gap-3 px-4 py-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium capitalize text-gray-900">
+                            {new Date(`${closure.date}T00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                          </p>
+                          {closure.reason && <p className="truncate text-sm text-gray-500">{closure.reason}</p>}
+                        </div>
                         <button
-                          onClick={() => handleRemoveClosedDate(date)}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-900"
-                          aria-label="Retirer cette date"
+                          onClick={() => handleRemoveClosedDate(closure.date)}
+                          disabled={savingClosure === closure.date}
+                          className={btn.icon}
+                          aria-label="Retirer cette fermeture"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          {savingClosure === closure.date ? <Spinner /> : <X className="h-4 w-4" />}
                         </button>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-gray-500">Aucune fermeture exceptionnelle prévue.</p>
+                  <p className="text-sm text-gray-500">Aucune fermeture prévue. Les clients ne pourront pas réserver les jours ajoutés ici.</p>
                 )}
               </PanelBody>
             </Panel>
@@ -1884,11 +1943,11 @@ export function ManageBarbershopClient({
               value={barberPassword}
               onChange={(e) => setBarberPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={passwordMinLength}
               className={inputClass}
               aria-describedby="barber-password-help"
             />
-            <p id="barber-password-help" className="mt-1.5 text-xs text-gray-500">6 caractères minimum. Le coiffeur se connecte avec son email et ce mot de passe.</p>
+            <p id="barber-password-help" className="mt-1.5 text-xs text-gray-500">{passwordMinLength} caractères minimum. Le coiffeur se connecte avec son email et ce mot de passe.</p>
           </div>
           <div>
             <label htmlFor="barber-username" className={labelClass}>Identifiant</label>

@@ -50,6 +50,10 @@ const EVENT: Record<string, { label: string; tone: BadgeTone; icon: typeof Activ
   failed_login: { label: 'Échec de connexion', tone: 'danger', icon: AlertCircle },
   role_change: { label: 'Changement de rôle', tone: 'brand', icon: UserCog },
   ip_blocked: { label: 'IP bloquée', tone: 'warning', icon: Ban },
+  ip_unblocked: { label: 'IP débloquée', tone: 'neutral', icon: Ban },
+  blocked_request: { label: 'Requête bloquée', tone: 'warning', icon: ShieldAlert },
+  signup: { label: 'Inscription', tone: 'neutral', icon: UserCog },
+  data_export: { label: 'Export de la base', tone: 'warning', icon: ShieldAlert },
   logout: { label: 'Déconnexion', tone: 'neutral', icon: Activity },
   password_change: { label: 'Mot de passe modifié', tone: 'brand', icon: UserCog },
 };
@@ -203,7 +207,7 @@ export function SecurityClient({ securityData }: SecurityClientProps) {
           <Panel>
             <PanelHeader
               title="IP bloquées"
-              description="Liste de suivi. Le blocage n’est pas encore appliqué par le site."
+              description="Ces adresses ne peuvent plus se connecter, créer de compte ni réserver."
               actions={
                 <button onClick={() => setBlockOpen(true)} className={`${btn.secondary} ${btn.sm}`}>
                   <Plus className="h-3.5 w-3.5" />

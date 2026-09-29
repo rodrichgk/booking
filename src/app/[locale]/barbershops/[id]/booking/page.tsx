@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbershops, barbers, users, services } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
+import { getUpcomingClosures } from '@/lib/closures';
 import { BookingClient } from './client';
 
 export default async function BookingPage({
@@ -59,7 +60,10 @@ export default async function BookingPage({
       category: services.category,
     })
     .from(services)
-    .where(eq(services.barbershopId, id));
+    // Deactivated services cannot be booked (the booking API rejects them).
+    .where(and(eq(services.barbershopId, id), sql`${services.isActive} IS NOT FALSE`));
+
+  const closedDates = (await getUpcomingClosures(id)).map((c) => c.date);
 
   // Get user info from session
   const userInfo = session?.user ? {
@@ -68,5 +72,5 @@ export default async function BookingPage({
     phone: (session.user as any).phone || '',
   } : null;
 
-  return <BookingClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} userInfo={userInfo} />;
+  return <BookingClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} userInfo={userInfo} closedDates={closedDates} />;
 }

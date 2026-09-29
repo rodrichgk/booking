@@ -9,6 +9,7 @@ import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/components/dashboard/confirm-dialog';
 import { Modal } from '@/components/dashboard/modal';
+import { useSettings } from '@/contexts/settings-context';
 import {
   PageHeader, PageShell, Tabs, Panel, Badge, EmptyState, Spinner,
   btn, inputClass, labelClass, type BadgeTone,
@@ -391,6 +392,7 @@ function AddUserModal({
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('customer');
   const [password, setPassword] = useState('');
+  const { passwordMinLength } = useSettings();
 
   return (
     <Modal
@@ -447,7 +449,8 @@ function AddUserModal({
         </div>
         <div>
           <label htmlFor="new-user-password" className={labelClass}>Mot de passe <span className="text-red-600" aria-hidden="true">*</span></label>
-          <input id="new-user-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className={inputClass} />
+          <input id="new-user-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={passwordMinLength} className={inputClass} />
+          <p className="mt-1.5 text-xs text-gray-500">{passwordMinLength} caractères minimum.</p>
         </div>
       </form>
     </Modal>

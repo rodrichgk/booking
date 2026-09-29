@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { barbers, users, barbershops } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { getPasswordMinLength } from '@/lib/settings';
 
 export async function POST(request: Request) {
   try {
@@ -67,6 +68,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ 
         error: 'Un utilisateur avec cet email existe déjà' 
       }, { status: 400 });
+    }
+
+    const minLength = await getPasswordMinLength();
+    if (typeof password !== 'string' || password.length < minLength) {
+      return NextResponse.json(
+        { error: `Le mot de passe doit contenir au moins ${minLength} caractères` },
+        { status: 400 }
+      );
     }
 
     // Hash password

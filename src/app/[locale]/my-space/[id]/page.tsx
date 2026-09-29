@@ -6,6 +6,7 @@ import { barbershops, barbers, users, services, bookings } from '@/lib/db/schema
 import { eq, and } from 'drizzle-orm';
 import { ManageBarbershopClient } from './client';
 import { getSubscriptionPrice } from '@/lib/settings';
+import { getUpcomingClosures } from '@/lib/closures';
 
 export default async function ManageBarbershopPage({
   params
@@ -181,6 +182,7 @@ export default async function ManageBarbershopPage({
       subscriptionStatus={subscriptionStatus}
       locale={locale}
       subscriptionPrice={subscriptionPrice}
+      closures={await getUpcomingClosures(id)}
     />
   );
 }

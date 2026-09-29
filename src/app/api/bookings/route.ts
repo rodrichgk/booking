@@ -7,6 +7,9 @@ import { eq, and } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { escapeHtml } from '@/lib/utils';
 import { hasBookingConflict } from '@/lib/booking';
+import { isShopClosedOn } from '@/lib/closures';
+import { getClientIp, isIpBlocked, logSecurityEvent } from '@/lib/security';
+import { getEmailFrom, isMaintenanceMode } from '@/lib/settings';
 
 // Lazy initialization of Resend to avoid build-time errors
 let resendInstance: Resend | null = null;
@@ -25,6 +28,16 @@ const DEFAULT_DURATION_MINUTES = 60;
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request.headers);
+    if (await isIpBlocked(ip)) {
+      await logSecurityEvent({ type: 'blocked_request', ip, userAgent: request.headers.get('user-agent'), details: 'Réservation refusée : IP bloquée', status: 'failed' });
+      return NextResponse.json({ error: 'Les réservations depuis votre réseau sont bloquées.' }, { status: 403 });
+    }
+
+    if (await isMaintenanceMode()) {
+      return NextResponse.json({ error: 'Le site est en maintenance. Les réservations reprendront très bientôt.' }, { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
     const userId = session?.user ? (session.user as any).id : null;
 
@@ -69,6 +82,13 @@ export async function POST(request: NextRequest) {
 
     if (!barbershop) {
       return NextResponse.json({ error: 'Barbershop not found' }, { status: 404 });
+    }
+
+    if (await isShopClosedOn(barbershopId, appointmentDateTime)) {
+      return NextResponse.json(
+        { error: 'Le salon est fermé ce jour-là. Veuillez choisir une autre date.' },
+        { status: 409 }
+      );
     }
 
     // Resolve service to derive real duration and price (instead of hardcoding).
@@ -245,7 +265,7 @@ async function sendBookingEmails(args: {
   try {
     const resendClient = getResend();
     const emailResponse = await resendClient.emails.send({
-      from: 'Orphelia <noreply@orphelia.net>',
+      from: await getEmailFrom(),
       to: customerEmail,
       subject: `Confirmation de votre rendez-vous chez ${barbershop.name}`,
       html: `
@@ -330,7 +350,7 @@ async function sendBookingEmails(args: {
     if (barbershop.email) {
       try {
         await resendClient.emails.send({
-          from: 'Orphelia <noreply@orphelia.net>',
+          from: await getEmailFrom(),
           to: barbershop.email,
           subject: `Nouvelle réservation - ${customerName}`,
           html: `

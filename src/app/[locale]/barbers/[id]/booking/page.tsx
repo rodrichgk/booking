@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { barbers, users, barbershops, services } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { BarberBookingClient } from './client';
+import { getUpcomingClosures } from '@/lib/closures';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const { id, locale } = await params;
@@ -94,8 +95,11 @@ export default async function BarberBookingPage({
       )
     );
 
+  const closedDates = (await getUpcomingClosures(barberData.barbershopId)).map((c) => c.date);
+
   return (
-    <BarberBookingClient 
+    <BarberBookingClient
+      closedDates={closedDates} 
       barber={barberData as any}
       barbershop={{
         id: barberData.barbershopId,

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { barbershops, users } from '@/lib/db/schema';
+import { barbershops } from '@/lib/db/schema';
+import { canManageShop } from '@/lib/shop-access';
 import { eq } from 'drizzle-orm';
 
 export async function PUT(
@@ -18,39 +19,13 @@ export async function PUT(
     const { id } = await params;
     const { openingHours } = await request.json();
 
-    // Fetch the barbershop
-    const [shop] = await db
-      .select({
-        id: barbershops.id,
-        ownerId: barbershops.ownerId,
-      })
-      .from(barbershops)
-      .where(eq(barbershops.id, id))
-      .limit(1);
-
-    if (!shop) {
+    // Owner, co-owner or admin/dev
+    const allowed = await canManageShop(session, id);
+    if (allowed === null) {
       return NextResponse.json({ error: 'Barbershop not found' }, { status: 404 });
     }
-
-    // Check authorization
-    const userRole = (session.user as any).role;
-    const userEmail = session.user.email;
-
-    if (userRole !== 'admin' && userRole !== 'dev') {
-      // Check if user is the owner
-      if (shop.ownerId) {
-        const [owner] = await db
-          .select({ email: users.email })
-          .from(users)
-          .where(eq(users.id, shop.ownerId))
-          .limit(1);
-
-        if (!owner || owner.email !== userEmail) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
-      } else {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-      }
+    if (!allowed) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Update opening hours

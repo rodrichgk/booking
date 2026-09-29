@@ -33,6 +33,8 @@ interface BarberBookingClientProps {
     category: string | null;
   }>;
   locale: string;
+  /** YYYY-MM-DD dates on which the salon is exceptionally closed. */
+  closedDates?: string[];
   customer: {
     name: string;
     email: string;
@@ -40,7 +42,7 @@ interface BarberBookingClientProps {
   };
 }
 
-export function BarberBookingClient({ barber, barbershop, services, locale, customer }: BarberBookingClientProps) {
+export function BarberBookingClient({ barber, barbershop, services, locale, customer, closedDates = [] }: BarberBookingClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preSelectedServiceId = searchParams.get('serviceId');
@@ -77,14 +79,16 @@ export function BarberBookingClient({ barber, barbershop, services, locale, cust
     return slots;
   };
 
-  // Generate next 14 days
+  // Next 90 days as local YYYY-MM-DD keys, minus the salon's exceptional closures.
+  // (toISOString() would give the UTC date, off by one around midnight.)
   const generateAvailableDates = () => {
     const dates = [];
     const today = new Date();
     for (let i = 0; i < 90; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      dates.push(date.toISOString().split('T')[0]);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      if (!closedDates.includes(key)) dates.push(key);
     }
     return dates;
   };
@@ -256,7 +260,7 @@ export function BarberBookingClient({ barber, barbershop, services, locale, cust
               <h3 className="font-semibold text-gray-900 mb-3">Choose a Date</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {generateAvailableDates().map((date) => {
-                  const dateObj = new Date(date);
+                  const dateObj = new Date(`${date}T00:00`);
                   const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
                   const dayNum = dateObj.getDate();
                   const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
@@ -347,7 +351,7 @@ export function BarberBookingClient({ barber, barbershop, services, locale, cust
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-gray-700 mb-2">Date & Time</h3>
                 <p className="text-gray-900">
-                  {new Date(selectedDate).toLocaleDateString('en-US', {
+                  {new Date(`${selectedDate}T00:00`).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',

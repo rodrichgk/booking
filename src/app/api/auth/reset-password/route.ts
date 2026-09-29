@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq, and, gt } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { getPasswordMinLength } from '@/lib/settings';
 
 export async function POST(request: NextRequest) {
     try {
@@ -16,10 +17,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 1. Validate password strength
-        if (password.length < 8) {
+        // 1. Validate password strength (configurable in admin Settings > Security)
+        const minLength = await getPasswordMinLength();
+        if (password.length < minLength) {
             return NextResponse.json(
-                { error: 'Password must be at least 8 characters long' },
+                { error: `Le mot de passe doit contenir au moins ${minLength} caractères` },
                 { status: 400 }
             );
         }

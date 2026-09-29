@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { bookings, barbershops, barbers, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
+import { getEmailFrom } from '@/lib/settings';
 
 // Lazy initialization of Resend
 let resendInstance: Resend | null = null;
@@ -173,7 +174,7 @@ export async function PATCH(
 
           // Send modification email to customer
           await resendClient.emails.send({
-            from: 'Orphelia <noreply@orphelia.net>',
+            from: await getEmailFrom(),
             to: booking.customerEmail,
             subject: `Modification de votre rendez-vous chez ${barbershop.name}`,
             html: `
@@ -253,7 +254,7 @@ export async function PATCH(
           // Send modification email to barbershop
           if (barbershop.email) {
             await resendClient.emails.send({
-              from: 'Orphelia <noreply@orphelia.net>',
+              from: await getEmailFrom(),
               to: barbershop.email,
               subject: `Rendez-vous modifié - ${booking.customerName}`,
               html: `

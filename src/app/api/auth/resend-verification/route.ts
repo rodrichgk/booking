@@ -6,6 +6,7 @@ import { users, verificationTokens } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import { getEmailFrom } from '@/lib/settings';
 
 let resendInstance: Resend | null = null;
 function getResend() {
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     const resend = getResend();
     await resend.emails.send({
-      from: 'Orphelia <noreply@orphelia.net>',
+      from: await getEmailFrom(),
       to: email,
       subject: 'Vérifiez votre adresse email - Orphelia',
       html: `

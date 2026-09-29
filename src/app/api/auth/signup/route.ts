@@ -6,6 +6,9 @@ import { users, verificationTokens } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { Resend } from 'resend';
+import { getEmailFrom, getPasswordMinLength } from '@/lib/settings';
+import { getClientIp, isIpBlocked, logSecurityEvent } from '@/lib/security';
+import { escapeHtml } from '@/lib/utils';
 
 // Lazy initialization of Resend
 let resendInstance: Resend | null = null;
@@ -24,18 +27,33 @@ const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_.-]+$/, 'Username can only contain letters, numbers, dots, hyphens and underscores').optional(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   phone: z.string().optional(),
   role: z.enum(['customer', 'barber']).default('customer'),
 });
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request.headers);
+    if (await isIpBlocked(ip)) {
+      await logSecurityEvent({ type: 'blocked_request', ip, userAgent: request.headers.get('user-agent'), details: 'Inscription refusée : IP bloquée', status: 'failed' });
+      return NextResponse.json({ error: 'Les inscriptions depuis votre réseau sont bloquées.' }, { status: 403 });
+    }
+
     const body = await request.json();
     
     // Validate input
     const validatedData = signUpSchema.parse(body);
     const { name, email, username, password, phone, role } = validatedData;
+
+    // Minimum length is configurable in admin Settings > Security
+    const minLength = await getPasswordMinLength();
+    if (password.length < minLength) {
+      return NextResponse.json(
+        { error: `Le mot de passe doit contenir au moins ${minLength} caractères` },
+        { status: 400 }
+      );
+    }
 
     // Check if user already exists by email
     const existingUser = await db
@@ -109,7 +127,7 @@ export async function POST(request: NextRequest) {
 
       const resend = getResend();
       await resend.emails.send({
-        from: 'Orphelia <noreply@orphelia.net>',
+        from: await getEmailFrom(),
         to: email,
         subject: 'Vérifiez votre adresse email - Orphelia',
         html: `
@@ -162,7 +180,7 @@ export async function POST(request: NextRequest) {
                 </h1>
                 
                 <p style="margin:0 0 20px 0;color:#555555;text-align:center;">
-                  Bienvenue, <strong>${name}</strong> !
+                  Bienvenue, <strong>${escapeHtml(name)}</strong> !
                 </p>
                 
                 <p style="margin:0 0 30px 0;color:#555555;line-height:1.6;text-align:center;">
@@ -211,6 +229,8 @@ export async function POST(request: NextRequest) {
       console.error('Error sending verification email:', emailError);
       // Don't fail the signup if email fails, user can request new verification
     }
+
+    await logSecurityEvent({ type: 'signup', email, userId: newUser[0].id, ip, userAgent: request.headers.get('user-agent'), details: 'Création de compte' });
 
     return NextResponse.json(
       {

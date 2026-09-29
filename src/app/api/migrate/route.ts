@@ -97,6 +97,15 @@ const MIGRATIONS: string[] = [
     `CREATE UNIQUE INDEX IF NOT EXISTS bookings_barber_start_confirmed_unique
         ON bookings (barber_id, start_time)
         WHERE barber_id IS NOT NULL AND status = 'confirmed'`,
+    // Exceptional closing days per barbershop
+    `CREATE TABLE IF NOT EXISTS barbershop_closures (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        barbershop_id UUID NOT NULL REFERENCES barbershops(id) ON DELETE CASCADE,
+        date VARCHAR(10) NOT NULL,
+        reason VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        UNIQUE (barbershop_id, date)
+    )`,
 ];
 
 export async function POST(request: NextRequest) {

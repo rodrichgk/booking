@@ -5,6 +5,7 @@ import { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { SettingsProvider } from '@/contexts/settings-context';
 import { ConfirmProvider } from '@/components/dashboard/confirm-dialog';
+import { MaintenanceGate } from '@/components/maintenance-gate';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -15,7 +16,7 @@ export function Providers({ children }: ProvidersProps) {
     <SessionProvider>
       <SettingsProvider>
         <ConfirmProvider>
-          {children}
+          <MaintenanceGate>{children}</MaintenanceGate>
           <Toaster />
         </ConfirmProvider>
       </SettingsProvider>

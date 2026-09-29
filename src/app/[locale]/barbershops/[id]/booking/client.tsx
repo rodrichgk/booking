@@ -49,13 +49,19 @@ interface BookingClientProps {
   services: Service[];
   locale: string;
   userInfo: UserInfo | null;
+  /** YYYY-MM-DD dates on which the salon is exceptionally closed. */
+  closedDates?: string[];
 }
+
+const localDateKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 // Generate available dates for the next 7 days
 // If a barber is selected and has their own hours, show days they work even if salon is closed
 const generateAvailableDates = (
   shopOpeningHours: OpeningHours | null,
-  selectedBarberData: Barber | undefined
+  selectedBarberData: Barber | undefined,
+  closedDates: string[] = []
 ) => {
   const dates = [];
   const today = new Date();
@@ -66,6 +72,11 @@ const generateAvailableDates = (
     date.setDate(today.getDate() + i);
 
     const dayName = days[date.getDay()];
+
+    // Exceptional closures close the whole salon, barbers included
+    if (closedDates.includes(localDateKey(date))) {
+      continue;
+    }
 
     // Check if barber has their own hours for this day
     const barberHours = selectedBarberData?.openingHours;
@@ -145,7 +156,7 @@ const generateTimeSlots = (
   return slots;
 };
 
-export function BookingClient({ shop, barbers, services, locale, userInfo }: BookingClientProps) {
+export function BookingClient({ shop, barbers, services, locale, userInfo, closedDates = [] }: BookingClientProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<'service' | 'barber' | 'date' | 'time' | 'confirm'>('service');
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -162,7 +173,7 @@ export function BookingClient({ shop, barbers, services, locale, userInfo }: Boo
 
   const activeBarbers = barbers.filter(b => b.isActive);
   const selectedBarberObj = activeBarbers.find(b => b.id === selectedBarber);
-  const availableDates = generateAvailableDates(shop.openingHours, selectedBarberObj);
+  const availableDates = generateAvailableDates(shop.openingHours, selectedBarberObj, closedDates);
   const availableTimeSlots = generateTimeSlots(selectedDate, shop.openingHours, selectedBarberObj?.openingHours);
 
   const formatDate = (date: Date) => {

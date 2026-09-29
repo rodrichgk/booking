@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSetting, getSubscriptionPrice } from '@/lib/settings';
+import { getSetting, getPasswordMinLength } from '@/lib/settings';
 
 // Public API to get settings needed by the frontend
 // This endpoint is cached and returns only public-safe settings
@@ -7,16 +7,13 @@ export async function GET() {
     try {
         const payment = await getSetting('payment');
         const general = await getSetting('general');
-        const appearance = await getSetting('appearance');
 
         return NextResponse.json({
             subscriptionPrice: payment.subscriptionPrice,
             currency: payment.currency,
             siteName: general.siteName,
-            siteUrl: general.siteUrl,
             maintenanceMode: general.maintenanceMode,
-            darkMode: appearance.darkMode,
-            primaryColor: appearance.primaryColor,
+            passwordMinLength: await getPasswordMinLength(),
         }, {
             headers: {
                 // Cache for 1 minute
@@ -31,10 +28,8 @@ export async function GET() {
             subscriptionPrice: 29.9,
             currency: 'EUR',
             siteName: 'Orphelia',
-            siteUrl: 'https://www.orphelia.net',
             maintenanceMode: false,
-            darkMode: false,
-            primaryColor: '#6366f1',
+            passwordMinLength: 8,
         });
     }
 }
