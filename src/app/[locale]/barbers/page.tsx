@@ -33,6 +33,9 @@ export default async function BarbersPage({ params }: { params: Promise<{ locale
       barbershopName: barbershops.name,
       barbershopCity: barbershops.city,
       barbershopAddress: barbershops.address,
+      // Backdrops for barbers without a portrait: their first work photo, else the salon photo.
+      workImage: sql<string | null>`${barbers.galleryImages}->>0`,
+      barbershopImage: sql<string | null>`${barbershops.images}->>0`,
     })
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))

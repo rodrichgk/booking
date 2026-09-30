@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbershops } from '@/lib/db/schema';
+import { canManageShop } from '@/lib/shop-access';
 import { eq } from 'drizzle-orm';
 
 export async function PUT(
@@ -118,15 +119,12 @@ export async function PATCH(
       );
     }
 
-    const userId = (session.user as any).id;
-    if (shop.ownerId !== userId) {
-      const userRole = (session.user as any).role;
-      if (userRole !== 'admin' && userRole !== 'dev') {
-        return NextResponse.json(
-          { error: 'Vous n\'êtes pas autorisé à modifier ce salon' },
-          { status: 403 }
-        );
-      }
+    // Owner, co-owner or admin (same rule as PUT above)
+    if (!(await canManageShop(session, id))) {
+      return NextResponse.json(
+        { error: 'Vous n\'êtes pas autorisé à modifier ce salon' },
+        { status: 403 }
+      );
     }
 
     // Build update object dynamically

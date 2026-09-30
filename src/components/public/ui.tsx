@@ -17,46 +17,101 @@ export function PublicShell({ children }: { children: ReactNode }) {
   return <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>;
 }
 
-/** Left-aligned page intro with an optional search/filter row underneath. */
-export function DirectoryHeader({ title, description, children }: { title: ReactNode; description?: ReactNode; children?: ReactNode }) {
+/**
+ * Directory page intro, same language as the homepage hero: split layout,
+ * one accent word, pill search and filters on the left, a photo collage built
+ * from the page's own data on the right (desktop only).
+ */
+export function DirectoryHero({
+  title,
+  accent,
+  description,
+  search,
+  filters,
+  visual,
+}: {
+  title: ReactNode;
+  accent?: ReactNode;
+  description?: ReactNode;
+  search?: ReactNode;
+  filters?: ReactNode;
+  visual?: ReactNode;
+}) {
   return (
-    <section className="border-b border-gray-200 bg-white">
+    <section className="overflow-hidden border-b border-gray-200 bg-white">
       <PublicShell>
-        <div className="py-10 sm:py-12">
-          <h1 className="max-w-3xl animate-fade-in-up font-display text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">{title}</h1>
-          {description && <p className="anim-delay-100 mt-3 max-w-2xl animate-fade-in-up text-gray-600">{description}</p>}
-          {children && <div className="anim-delay-200 mt-8 animate-fade-in-up">{children}</div>}
+        <div className={cn('grid items-center gap-12 py-10 sm:py-14', visual && 'lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]')}>
+          <div className="min-w-0">
+            <h1 className="animate-fade-in-up font-display text-4xl font-semibold leading-[1.05] tracking-tight text-gray-900 md:text-5xl">
+              {title}
+              {accent && <> <span className="text-primary-600">{accent}</span></>}
+            </h1>
+            {description && <p className="anim-delay-100 mt-4 max-w-[52ch] animate-fade-in-up text-lg leading-relaxed text-gray-600">{description}</p>}
+            {search && <div className="anim-delay-200 mt-8 animate-fade-in-up">{search}</div>}
+            {filters && <div className="anim-delay-300 mt-5 animate-fade-in-up">{filters}</div>}
+          </div>
+          {visual && <div className="hidden lg:block">{visual}</div>}
         </div>
       </PublicShell>
     </section>
   );
 }
 
-export function SearchField({
-  icon: Icon = Search,
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  icon?: IconType;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <label className="relative block flex-1">
-      <span className="sr-only">{label}</span>
-      <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-      <input
-        type="search"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="block w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-500 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-      />
+type PillField = { label: string; value: string; onChange: (value: string) => void; placeholder: string };
+
+/** The homepage's two-part search bar, filtering live (no submit button). */
+export function PillSearch({ what, where }: { what: PillField; where: PillField }) {
+  const field = (f: PillField, Icon: IconType, extra: string) => (
+    <label className={cn('flex min-w-0 flex-col rounded-xl px-4 py-2.5 transition-colors focus-within:bg-gray-50 sm:rounded-full', extra)}>
+      <span className="text-xs font-semibold text-gray-900">{f.label}</span>
+      <span className="flex items-center gap-2">
+        <Icon className="h-4 w-4 flex-shrink-0 text-gray-400" aria-hidden="true" />
+        <input
+          type="search"
+          value={f.value}
+          onChange={(e) => f.onChange(e.target.value)}
+          placeholder={f.placeholder}
+          className="w-full min-w-0 bg-transparent py-0.5 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+        />
+      </span>
     </label>
+  );
+  return (
+    <div
+      role="search"
+      className="grid gap-1 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-[0_12px_40px_-16px_rgba(222,90,22,0.25)] sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] sm:rounded-full"
+    >
+      {field(what, Search, 'sm:pl-6')}
+      {field(where, MapPin, 'sm:border-l sm:border-gray-200')}
+    </div>
+  );
+}
+
+/**
+ * One large photo with two smaller ones overlapping it, from real images
+ * (salon photos, portraits, service photos). Falls back to `fallback` when
+ * the page has fewer than one image of its own.
+ */
+export function PhotoCollage({ images, fallback }: { images: string[]; fallback: string[] }) {
+  const pics = Array.from(new Set(images.filter(Boolean)));
+  const list = (pics.length ? pics : fallback).slice(0, 3);
+  const [main, second, third] = list;
+  return (
+    <div className="relative mx-auto aspect-[5/4] w-full max-w-xl">
+      <div className="hero-image-in absolute inset-y-0 right-0 w-[78%] overflow-hidden rounded-2xl bg-gray-100">
+        <Image src={main} alt="" fill priority sizes="40vw" className="object-cover" />
+      </div>
+      {second && (
+        <div className="hero-image-in anim-delay-200 absolute bottom-[8%] left-0 aspect-square w-[36%] overflow-hidden rounded-2xl border-4 border-white bg-gray-100 shadow-xl shadow-gray-900/10">
+          <Image src={second} alt="" fill sizes="220px" className="object-cover" />
+        </div>
+      )}
+      {third && (
+        <div className="hero-image-in anim-delay-300 absolute left-[10%] top-[6%] aspect-[4/5] w-[24%] overflow-hidden rounded-2xl border-4 border-white bg-gray-100 shadow-xl shadow-gray-900/10">
+          <Image src={third} alt="" fill sizes="160px" className="object-cover" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -175,8 +230,8 @@ export function Media({
           className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
         />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-50 to-gray-100">
-          <span className="font-display text-4xl font-semibold tracking-tight text-primary-300">{initials}</span>
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-100 via-primary-50 to-white">
+          <span className="font-display text-5xl font-semibold tracking-tight text-primary-500/80">{initials}</span>
         </div>
       )}
     </div>

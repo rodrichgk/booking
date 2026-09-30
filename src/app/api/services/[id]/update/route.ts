@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { services, barbershops } from '@/lib/db/schema';
+import { services } from '@/lib/db/schema';
+import { canManageShop } from '@/lib/shop-access';
 import { eq } from 'drizzle-orm';
 
 export async function PATCH(
@@ -36,14 +37,8 @@ export async function PATCH(
       );
     }
 
-    // Check if user is the shop owner
-    const [shop] = await db
-      .select()
-      .from(barbershops)
-      .where(eq(barbershops.id, service.barbershopId))
-      .limit(1);
-
-    if (shop?.ownerId !== session.user.id) {
+    // Owner, co-owner or admin of the service's shop
+    if (!(await canManageShop(session, service.barbershopId))) {
       return NextResponse.json(
         { error: 'Non autorisé à modifier ce service' },
         { status: 403 }

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { barbers, barbershops } from '@/lib/db/schema';
+import { barbers } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { canManageShop } from '@/lib/shop-access';
 
 export async function PATCH(
   request: NextRequest,
@@ -36,17 +37,11 @@ export async function PATCH(
       );
     }
 
-    // Check if user is the barber or the shop owner
-    const [shop] = await db
-      .select()
-      .from(barbershops)
-      .where(eq(barbershops.id, barber.barbershopId))
-      .limit(1);
-
-    const isOwner = shop?.ownerId === session.user.id;
+    // The barber themself, or whoever manages the shop (owner, co-owner, admin)
     const isBarber = barber.userId === session.user.id;
+    const managesShop = !isBarber && (await canManageShop(session, barber.barbershopId));
 
-    if (!isOwner && !isBarber) {
+    if (!isBarber && !managesShop) {
       return NextResponse.json(
         { error: 'Non autorisé à modifier ce profil' },
         { status: 403 }

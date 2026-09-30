@@ -3,13 +3,19 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Link } from '@/routing';
-import { MapPin } from 'lucide-react';
+import { ArrowRight, Calendar } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import {
-  DirectoryHeader, PublicShell, SearchField, ChipGroup, ResultsBar, Rating, OpenStatus, Media, Place, EmptyResults,
+  DirectoryHero, PillSearch, PhotoCollage, PublicShell, ChipGroup, ResultsBar, Rating, OpenStatus, Media, Place, EmptyResults,
 } from '@/components/public/ui';
 import { btn } from '@/components/dashboard/ui';
+import { cn } from '@/lib/utils';
+
+const STOCK = [
+  'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1589156280159-27698a70f29e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+];
 import type { OpeningHours } from '@/lib/opening-hours';
 
 interface Barbershop {
@@ -74,25 +80,28 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <DirectoryHeader
-        title="Trouvez votre salon"
+      <DirectoryHero
+        title="Trouvez votre"
+        accent="salon."
         description="Des salons spécialisés dans les cheveux afro, bouclés et texturés. Choisissez, puis réservez en ligne."
-      >
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <SearchField label="Nom du salon" value={query} onChange={setQuery} placeholder="Nom du salon, style, tresses..." />
-          <SearchField icon={MapPin} label="Ville ou adresse" value={location} onChange={setLocation} placeholder="Ville ou adresse" />
-        </div>
-        {cities.length > 1 && (
-          <div className="mt-4">
+        search={
+          <PillSearch
+            what={{ label: 'Quoi', value: query, onChange: setQuery, placeholder: 'Nom du salon, style, tresses' }}
+            where={{ label: 'Où', value: location, onChange: setLocation, placeholder: 'Ville ou adresse' }}
+          />
+        }
+        filters={
+          cities.length > 1 ? (
             <ChipGroup
               label="Filtrer par ville"
               value={city}
               onChange={setCity}
               options={[{ id: 'all', label: 'Toutes les villes' }, ...cities.map((c) => ({ id: c.name, label: c.name, count: c.count }))]}
             />
-          </div>
-        )}
-      </DirectoryHeader>
+          ) : undefined
+        }
+        visual={<PhotoCollage images={barbershops.flatMap((b) => b.images ?? [])} fallback={STOCK} />}
+      />
 
       <PublicShell>
         <ResultsBar count={results.length} noun={['salon', 'salons']}>
@@ -119,6 +128,14 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
               Essayez un autre nom ou une autre ville.
             </EmptyResults>
           </div>
+        ) : results.length <= 2 ? (
+          <ul key={`wide|${city}|${sort}`} className="grid gap-6 pb-16">
+            {results.map((shop, index) => (
+              <li key={shop.id} className="card-in min-w-0" style={{ ['--i' as string]: index * 2 }}>
+                <WideShopCard shop={shop} />
+              </li>
+            ))}
+          </ul>
         ) : (
           <ul key={`${city}|${sort}`} className="grid gap-x-6 gap-y-10 pb-16 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((shop, index) => (
@@ -148,5 +165,39 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
 
       <Footer />
     </div>
+  );
+}
+
+/** Showcase card used when only one or two salons match: the list never looks empty. */
+function WideShopCard({ shop }: { shop: Barbershop }) {
+  return (
+    <article className="group grid overflow-hidden rounded-2xl border border-gray-200 bg-white transition-shadow duration-300 hover:shadow-[0_18px_48px_-24px_rgba(17,24,39,0.35)] md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <Link href={`/barbershops/${shop.id}`} className="block focus-visible:outline-none" tabIndex={-1} aria-hidden="true">
+        <Media src={shop.images?.[0]} name={shop.name} priority rounded="rounded-none" sizes="(max-width: 768px) 100vw, 55vw" className="aspect-[16/10] h-full md:aspect-auto md:min-h-[22rem]" />
+      </Link>
+      <div className="flex flex-col p-6 sm:p-8">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Rating value={shop.rating} count={shop.reviewCount} />
+          <OpenStatus hours={shop.openingHours} />
+        </div>
+        <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-gray-900">
+          <Link href={`/barbershops/${shop.id}`} className="hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+            {shop.name}
+          </Link>
+        </h2>
+        <Place className="mt-2">{shop.address}, {shop.city}</Place>
+        {shop.description && <p className="mt-4 line-clamp-4 text-gray-600">{shop.description}</p>}
+        <div className="mt-auto flex flex-wrap gap-3 pt-8">
+          <Link href={`/barbershops/${shop.id}/booking`} className={cn(btn.primary, 'press')}>
+            <Calendar className="h-4 w-4" aria-hidden="true" />
+            Réserver
+          </Link>
+          <Link href={`/barbershops/${shop.id}`} className={cn(btn.secondary, 'press group/link')}>
+            Voir le salon
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5" aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+    </article>
   );
 }

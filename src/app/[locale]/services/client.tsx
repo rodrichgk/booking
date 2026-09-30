@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Link } from '@/routing';
-import { MapPin, ChevronRight, Scissors } from 'lucide-react';
+import { ChevronRight, Scissors } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
-import { DirectoryHeader, PublicShell, SearchField, ChipGroup, ResultsBar, EmptyResults } from '@/components/public/ui';
+import { DirectoryHero, PillSearch, PhotoCollage, PublicShell, ChipGroup, ResultsBar, EmptyResults } from '@/components/public/ui';
 import { btn, formatEuro } from '@/components/dashboard/ui';
 import { SERVICE_CATEGORIES, categoryLabel, formatDuration } from '@/lib/service-categories';
 import Image from 'next/image';
@@ -24,6 +24,11 @@ interface ServiceRow {
   barbershopCity: string;
   barbershopRating: string | null;
 }
+
+const STOCK = [
+  'https://images.unsplash.com/photo-1589156280159-27698a70f29e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+];
 
 type Sort = 'price-asc' | 'price-desc' | 'duration';
 
@@ -69,20 +74,23 @@ export function ServicesClient({ services }: { services: ServiceRow[]; locale: s
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <DirectoryHeader
-        title="Prestations"
+      <DirectoryHero
+        title="Toutes les"
+        accent="prestations."
         description="Coupes, tresses, colorations et soins pour cheveux afro, bouclés et texturés. Comparez les tarifs des salons et réservez."
-      >
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <SearchField label="Prestation" value={query} onChange={setQuery} placeholder="Nattes, dégradé, locks..." />
-          <SearchField icon={MapPin} label="Ville" value={location} onChange={setLocation} placeholder="Ville" />
-        </div>
-        {categoryOptions.length > 2 && (
-          <div className="mt-4">
+        search={
+          <PillSearch
+            what={{ label: 'Quoi', value: query, onChange: setQuery, placeholder: 'Nattes, dégradé, locks' }}
+            where={{ label: 'Où', value: location, onChange: setLocation, placeholder: 'Ville' }}
+          />
+        }
+        filters={
+          categoryOptions.length > 2 ? (
             <ChipGroup label="Catégorie" value={category} onChange={setCategory} options={categoryOptions} />
-          </div>
-        )}
-      </DirectoryHeader>
+          ) : undefined
+        }
+        visual={<PhotoCollage images={services.map((s) => s.image).filter((x): x is string => !!x)} fallback={STOCK} />}
+      />
 
       <PublicShell>
         <ResultsBar count={results.length} noun={['prestation', 'prestations']}>
