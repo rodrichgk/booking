@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { Star, MapPin, Phone, Mail, Globe, Share2, Calendar, ChevronRight, MessageSquare, ArrowUpRight } from 'lucide-react';
 import { Header } from '@/components/ui/header';
@@ -9,8 +10,9 @@ import { Footer } from '@/components/ui/footer';
 import { useToast } from '@/hooks/use-toast';
 import { PublicShell, Rating, OpenStatus, Media, SectionTitle } from '@/components/public/ui';
 import { btn, formatEuro, inputClass, Spinner } from '@/components/dashboard/ui';
-import { SERVICE_CATEGORIES, formatDuration } from '@/lib/service-categories';
-import { WEEK, todayKey, frTime, type OpeningHours } from '@/lib/opening-hours';
+import { SERVICE_CATEGORIES, categoryName, formatDuration } from '@/lib/service-categories';
+import { barberTypeLabel } from '@/lib/barber-types';
+import { WEEK, todayKey, dayName, formatTime, type OpeningHours } from '@/lib/opening-hours';
 import { cn } from '@/lib/utils';
 
 interface Barbershop {
@@ -66,6 +68,8 @@ interface BarbershopDetailClientProps {
 }
 
 export function BarbershopDetailClient({ shop, barbers, services, isAuthenticated = false, canReview = false }: BarbershopDetailClientProps) {
+  const t = useTranslations('site.salon');
+  const locale = useLocale();
   const { toast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -100,11 +104,12 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
   }, [shop.id]);
 
   const groupedServices = useMemo(() => {
-    const groups = SERVICE_CATEGORIES.map((c) => ({ id: c.id as string, label: c.label as string, items: services.filter((s) => s.category === c.id) }));
+    const groups = SERVICE_CATEGORIES.map((c) => ({ id: c.id as string, label: categoryName(c, locale), items: services.filter((s) => s.category === c.id) }));
     const other = services.filter((s) => !SERVICE_CATEGORIES.some((c) => c.id === s.category));
-    if (other.length) groups.push({ id: 'other', label: 'Autres prestations', items: other });
+    if (other.length) groups.push({ id: 'other', label: t('otherServices'), items: other });
     return groups.filter((g) => g.items.length > 0);
-  }, [services]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services, locale]);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -113,7 +118,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
         await navigator.share({ title: shop.name, text: `${shop.name}, ${shop.city}`, url });
       } else {
         await navigator.clipboard.writeText(url);
-        toast({ variant: 'success', title: 'Lien copié' });
+        toast({ variant: 'success', title: t('linkCopied') });
       }
     } catch {
       // Share sheet dismissed: nothing to do.
@@ -130,15 +135,16 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
         body: JSON.stringify({ barbershopId: shop.id, rating: reviewRating, comment: reviewComment || null }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 403) throw new Error(t('reviewAfterVisit'));
       if (!res.ok) throw new Error(data.error);
-      toast({ variant: 'success', title: 'Merci pour votre avis' });
+      toast({ variant: 'success', title: t('reviewThanks') });
       setShowReviewForm(false);
       setReviewComment('');
       setReviewRating(5);
       setReviewed(true);
       loadReviews();
     } catch (err) {
-      toast({ variant: 'error', title: 'Erreur', description: err instanceof Error && err.message ? err.message : 'Une erreur est survenue' });
+      toast({ variant: 'error', title: t('errorTitle'), description: err instanceof Error && err.message ? err.message : t('errorGeneric') });
     } finally {
       setSubmittingReview(false);
     }
@@ -149,8 +155,8 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
       <Header />
 
       <PublicShell>
-        <nav aria-label="Fil d’Ariane" className="flex items-center gap-1.5 pt-6 text-sm text-gray-500">
-          <Link href="/barbershops" className="hover:text-gray-900">Salons</Link>
+        <nav aria-label={t('breadcrumb')} className="flex items-center gap-1.5 pt-6 text-sm text-gray-500">
+          <Link href="/barbershops" className="hover:text-gray-900">{t('salons')}</Link>
           <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="truncate text-gray-900">{shop.name}</span>
         </nav>
@@ -170,11 +176,11 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
           <div className="flex flex-shrink-0 gap-2">
             <button onClick={handleShare} className={btn.secondary}>
               <Share2 className="h-4 w-4" />
-              Partager
+              {t('share')}
             </button>
             <Link href={bookingHref} className={cn(btn.primary, 'hidden sm:inline-flex')}>
               <Calendar className="h-4 w-4" />
-              Réserver
+              {t('book')}
             </Link>
           </div>
         </header>
@@ -209,15 +215,15 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
           <div className="min-w-0 space-y-14">
             {shop.description && (
               <section aria-labelledby="about">
-                <SectionTitle id="about">À propos</SectionTitle>
+                <SectionTitle id="about">{t('about')}</SectionTitle>
                 <p className="max-w-[65ch] whitespace-pre-line leading-relaxed text-gray-700">{shop.description}</p>
               </section>
             )}
 
             <section aria-labelledby="services">
-              <SectionTitle id="services">Prestations</SectionTitle>
+              <SectionTitle id="services">{t('services')}</SectionTitle>
               {groupedServices.length === 0 ? (
-                <p className="text-gray-600">Ce salon n’a pas encore publié ses prestations. Vous pouvez tout de même réserver un créneau.</p>
+                <p className="text-gray-600">{t('noServices')}</p>
               ) : (
                 <div className="space-y-8">
                   {groupedServices.map((group) => (
@@ -229,11 +235,11 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-gray-900">{service.name}</p>
                               {service.description && <p className="mt-0.5 line-clamp-2 text-sm text-gray-600">{service.description}</p>}
-                              <p className="mt-1 text-sm text-gray-500">{formatDuration(service.duration)}</p>
+                              <p className="mt-1 text-sm text-gray-500">{formatDuration(service.duration, locale)}</p>
                             </div>
-                            <span className="text-sm font-medium tabular-nums text-gray-900">{formatEuro(service.price)}</span>
+                            <span className="text-sm font-medium tabular-nums text-gray-900">{formatEuro(service.price, locale)}</span>
                             <Link href={`${bookingHref}?serviceId=${service.id}`} className={cn(btn.secondary, btn.sm)}>
-                              Choisir
+                              {t('choose')}
                             </Link>
                           </li>
                         ))}
@@ -246,15 +252,15 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
 
             {barbers.length > 0 && (
               <section aria-labelledby="team">
-                <SectionTitle id="team">L’équipe</SectionTitle>
+                <SectionTitle id="team">{t('team')}</SectionTitle>
                 <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4">
                   {barbers.map((barber) => (
                     <li key={barber.id}>
                       <Link href={`/barbers/${barber.id}`} className="group block">
-                        <Media src={barber.profileImage} name={barber.name || 'Coiffeur'} className="aspect-square" rounded="rounded-full" sizes="160px" />
-                        <p className="mt-3 truncate text-center font-medium text-gray-900 group-hover:text-primary-700">{barber.name || 'Coiffeur'}</p>
+                        <Media src={barber.profileImage} name={barber.name || t('stylistFallback')} className="aspect-square" rounded="rounded-full" sizes="160px" />
+                        <p className="mt-3 truncate text-center font-medium text-gray-900 group-hover:text-primary-700">{barber.name || t('stylistFallback')}</p>
                         <p className="truncate text-center text-sm text-gray-500">
-                          {[barber.barberType, barber.experience ? `${barber.experience} ans d’exp.` : null].filter(Boolean).join(', ') || 'Coiffeur'}
+                          {[barberTypeLabel(barber.barberType, locale), barber.experience ? t('experience', { years: barber.experience }) : null].filter(Boolean).join(', ') || t('stylistFallback')}
                         </p>
                       </Link>
                     </li>
@@ -269,33 +275,33 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
                 aside={
                   canReview && !reviewed ? (
                     <button onClick={() => setShowReviewForm((v) => !v)} className={cn(btn.secondary, btn.sm)}>
-                      {showReviewForm ? 'Annuler' : 'Laisser un avis'}
+                      {showReviewForm ? t('cancel') : t('leaveReview')}
                     </button>
                   ) : isAuthenticated ? null : (
                     <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/barbershops/${shop.id}`)}`} className={cn(btn.ghost, btn.sm)}>
-                      Se connecter pour laisser un avis
+                      {t('signInToReview')}
                     </Link>
                   )
                 }
               >
-                Avis
+                {t('reviews')}
               </SectionTitle>
 
               {isAuthenticated && !canReview && !reviewed && (
-                <p className="mb-6 text-sm text-gray-500">Vous pourrez noter ce salon après votre rendez-vous.</p>
+                <p className="mb-6 text-sm text-gray-500">{t('reviewAfterVisit')}</p>
               )}
 
               {showReviewForm && !reviewed && (
                 <form onSubmit={handleSubmitReview} className="mb-8 space-y-4 rounded-xl border border-gray-200 p-5">
                   <fieldset>
-                    <legend className="mb-2 text-sm font-medium text-gray-800">Votre note</legend>
+                    <legend className="mb-2 text-sm font-medium text-gray-800">{t('yourRating')}</legend>
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           type="button"
                           onClick={() => setReviewRating(star)}
-                          aria-label={`${star} sur 5`}
+                          aria-label={t('outOfFive', { value: star })}
                           aria-pressed={star <= reviewRating}
                           className="rounded p-0.5 transition-transform active:scale-90"
                         >
@@ -306,20 +312,20 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
                   </fieldset>
                   <div>
                     <label htmlFor="review-comment" className="mb-1.5 block text-sm font-medium text-gray-800">
-                      Votre commentaire <span className="font-normal text-gray-500">(facultatif)</span>
+                      {t('yourComment')} <span className="font-normal text-gray-500">{t('optional')}</span>
                     </label>
                     <textarea
                       id="review-comment"
                       value={reviewComment}
                       onChange={(e) => setReviewComment(e.target.value)}
                       rows={3}
-                      placeholder="Accueil, résultat, ambiance..."
+                      placeholder={t('commentPlaceholder')}
                       className={cn(inputClass, 'resize-none')}
                     />
                   </div>
                   <button type="submit" disabled={submittingReview} className={btn.primary}>
                     {submittingReview && <Spinner className="h-3.5 w-3.5" />}
-                    Publier mon avis
+                    {t('publishReview')}
                   </button>
                 </form>
               )}
@@ -339,7 +345,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
               ) : reviews.length === 0 ? (
                 <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-5 py-6 text-gray-600">
                   <MessageSquare className="h-5 w-5 flex-shrink-0 text-gray-400" />
-                  Pas encore d’avis. Après votre rendez-vous, partagez votre expérience.
+                  {t('noReviews')}
                 </div>
               ) : (
                 <ul className="space-y-8">
@@ -356,10 +362,10 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
                         <div className="flex flex-wrap items-baseline gap-x-2">
                           <p className="font-medium text-gray-900">{review.customerName}</p>
                           <time className="text-xs text-gray-500" dateTime={review.createdAt}>
-                            {new Date(review.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                            {new Date(review.createdAt).toLocaleDateString(locale === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' })}
                           </time>
                         </div>
-                        <div className="mt-1 flex gap-0.5" aria-label={`${review.rating} sur 5`}>
+                        <div className="mt-1 flex gap-0.5" aria-label={t('outOfFive', { value: review.rating })}>
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star key={star} aria-hidden="true" className={cn('h-3.5 w-3.5', star <= review.rating ? 'fill-primary-500 text-primary-500' : 'text-gray-200')} />
                           ))}
@@ -375,26 +381,26 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
 
           <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-xl border border-gray-200 p-5">
-              <p className="font-display text-lg font-semibold text-gray-900">Prendre rendez-vous</p>
-              <p className="mt-1 text-sm text-gray-600">Choisissez une prestation, un coiffeur et un créneau. Confirmation immédiate par email.</p>
+              <p className="font-display text-lg font-semibold text-gray-900">{t('bookTitle')}</p>
+              <p className="mt-1 text-sm text-gray-600">{t('bookText')}</p>
               <Link href={bookingHref} className={cn(btn.primary, 'mt-4 w-full py-2.5')}>
                 <Calendar className="h-4 w-4" />
-                Réserver
+                {t('book')}
               </Link>
             </div>
 
             {shop.openingHours && (
               <div className="rounded-xl border border-gray-200 p-5">
-                <p className="font-display text-base font-semibold text-gray-900">Horaires</p>
+                <p className="font-display text-base font-semibold text-gray-900">{t('hours')}</p>
                 <dl className="mt-3 space-y-1.5 text-sm">
                   {WEEK.map((day) => {
                     const hours = shop.openingHours?.[day.key];
                     const isToday = day.key === today;
                     return (
                       <div key={day.key} className={cn('flex justify-between gap-4', isToday ? 'font-medium text-gray-900' : 'text-gray-600')}>
-                        <dt>{day.label}{isToday && <span className="sr-only"> (aujourd’hui)</span>}</dt>
+                        <dt>{dayName(day.key, locale)}{isToday && <span className="sr-only"> ({t('today')})</span>}</dt>
                         <dd className="tabular-nums">
-                          {!hours || hours.closed ? 'Fermé' : `${frTime(hours.open)} à ${frTime(hours.close)}`}
+                          {!hours || hours.closed ? t('closed') : t('timeRange', { from: formatTime(hours.open, locale), to: formatTime(hours.close, locale) })}
                         </dd>
                       </div>
                     );
@@ -404,7 +410,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
             )}
 
             <div className="rounded-xl border border-gray-200 p-5">
-              <p className="font-display text-base font-semibold text-gray-900">Contact</p>
+              <p className="font-display text-base font-semibold text-gray-900">{t('contact')}</p>
               <ul className="mt-3 space-y-2.5 text-sm">
                 <li>
                   <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="group flex gap-2.5 text-gray-700 hover:text-gray-900">
@@ -412,7 +418,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
                     <span>
                       {shop.address}, {shop.city}
                       <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-primary-700 group-hover:underline">
-                        Itinéraire <ArrowUpRight className="h-3 w-3" />
+                        {t('directions')} <ArrowUpRight className="h-3 w-3" />
                       </span>
                     </span>
                   </a>
@@ -451,7 +457,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
         <Link href={bookingHref} className={cn(btn.primary, 'w-full py-3')}>
           <Calendar className="h-4 w-4" />
-          Réserver chez {shop.name}
+          {t('bookAt', { name: shop.name })}
         </Link>
       </div>
 

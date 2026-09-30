@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { MailCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { AuthShell, AuthField, AuthStatus, SubmitButton, FormAlert, authLinkClass } from '@/components/auth/auth-ui';
 import { btn } from '@/components/dashboard/ui';
 
 export default function ForgotPasswordPage() {
+    const t = useTranslations('site.forgot');
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
@@ -25,11 +27,11 @@ export default function ForgotPasswordPage() {
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(data.error || 'Une erreur est survenue');
+                throw new Error(data.error || t('error'));
             }
             setIsSent(true);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+            setError(err instanceof Error ? err.message : t('error'));
         } finally {
             setIsLoading(false);
         }
@@ -37,25 +39,24 @@ export default function ForgotPasswordPage() {
 
     const backToSignIn = (
         <>
-            Vous vous en souvenez ?{' '}
-            <Link href="/auth/signin" className={authLinkClass}>Se connecter</Link>
+            {t('remember')}{' '}
+            <Link href="/auth/signin" className={authLinkClass}>{t('signIn')}</Link>
         </>
     );
 
     if (isSent) {
         return (
-            <AuthShell title="Vérifiez vos emails" footer={backToSignIn}>
+            <AuthShell title={t('checkTitle')} footer={backToSignIn}>
                 <AuthStatus
                     icon={MailCheck}
-                    title="Lien envoyé"
+                    title={t('sentTitle')}
                     action={
                         <button type="button" onClick={() => setIsSent(false)} className={btn.secondary}>
-                            Utiliser une autre adresse
+                            {t('otherAddress')}
                         </button>
                     }
                 >
-                    Si un compte est associé à <strong className="font-medium text-gray-900">{email}</strong>, vous allez recevoir un lien
-                    pour choisir un nouveau mot de passe. Pensez à regarder dans vos spams.
+                    {t.rich('sentText', { email, b: (chunks) => <strong className="font-medium text-gray-900">{chunks}</strong> })}
                 </AuthStatus>
             </AuthShell>
         );
@@ -63,24 +64,24 @@ export default function ForgotPasswordPage() {
 
     return (
         <AuthShell
-            title="Mot de passe oublié ?"
-            description="Indiquez votre adresse email, nous vous envoyons un lien pour le réinitialiser."
+            title={t('title')}
+            description={t('description')}
             footer={backToSignIn}
         >
             {error && <FormAlert>{error}</FormAlert>}
             <form className="space-y-5" onSubmit={handleSubmit}>
                 <AuthField
-                    label="Adresse email"
+                    label={t('emailLabel')}
                     name="email"
                     type="email"
                     autoComplete="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="vous@exemple.fr"
+                    placeholder={t('emailPlaceholder')}
                     disabled={isLoading}
                 />
-                <SubmitButton loading={isLoading}>Envoyer le lien</SubmitButton>
+                <SubmitButton loading={isLoading}>{t('send')}</SubmitButton>
             </form>
         </AuthShell>
     );

@@ -40,7 +40,7 @@ export function Header() {
 
     return [
       ...baseItems,
-      { href: '/about', label: 'À propos' },
+      { href: '/about', label: t('about') },
     ];
   };
 
@@ -69,7 +69,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" aria-label="Orphelia, accueil" className="group flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+          <Link href="/" aria-label="Orphelia" className="group flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
             <Logo className="[&_svg]:transition-transform [&_svg]:duration-500 [&_svg]:ease-out group-hover:[&_svg]:rotate-[-12deg]" />
           </Link>
 

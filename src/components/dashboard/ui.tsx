@@ -15,11 +15,13 @@ import { cn } from '@/lib/utils';
 type IconType = ComponentType<{ className?: string }>;
 
 const euroFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+const euroFormatterEn = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' });
 
-/** "25" / 25 / "25.5" -> "25,00 €" / "25,50 €". */
-export function formatEuro(value: string | number | null | undefined): string {
+/** "25" / 25 / "25.5" -> "25,00 €" / "25,50 €" ("€25.00" with locale "en"). */
+export function formatEuro(value: string | number | null | undefined, locale?: string): string {
   const n = typeof value === 'number' ? value : parseFloat(value ?? '');
-  return Number.isFinite(n) ? euroFormatter.format(n) : '-';
+  if (!Number.isFinite(n)) return '-';
+  return (locale === 'en' ? euroFormatterEn : euroFormatter).format(n);
 }
 
 /* ------------------------------------------------------------------ */

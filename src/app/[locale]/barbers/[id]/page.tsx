@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   return {
     title: `${barber.name}, ${barber.shop} (${barber.city})`,
-    description: `Découvrez le travail de ${barber.name} chez ${barber.shop} et réservez en ligne.`,
+    description: locale === 'en' ? `See ${barber.name}’s work at ${barber.shop} and book online.` : `Découvrez le travail de ${barber.name} chez ${barber.shop} et réservez en ligne.`,
   };
 }
 

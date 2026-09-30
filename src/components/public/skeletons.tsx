@@ -5,7 +5,7 @@ function Bar({ className = '' }: { className?: string }) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50" aria-busy="true" aria-label="Chargement">
+    <div className="min-h-screen bg-gray-50" aria-busy="true">
       <div className="h-16 border-b border-gray-200 bg-white" />
       {children}
     </div>

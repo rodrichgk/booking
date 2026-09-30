@@ -7,6 +7,7 @@
  */
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import Image from 'next/image';
+import { useLocale, useTranslations } from 'next-intl';
 import { Star, MapPin, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { openStatus, type OpeningHours } from '@/lib/opening-hours';
@@ -156,10 +157,12 @@ export function ChipGroup<T extends string>({
 }
 
 export function ResultsBar({ count, noun, children }: { count: number; noun: [string, string]; children?: ReactNode }) {
+  // French uses the singular for 0 and 1, English only for 1.
+  const plural = useLocale() === 'en' ? count !== 1 : count > 1;
   return (
     <div className="flex flex-col gap-3 py-6 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-gray-600" aria-live="polite">
-        <span key={count} className="inline-block animate-fade-in font-medium tabular-nums text-gray-900">{count}</span> {count > 1 ? noun[1] : noun[0]}
+        <span key={count} className="inline-block animate-fade-in font-medium tabular-nums text-gray-900">{count}</span> {plural ? noun[1] : noun[0]}
       </p>
       {children}
     </div>
@@ -167,15 +170,17 @@ export function ResultsBar({ count, noun, children }: { count: number; noun: [st
 }
 
 export function Rating({ value, count, className }: { value: string | number | null | undefined; count?: number | null; className?: string }) {
+  const t = useTranslations('site.ui');
+  const locale = useLocale();
   const n = typeof value === 'number' ? value : parseFloat(value ?? '');
   if (!Number.isFinite(n) || n <= 0) {
-    return <span className={cn('text-sm text-gray-500', className)}>Nouveau</span>;
+    return <span className={cn('text-sm text-gray-500', className)}>{t('new')}</span>;
   }
   return (
     <span className={cn('inline-flex items-center gap-1 text-sm tabular-nums text-gray-900', className)}>
       <Star className="h-3.5 w-3.5 fill-primary-500 text-primary-500" aria-hidden="true" />
-      <span className="font-medium">{n.toFixed(1).replace('.', ',')}</span>
-      {typeof count === 'number' && count > 0 && <span className="text-gray-500">({count} avis)</span>}
+      <span className="font-medium">{n.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+      {typeof count === 'number' && count > 0 && <span className="text-gray-500">({t('reviewsCount', { count })})</span>}
     </span>
   );
 }
@@ -185,8 +190,9 @@ export function Rating({ value, count, className }: { value: string | number | n
  * it depends on the current time, which differs between server and browser.
  */
 export function OpenStatus({ hours, className }: { hours: OpeningHours | null | undefined; className?: string }) {
+  const locale = useLocale();
   const [status, setStatus] = useState<ReturnType<typeof openStatus>>(null);
-  useEffect(() => setStatus(openStatus(hours)), [hours]);
+  useEffect(() => setStatus(openStatus(hours, new Date(), locale)), [hours, locale]);
   if (!status) return null;
   return (
     <span className={cn('inline-flex items-center gap-1.5 text-sm', status.open ? 'text-green-700' : 'text-gray-500', className)}>

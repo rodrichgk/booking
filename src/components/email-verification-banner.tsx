@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, Mail, X, Loader2 } from 'lucide-react';
 
 interface EmailVerificationBannerProps {
@@ -9,6 +10,7 @@ interface EmailVerificationBannerProps {
 }
 
 export function EmailVerificationBanner({ email, userName }: EmailVerificationBannerProps) {
+  const t = useTranslations('site.verifyBanner');
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [error, setError] = useState('');
@@ -30,10 +32,10 @@ export function EmailVerificationBanner({ email, userName }: EmailVerificationBa
       if (res.ok) {
         setIsSent(true);
       } else {
-        setError(data.error || 'Une erreur est survenue');
+        setError(data.error || t('error'));
       }
     } catch (err) {
-      setError('Une erreur est survenue');
+      setError(t('error'));
     } finally {
       setIsLoading(false);
     }
@@ -52,13 +54,13 @@ export function EmailVerificationBanner({ email, userName }: EmailVerificationBa
             <div className="flex-1">
               {isSent ? (
                 <div className="text-sm text-amber-800">
-                  <p><span className="font-medium">✅ Email envoyé!</span> Vérifiez votre boîte de réception à <strong>{email}</strong></p>
-                  <p className="text-amber-700 mt-1">⚠️ Pensez à vérifier vos <strong>spams/courriers indésirables</strong> si vous ne le trouvez pas.</p>
+                  <p><span className="font-medium">{t('sentTitle')}</span> {t.rich('sentBody', { email, b: (chunks) => <strong>{chunks}</strong> })}</p>
+                  <p className="text-amber-700 mt-1">{t.rich('sentSpam', { b: (chunks) => <strong>{chunks}</strong> })}</p>
                 </div>
               ) : (
                 <div className="text-sm text-amber-800">
-                  <p><span className="font-medium">📧 Email non vérifié.</span> Vous devez vérifier votre email pour pouvoir réserver.</p>
-                  <p className="text-amber-700 mt-1">⚠️ Vérifiez vos <strong>spams/courriers indésirables</strong> - l'email peut s'y trouver!</p>
+                  <p><span className="font-medium">{t('unverifiedTitle')}</span> {t('unverifiedBody')}</p>
+                  <p className="text-amber-700 mt-1">{t.rich('unverifiedSpam', { b: (chunks) => <strong>{chunks}</strong> })}</p>
                 </div>
               )}
               {error && (
@@ -78,11 +80,12 @@ export function EmailVerificationBanner({ email, userName }: EmailVerificationBa
                 ) : (
                   <Mail className="w-4 h-4 mr-2" />
                 )}
-                Renvoyer l'email
+                {t('resend')}
               </button>
             )}
             <button
               onClick={() => setIsDismissed(true)}
+              aria-label={t('dismiss')}
               className="p-1 text-amber-600 hover:text-amber-800 transition-colors"
             >
               <X className="w-4 h-4" />

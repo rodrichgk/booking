@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -7,8 +8,8 @@ import { eq, and, sql } from 'drizzle-orm';
 import { findReviewableBooking } from '@/lib/reviews';
 import { BarbershopDetailClient } from './client';
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function generateMetadata({ params }: { params: Promise<{ id: string; locale: string }> }) {
+  const { id, locale } = await params;
   const [shop] = await db
     .select({ name: barbershops.name, city: barbershops.city, description: barbershops.description })
     .from(barbershops)
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!shop) return {};
   return {
     title: `${shop.name}, ${shop.city}`,
-    description: shop.description?.slice(0, 160) || `Réservez chez ${shop.name} à ${shop.city}.`,
+    description: shop.description?.slice(0, 160) || (await getTranslations({ locale, namespace: 'site.salon' }))('metaDescription', { name: shop.name, city: shop.city }),
   };
 }
 

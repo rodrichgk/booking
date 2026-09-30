@@ -14,6 +14,7 @@ export default function SignInPage() {
   const searchParams = useSearchParams();
   const t = useTranslations('auth');
   const tErrors = useTranslations('errors');
+  const ts = useTranslations('site.signin');
   
   const [formData, setFormData] = useState({
     email: '',
@@ -30,14 +31,14 @@ export default function SignInPage() {
 
   // Errors NextAuth passes back after a failed Google sign-in (?error=...)
   const oauthErrors: Record<string, string> = {
-    AccessDenied: 'Connexion refusée. Si le problème persiste, contactez le support.',
-    OAuthAccountNotLinked: 'Un compte existe déjà avec cette adresse email. Connectez-vous avec votre mot de passe.',
-    OAuthSignin: 'La connexion avec Google a échoué. Réessayez.',
-    OAuthCallback: 'La connexion avec Google a échoué. Réessayez.',
-    Callback: 'La connexion a échoué. Réessayez.',
+    AccessDenied: ts('accessDenied'),
+    OAuthAccountNotLinked: ts('accountNotLinked'),
+    OAuthSignin: ts('googleFailed'),
+    OAuthCallback: ts('googleFailed'),
+    Callback: ts('signInFailed'),
   };
   const oauthError = searchParams.get('error');
-  const redirectError = oauthError ? oauthErrors[oauthError] ?? 'La connexion a échoué. Réessayez.' : '';
+  const redirectError = oauthError ? oauthErrors[oauthError] ?? ts('signInFailed') : '';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -65,7 +66,7 @@ export default function SignInPage() {
       }
     } else {
       if (!formData.username.trim()) {
-        newErrors.username = 'Nom d\'utilisateur requis';
+        newErrors.username = ts('usernameRequired');
       }
     }
 
@@ -100,20 +101,20 @@ export default function SignInPage() {
         // Coded errors come from authorize() in src/lib/auth.ts
         const message =
           result.error === 'TOO_MANY_ATTEMPTS'
-            ? 'Trop de tentatives de connexion. Réessayez dans 15 minutes ou réinitialisez votre mot de passe.'
+            ? ts('tooManyAttempts')
             : result.error === 'IP_BLOCKED'
-              ? 'Les connexions depuis votre réseau sont bloquées. Contactez le support si vous pensez que c’est une erreur.'
+              ? ts('ipBlocked')
               : t('invalidCredentials');
         setApiError(message);
         toast({
-          title: "Erreur de connexion",
+          title: ts('errorTitle'),
           description: message,
           variant: "error",
         });
       } else {
         toast({
-          title: "Connexion réussie",
-          description: "Bienvenue sur Orphelia",
+          title: ts('successTitle'),
+          description: ts('successText'),
           variant: "success",
         });
         
@@ -124,7 +125,7 @@ export default function SignInPage() {
     } catch (error) {
       setApiError(tErrors('somethingWentWrong'));
       toast({
-        title: "Erreur",
+        title: ts('error'),
         description: tErrors('somethingWentWrong'),
         variant: "error",
       });
@@ -139,9 +140,9 @@ export default function SignInPage() {
   };
 
   const tabs: { id: typeof loginType; label: string }[] = [
-    { id: 'email', label: 'Email' },
-    { id: 'phone', label: 'Téléphone' },
-    { id: 'username', label: 'Identifiant' },
+    { id: 'email', label: ts('tabEmail') },
+    { id: 'phone', label: ts('tabPhone') },
+    { id: 'username', label: ts('tabUsername') },
   ];
 
   return (
@@ -159,10 +160,10 @@ export default function SignInPage() {
       {(apiError || redirectError) && <FormAlert>{apiError || redirectError}</FormAlert>}
 
       <GoogleButton onClick={handleGoogleSignIn}>{t('signInWithGoogle')}</GoogleButton>
-      <Divider>ou avec vos identifiants</Divider>
+      <Divider>{ts('orWithCredentials')}</Divider>
 
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-        <div role="tablist" aria-label="Se connecter avec" className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
+        <div role="tablist" aria-label={ts('signInWith')} className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -191,7 +192,7 @@ export default function SignInPage() {
             value={formData.email}
             onChange={handleInputChange}
             error={errors.email}
-            placeholder="vous@exemple.fr"
+            placeholder={ts('emailPlaceholder')}
             required
           />
         ) : loginType === 'phone' ? (
@@ -208,14 +209,14 @@ export default function SignInPage() {
           />
         ) : (
           <AuthField
-            label="Identifiant"
+            label={ts('tabUsername')}
             name="username"
             type="text"
             autoComplete="username"
             value={formData.username}
             onChange={handleInputChange}
             error={errors.username}
-            help="L’identifiant fourni par votre salon."
+            help={ts('usernameHelp')}
             required
           />
         )}

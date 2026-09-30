@@ -26,6 +26,7 @@ export default function SignUpPage() {
   const t = useTranslations('auth');
   const tCommon = useTranslations('common');
   const tErrors = useTranslations('errors');
+  const ts = useTranslations('site.signup');
   // Configurable in admin Settings > Security; the API enforces the same value.
   const { passwordMinLength } = useSettings();
   
@@ -68,16 +69,16 @@ export default function SignUpPage() {
 
     if (formData.username && formData.username.trim().length > 0) {
       if (formData.username.trim().length < 3) {
-        newErrors.username = 'Minimum 3 caractères';
+        newErrors.username = ts('usernameMin');
       } else if (!/^[a-zA-Z0-9_.-]+$/.test(formData.username.trim())) {
-        newErrors.username = 'Lettres, chiffres, points, tirets et underscores uniquement';
+        newErrors.username = ts('usernameChars');
       }
     }
 
     if (!formData.password) {
       newErrors.password = t('passwordRequired');
     } else if (formData.password.length < passwordMinLength) {
-      newErrors.password = `Le mot de passe doit contenir au moins ${passwordMinLength} caractères`;
+      newErrors.password = ts('passwordMin', { min: passwordMinLength });
     }
 
     if (!formData.confirmPassword) {
@@ -132,16 +133,16 @@ export default function SignUpPage() {
       if (signInResult?.error) {
         // Registration successful but auto-login failed
         toast({
-          title: "Inscription réussie",
-          description: "Vérifiez votre email pour activer votre compte",
+          title: ts('successTitle'),
+          description: ts('checkEmail'),
           variant: "success",
         });
-        router.push('/auth/signin?message=' + encodeURIComponent('Vérifiez votre email pour activer votre compte'));
+        router.push('/auth/signin?message=' + encodeURIComponent(ts('checkEmail')));
       } else {
         // Both registration and login successful
         toast({
-          title: "Bienvenue sur Orphelia",
-          description: "Un email de vérification vous a été envoyé",
+          title: ts('welcomeTitle'),
+          description: ts('verificationSent'),
           variant: "success",
         });
         router.push('/');
@@ -150,7 +151,7 @@ export default function SignUpPage() {
       const errorMsg = error instanceof Error ? error.message : tErrors('somethingWentWrong');
       setApiError(errorMsg);
       toast({
-        title: "Erreur d'inscription",
+        title: ts('errorTitle'),
         description: errorMsg,
         variant: "error",
       });
@@ -164,8 +165,8 @@ export default function SignUpPage() {
   };
 
   const roles: { id: SignUpFormData['role']; title: string; description: string; icon: typeof User }[] = [
-    { id: 'customer', title: 'Client', description: 'Je prends rendez-vous', icon: User },
-    { id: 'barber', title: 'Coiffeur', description: 'Je travaille en salon', icon: Scissors },
+    { id: 'customer', title: ts('roleCustomer'), description: ts('roleCustomerText'), icon: User },
+    { id: 'barber', title: ts('roleBarber'), description: ts('roleBarberText'), icon: Scissors },
   ];
 
   return (
@@ -182,7 +183,7 @@ export default function SignUpPage() {
       {apiError && <FormAlert>{apiError}</FormAlert>}
 
       <GoogleButton onClick={handleGoogleSignUp}>{t('signUpWithGoogle')}</GoogleButton>
-      <Divider>ou avec votre email</Divider>
+      <Divider>{ts('orWithEmail')}</Divider>
 
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         <fieldset>
@@ -225,7 +226,7 @@ export default function SignUpPage() {
           value={formData.email}
           onChange={handleInputChange}
           error={errors.email}
-          placeholder="vous@exemple.fr"
+          placeholder={ts('emailPlaceholder')}
           required
         />
         <AuthField
@@ -239,13 +240,13 @@ export default function SignUpPage() {
         />
         {formData.role === 'barber' && (
           <AuthField
-            label="Identifiant (facultatif)"
+            label={ts('usernameLabel')}
             name="username"
             autoComplete="username"
             value={formData.username}
             onChange={handleInputChange}
             error={errors.username}
-            help="Utile si plusieurs coiffeurs partagent la même adresse email."
+            help={ts('usernameHelp')}
           />
         )}
         <AuthField
@@ -256,7 +257,7 @@ export default function SignUpPage() {
           value={formData.password}
           onChange={handleInputChange}
           error={errors.password}
-          help={`${passwordMinLength} caractères minimum.`}
+          help={ts('passwordHelp', { min: passwordMinLength })}
           required
         />
         <AuthField

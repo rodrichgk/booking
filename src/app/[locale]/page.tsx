@@ -1,23 +1,24 @@
-import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { barbershops, services } from '@/lib/db/schema';
 import { getFeaturedBarbershops } from '@/lib/featured';
-import { SERVICE_CATEGORIES } from '@/lib/service-categories';
+import { SERVICE_CATEGORIES, categoryName } from '@/lib/service-categories';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { HomeHero } from '@/components/home/hero';
 import { CategoryBento, FeaturedSalons, HowItWorks, Cities, ForSalons, type CategoryStat, type CityStat } from '@/components/home/sections';
 
-export const metadata: Metadata = {
-  title: 'Orphelia, salons et coiffeurs afro, bouclés et texturés',
-  description: 'Trouvez un salon spécialisé dans les cheveux afro, bouclés et texturés, comparez les prestations et réservez en ligne.',
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'site.home' });
+  return { title: t('metaTitle'), description: t('metaDescription') };
+}
 
 // Counts and featured salons change slowly: refresh at most every 5 minutes.
 export const revalidate = 300;
 
-async function getCategoryStats(): Promise<CategoryStat[]> {
+async function getCategoryStats(locale: string): Promise<CategoryStat[]> {
   const rows = await db
     .select({
       category: services.category,
@@ -32,7 +33,7 @@ async function getCategoryStats(): Promise<CategoryStat[]> {
   const byId = new Map(rows.map((r) => [r.category, r]));
   const stats = SERVICE_CATEGORIES.map((c) => {
     const row = byId.get(c.id);
-    return { id: c.id as string, label: c.label as string, count: row?.count ?? 0, minPrice: row?.minPrice ? parseFloat(row.minPrice) : null };
+    return { id: c.id as string, label: categoryName(c, locale), count: row?.count ?? 0, minPrice: row?.minPrice ? parseFloat(row.minPrice) : null };
   });
   const offered = stats.filter((c) => c.count > 0).sort((a, b) => b.count - a.count);
   // No services yet: still show the categories (without counts) so the section is useful.
@@ -49,10 +50,11 @@ async function getCityStats(): Promise<CityStat[]> {
     .limit(8);
 }
 
-export default async function HomePage() {
+export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   // Each block degrades on its own: a failing query hides that section only.
   const [categories, featured, cities] = await Promise.all([
-    getCategoryStats().catch(() => [] as CategoryStat[]),
+    getCategoryStats(locale).catch(() => [] as CategoryStat[]),
     getFeaturedBarbershops(3).catch(() => []),
     getCityStats().catch(() => [] as CityStat[]),
   ]);

@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { AuthShell, AuthStatus } from '@/components/auth/auth-ui';
 import { btn } from '@/components/dashboard/ui';
@@ -10,6 +11,7 @@ import { btn } from '@/components/dashboard/ui';
 const SpinningLoader = ({ className }: { className?: string }) => <Loader2 className={`${className ?? ''} animate-spin`} />;
 
 function VerifyEmail() {
+  const t = useTranslations('site.verify');
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const email = searchParams.get('email');
@@ -35,53 +37,54 @@ function VerifyEmail() {
           setStatus('success');
         } else {
           setStatus('error');
-          setErrorMessage(data.error || 'Une erreur est survenue.');
+          setErrorMessage(data.error || '');
         }
       } catch {
         setStatus('error');
-        setErrorMessage('Une erreur est survenue lors de la vérification.');
+        setErrorMessage('');
       }
     };
 
     verifyEmail();
   }, [token, email]);
 
-  const signInButton = <Link href="/auth/signin" className={btn.primary}>Se connecter</Link>;
+  const signInButton = <Link href="/auth/signin" className={btn.primary}>{t('signIn')}</Link>;
 
   if (status === 'loading') {
     return (
-      <AuthStatus icon={SpinningLoader} title="Vérification en cours">
-        Un instant, nous confirmons votre adresse email.
+      <AuthStatus icon={SpinningLoader} title={t('loadingTitle')}>
+        {t('loadingText')}
       </AuthStatus>
     );
   }
 
   if (status === 'success') {
     return (
-      <AuthStatus icon={CheckCircle} tone="success" title="Email vérifié" action={signInButton}>
-        Votre adresse est confirmée. Vous pouvez maintenant vous connecter.
+      <AuthStatus icon={CheckCircle} tone="success" title={t('successTitle')} action={signInButton}>
+        {t('successText')}
       </AuthStatus>
     );
   }
 
   if (status === 'error') {
     return (
-      <AuthStatus icon={XCircle} tone="danger" title="Vérification impossible" action={signInButton}>
-        {errorMessage} Vous pourrez demander un nouveau lien depuis votre espace une fois connecté.
+      <AuthStatus icon={XCircle} tone="danger" title={t('errorTitle')} action={signInButton}>
+        {errorMessage || t('error')} {t('errorText')}
       </AuthStatus>
     );
   }
 
   return (
-    <AuthStatus icon={Mail} tone="danger" title="Lien invalide" action={signInButton}>
-      Ce lien de vérification est incomplet. Ouvrez le lien reçu par email, ou demandez-en un nouveau depuis votre espace.
+    <AuthStatus icon={Mail} tone="danger" title={t('invalidTitle')} action={signInButton}>
+      {t('invalidText')}
     </AuthStatus>
   );
 }
 
 export default function VerifyEmailPage() {
+  const t = useTranslations('site.verify');
   return (
-    <AuthShell title="Vérification de l’email">
+    <AuthShell title={t('title')}>
       <Suspense fallback={null}>
         <VerifyEmail />
       </Suspense>

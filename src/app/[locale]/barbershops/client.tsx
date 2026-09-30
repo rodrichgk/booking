@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Link } from '@/routing';
 import { ArrowRight, Calendar } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import {
@@ -40,6 +41,8 @@ type Sort = 'rating' | 'reviews' | 'name';
 const normalize = (s: string) => s.toLocaleLowerCase('fr').normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
+  const t = useTranslations('site.salons');
+  const tl = useTranslations('site.list');
   const searchParams = useSearchParams();
   // The homepage search sends ?search=...&location=...
   const [query, setQuery] = useState(searchParams.get('search') ?? '');
@@ -81,22 +84,22 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
       <Header />
 
       <DirectoryHero
-        title="Trouvez votre"
-        accent="salon."
-        description="Des salons spécialisés dans les cheveux afro, bouclés et texturés. Choisissez, puis réservez en ligne."
+        title={t('title')}
+        accent={t('accent')}
+        description={t('description')}
         search={
           <PillSearch
-            what={{ label: 'Quoi', value: query, onChange: setQuery, placeholder: 'Nom du salon, style, tresses' }}
-            where={{ label: 'Où', value: location, onChange: setLocation, placeholder: 'Ville ou adresse' }}
+            what={{ label: tl('what'), value: query, onChange: setQuery, placeholder: t('whatPlaceholder') }}
+            where={{ label: tl('where'), value: location, onChange: setLocation, placeholder: t('wherePlaceholder') }}
           />
         }
         filters={
           cities.length > 1 ? (
             <ChipGroup
-              label="Filtrer par ville"
+              label={t('filterCity')}
               value={city}
               onChange={setCity}
-              options={[{ id: 'all', label: 'Toutes les villes' }, ...cities.map((c) => ({ id: c.name, label: c.name, count: c.count }))]}
+              options={[{ id: 'all', label: t('allCities') }, ...cities.map((c) => ({ id: c.name, label: c.name, count: c.count }))]}
             />
           ) : undefined
         }
@@ -104,17 +107,17 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
       />
 
       <PublicShell>
-        <ResultsBar count={results.length} noun={['salon', 'salons']}>
+        <ResultsBar count={results.length} noun={[t('nounOne'), t('nounOther')]}>
           <label className="flex items-center gap-2 text-sm text-gray-600">
-            Trier par
+            {tl('sortBy')}
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as Sort)}
               className="rounded-lg border border-gray-300 bg-white py-1.5 pl-3 pr-8 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             >
-              <option value="rating">Mieux notés</option>
-              <option value="reviews">Plus d’avis</option>
-              <option value="name">Nom</option>
+              <option value="rating">{tl('sortRating')}</option>
+              <option value="reviews">{t('sortReviews')}</option>
+              <option value="name">{tl('sortName')}</option>
             </select>
           </label>
         </ResultsBar>
@@ -122,10 +125,10 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
         {results.length === 0 ? (
           <div className="pb-16">
             <EmptyResults
-              title="Aucun salon ne correspond"
-              action={<button onClick={reset} className={btn.secondary}>Effacer la recherche</button>}
+              title={t('emptyTitle')}
+              action={<button onClick={reset} className={btn.secondary}>{tl('clearSearch')}</button>}
             >
-              Essayez un autre nom ou une autre ville.
+              {t('emptyText')}
             </EmptyResults>
           </div>
         ) : results.length <= 2 ? (
@@ -170,6 +173,7 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
 
 /** Showcase card used when only one or two salons match: the list never looks empty. */
 function WideShopCard({ shop }: { shop: Barbershop }) {
+  const t = useTranslations('site.salons');
   return (
     <article className="group grid overflow-hidden rounded-2xl border border-gray-200 bg-white transition-shadow duration-300 hover:shadow-[0_18px_48px_-24px_rgba(17,24,39,0.35)] md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
       <Link href={`/barbershops/${shop.id}`} className="block focus-visible:outline-none" tabIndex={-1} aria-hidden="true">
@@ -190,10 +194,10 @@ function WideShopCard({ shop }: { shop: Barbershop }) {
         <div className="mt-auto flex flex-wrap gap-3 pt-8">
           <Link href={`/barbershops/${shop.id}/booking`} className={cn(btn.primary, 'press')}>
             <Calendar className="h-4 w-4" aria-hidden="true" />
-            Réserver
+            {t('book')}
           </Link>
           <Link href={`/barbershops/${shop.id}`} className={cn(btn.secondary, 'press group/link')}>
-            Voir le salon
+            {t('viewSalon')}
             <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5" aria-hidden="true" />
           </Link>
         </div>

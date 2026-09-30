@@ -3,12 +3,14 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { useSettings } from '@/contexts/settings-context';
 import { AuthShell, AuthField, AuthStatus, SubmitButton, FormAlert, authLinkClass } from '@/components/auth/auth-ui';
 import { btn, Spinner } from '@/components/dashboard/ui';
 
 function ResetPasswordForm() {
+    const t = useTranslations('site.reset');
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
@@ -26,10 +28,10 @@ function ResetPasswordForm() {
             <AuthStatus
                 icon={AlertTriangle}
                 tone="danger"
-                title="Lien invalide"
-                action={<Link href="/auth/forgot-password" className={btn.primary}>Demander un nouveau lien</Link>}
+                title={t('invalidTitle')}
+                action={<Link href="/auth/forgot-password" className={btn.primary}>{t('newLink')}</Link>}
             >
-                Ce lien de réinitialisation est incomplet ou a expiré.
+                {t('invalidText')}
             </AuthStatus>
         );
     }
@@ -39,10 +41,10 @@ function ResetPasswordForm() {
             <AuthStatus
                 icon={CheckCircle}
                 tone="success"
-                title="Mot de passe modifié"
-                action={<Link href="/auth/signin" className={btn.primary}>Se connecter</Link>}
+                title={t('doneTitle')}
+                action={<Link href="/auth/signin" className={btn.primary}>{t('signIn')}</Link>}
             >
-                Vous allez être redirigé vers la page de connexion.
+                {t('doneText')}
             </AuthStatus>
         );
     }
@@ -52,11 +54,11 @@ function ResetPasswordForm() {
         setError('');
 
         if (password.length < passwordMinLength) {
-            setError(`Le mot de passe doit contenir au moins ${passwordMinLength} caractères.`);
+            setError(t('passwordMin', { min: passwordMinLength }));
             return;
         }
         if (password !== confirmPassword) {
-            setError('Les mots de passe ne correspondent pas.');
+            setError(t('mismatch'));
             return;
         }
 
@@ -69,12 +71,12 @@ function ResetPasswordForm() {
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(data.error || 'Une erreur est survenue');
+                throw new Error(data.error || t('error'));
             }
             setDone(true);
             setTimeout(() => router.push('/auth/signin'), 2500);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+            setError(err instanceof Error ? err.message : t('error'));
         } finally {
             setIsLoading(false);
         }
@@ -85,18 +87,18 @@ function ResetPasswordForm() {
             {error && <FormAlert>{error}</FormAlert>}
             <form className="space-y-5" onSubmit={handleSubmit}>
                 <AuthField
-                    label="Nouveau mot de passe"
+                    label={t('newPassword')}
                     name="password"
                     type="password"
                     autoComplete="new-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    help={`${passwordMinLength} caractères minimum.`}
+                    help={t('passwordHelp', { min: passwordMinLength })}
                     disabled={isLoading}
                 />
                 <AuthField
-                    label="Confirmer le mot de passe"
+                    label={t('confirmPassword')}
                     name="confirmPassword"
                     type="password"
                     autoComplete="new-password"
@@ -105,18 +107,19 @@ function ResetPasswordForm() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={isLoading}
                 />
-                <SubmitButton loading={isLoading}>Enregistrer le mot de passe</SubmitButton>
+                <SubmitButton loading={isLoading}>{t('save')}</SubmitButton>
             </form>
         </>
     );
 }
 
 export default function ResetPasswordPage() {
+    const t = useTranslations('site.reset');
     return (
         <AuthShell
-            title="Nouveau mot de passe"
-            description="Choisissez le mot de passe que vous utiliserez pour vous connecter."
-            footer={<Link href="/auth/signin" className={authLinkClass}>Retour à la connexion</Link>}
+            title={t('title')}
+            description={t('description')}
+            footer={<Link href="/auth/signin" className={authLinkClass}>{t('backToSignIn')}</Link>}
         >
             <Suspense fallback={<Spinner className="h-5 w-5 text-gray-400" />}>
                 <ResetPasswordForm />

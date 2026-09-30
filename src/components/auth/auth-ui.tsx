@@ -7,6 +7,7 @@
  */
 import { useId, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { ArrowLeft, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { cn } from '@/lib/utils';
 import { btn, inputClass, Spinner } from '@/components/dashboard/ui';
@@ -18,7 +19,7 @@ const HERO_IMAGE =
 /** Brand logo, same lockup as the site header. */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <Link href="/" aria-label="Orphelia, accueil" className={cn('inline-flex', className)}>
+    <Link href="/" aria-label="Orphelia" className={cn('inline-flex', className)}>
       <Logo />
     </Link>
   );
@@ -36,6 +37,7 @@ export function AuthShell({
   /** Line under the card, e.g. "No account yet? Sign up". */
   footer?: ReactNode;
 }) {
+  const t = useTranslations('site.authUi');
   return (
     <div className="grid min-h-[100dvh] bg-white lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       <div className="flex flex-col px-4 py-6 sm:px-8 lg:px-12">
@@ -43,7 +45,7 @@ export function AuthShell({
           <Wordmark />
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">
             <ArrowLeft className="h-4 w-4" />
-            Accueil
+            {t('home')}
           </Link>
         </header>
 
@@ -65,9 +67,9 @@ export function AuthShell({
         <div className="absolute inset-0 bg-gradient-to-t from-gray-950/85 via-gray-950/30 to-gray-950/10" />
         <div className="absolute inset-x-0 bottom-0 p-12">
           <p className="max-w-md font-display text-3xl font-semibold leading-tight tracking-tight text-white">
-            Les spécialistes des cheveux afro, bouclés et texturés, réservés en quelques clics.
+            {t('asideTitle')}
           </p>
-          <p className="mt-4 max-w-md text-white/75">Des salons partenaires de Marseille à New York.</p>
+          <p className="mt-4 max-w-md text-white/75">{t('asideText')}</p>
         </div>
       </aside>
     </div>
@@ -130,6 +132,7 @@ type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 export function AuthField({ label, error, help, labelAside, className, type, ...props }: FieldProps) {
+  const t = useTranslations('site.authUi');
   const id = useId();
   const [visible, setVisible] = useState(false);
   const isPassword = type === 'password';
@@ -160,7 +163,7 @@ export function AuthField({ label, error, help, labelAside, className, type, ...
             type="button"
             onClick={() => setVisible((v) => !v)}
             className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-400 hover:text-gray-700"
-            aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            aria-label={visible ? t('hidePassword') : t('showPassword')}
           >
             {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>

@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { ChevronRight, Scissors } from 'lucide-react';
 import { Header } from '@/components/ui/header';
 import { Footer } from '@/components/ui/footer';
 import { DirectoryHero, PillSearch, PhotoCollage, PublicShell, ChipGroup, ResultsBar, EmptyResults } from '@/components/public/ui';
 import { btn, formatEuro } from '@/components/dashboard/ui';
-import { SERVICE_CATEGORIES, categoryLabel, formatDuration } from '@/lib/service-categories';
+import { SERVICE_CATEGORIES, categoryLabel, categoryName, formatDuration } from '@/lib/service-categories';
 import Image from 'next/image';
 
 interface ServiceRow {
@@ -35,6 +36,9 @@ type Sort = 'price-asc' | 'price-desc' | 'duration';
 const normalize = (s: string) => s.toLocaleLowerCase('fr').normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 export function ServicesClient({ services }: { services: ServiceRow[]; locale: string }) {
+  const t = useTranslations('site.catalog');
+  const tl = useTranslations('site.list');
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('search') ?? '');
   const [location, setLocation] = useState(searchParams.get('location') ?? '');
@@ -42,10 +46,11 @@ export function ServicesClient({ services }: { services: ServiceRow[]; locale: s
   const [sort, setSort] = useState<Sort>('price-asc');
 
   const categoryOptions = useMemo(() => {
-    const options = SERVICE_CATEGORIES.map((c) => ({ id: c.id as string, label: c.label as string, count: services.filter((s) => s.category === c.id).length }))
+    const options = SERVICE_CATEGORIES.map((c) => ({ id: c.id as string, label: categoryName(c, locale), count: services.filter((s) => s.category === c.id).length }))
       .filter((c) => c.count > 0);
-    return [{ id: 'all', label: 'Toutes' }, ...options];
-  }, [services]);
+    return [{ id: 'all', label: t('allCategories') }, ...options];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services, locale]);
 
   const results = useMemo(() => {
     const q = normalize(query.trim());
@@ -75,35 +80,35 @@ export function ServicesClient({ services }: { services: ServiceRow[]; locale: s
       <Header />
 
       <DirectoryHero
-        title="Toutes les"
-        accent="prestations."
-        description="Coupes, tresses, colorations et soins pour cheveux afro, bouclés et texturés. Comparez les tarifs des salons et réservez."
+        title={t('title')}
+        accent={t('accent')}
+        description={t('description')}
         search={
           <PillSearch
-            what={{ label: 'Quoi', value: query, onChange: setQuery, placeholder: 'Nattes, dégradé, locks' }}
-            where={{ label: 'Où', value: location, onChange: setLocation, placeholder: 'Ville' }}
+            what={{ label: tl('what'), value: query, onChange: setQuery, placeholder: t('whatPlaceholder') }}
+            where={{ label: tl('where'), value: location, onChange: setLocation, placeholder: t('wherePlaceholder') }}
           />
         }
         filters={
           categoryOptions.length > 2 ? (
-            <ChipGroup label="Catégorie" value={category} onChange={setCategory} options={categoryOptions} />
+            <ChipGroup label={t('category')} value={category} onChange={setCategory} options={categoryOptions} />
           ) : undefined
         }
         visual={<PhotoCollage images={services.map((s) => s.image).filter((x): x is string => !!x)} fallback={STOCK} />}
       />
 
       <PublicShell>
-        <ResultsBar count={results.length} noun={['prestation', 'prestations']}>
+        <ResultsBar count={results.length} noun={[t('nounOne'), t('nounOther')]}>
           <label className="flex items-center gap-2 text-sm text-gray-600">
-            Trier par
+            {tl('sortBy')}
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as Sort)}
               className="rounded-lg border border-gray-300 bg-white py-1.5 pl-3 pr-8 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             >
-              <option value="price-asc">Prix croissant</option>
-              <option value="price-desc">Prix décroissant</option>
-              <option value="duration">Durée</option>
+              <option value="price-asc">{t('sortPriceAsc')}</option>
+              <option value="price-desc">{t('sortPriceDesc')}</option>
+              <option value="duration">{t('sortDuration')}</option>
             </select>
           </label>
         </ResultsBar>
@@ -111,10 +116,10 @@ export function ServicesClient({ services }: { services: ServiceRow[]; locale: s
         {results.length === 0 ? (
           <div className="pb-16">
             <EmptyResults
-              title={services.length === 0 ? 'Aucune prestation pour le moment' : 'Aucune prestation ne correspond'}
-              action={services.length > 0 ? <button onClick={reset} className={btn.secondary}>Effacer la recherche</button> : undefined}
+              title={services.length === 0 ? t('noneYetTitle') : t('emptyTitle')}
+              action={services.length > 0 ? <button onClick={reset} className={btn.secondary}>{tl('clearSearch')}</button> : undefined}
             >
-              {services.length === 0 ? 'Les salons partenaires publieront bientôt leurs tarifs.' : 'Essayez un autre mot-clé ou une autre ville.'}
+              {services.length === 0 ? t('noneYetText') : t('emptyText')}
             </EmptyResults>
           </div>
         ) : (
@@ -137,13 +142,13 @@ export function ServicesClient({ services }: { services: ServiceRow[]; locale: s
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-3">
                       <span className="truncate font-medium text-gray-900 group-hover:text-primary-700">{service.name}</span>
-                      <span className="flex-shrink-0 font-medium tabular-nums text-gray-900">{formatEuro(service.price)}</span>
+                      <span className="flex-shrink-0 font-medium tabular-nums text-gray-900">{formatEuro(service.price, locale)}</span>
                     </span>
                     <span className="mt-0.5 block truncate text-sm text-gray-600">
                       {service.barbershopName}, {service.barbershopCity}
                     </span>
                     <span className="mt-1 block text-xs text-gray-500">
-                      {[formatDuration(service.duration), categoryLabel(service.category)].filter(Boolean).join(', ')}
+                      {[formatDuration(service.duration, locale), categoryLabel(service.category, locale)].filter(Boolean).join(', ')}
                     </span>
                   </span>
                   <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300 group-hover:text-gray-500" aria-hidden="true" />

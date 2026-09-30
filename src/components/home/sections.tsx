@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { ArrowRight, ArrowUpRight, Search, CalendarCheck, Star } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/routing';
 import { cn } from '@/lib/utils';
 import { Reveal } from '@/components/ui/reveal';
@@ -18,8 +19,8 @@ const FALLBACK_PHOTOS = [photo('photo-1521590832167-7bcbfaa6381f'), photo('photo
 export type CategoryStat = { id: string; label: string; count: number; minPrice: number | null };
 export type CityStat = { city: string; count: number };
 
-const euro = (n: number) =>
-  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
+const euro = (n: number, locale: string) =>
+  new Intl.NumberFormat(locale === 'en' ? 'en-GB' : 'fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
 
 function Heading({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
   return (
@@ -39,15 +40,17 @@ function MoreLink({ href, children }: { href: string; children: React.ReactNode 
   );
 }
 
-function categoryMeta(c: CategoryStat) {
-  if (!c.count) return 'Voir les salons';
-  const n = `${c.count} prestation${c.count > 1 ? 's' : ''}`;
-  return c.minPrice != null ? `${n}, dès ${euro(c.minPrice)}` : n;
-}
-
 /** Bento: the two biggest categories as photo tiles, the others as tinted tiles. */
 export function CategoryBento({ categories }: { categories: CategoryStat[] }) {
+  const t = useTranslations('site.home');
+  const locale = useLocale();
   if (categories.length === 0) return null;
+  const categoryMeta = (c: CategoryStat) =>
+    !c.count
+      ? t('seeSalons')
+      : c.minPrice != null
+        ? t('categoryMetaFrom', { count: c.count, price: euro(c.minPrice, locale) })
+        : t('categoryMeta', { count: c.count });
   const [big, rest] = [categories.slice(0, 2), categories.slice(2)];
   const smallCols = ['', 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4'][Math.min(rest.length, 4)];
   let fallback = 0;
@@ -55,7 +58,7 @@ export function CategoryBento({ categories }: { categories: CategoryStat[] }) {
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
       <Reveal>
-        <Heading aside={<MoreLink href="/services">Toutes les prestations</MoreLink>}>Que voulez-vous faire ?</Heading>
+        <Heading aside={<MoreLink href="/services">{t('allServices')}</MoreLink>}>{t('categoriesTitle')}</Heading>
       </Reveal>
 
       <div className={cn('grid gap-4', big.length > 1 && 'md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]')}>
@@ -117,6 +120,7 @@ export function CategoryBento({ categories }: { categories: CategoryStat[] }) {
 
 /** One large salon on the left, the next ones stacked on the right. */
 export function FeaturedSalons({ shops }: { shops: FeaturedShop[] }) {
+  const t = useTranslations('site.home');
   if (shops.length === 0) return null;
   const [lead, ...others] = shops;
 
@@ -124,7 +128,7 @@ export function FeaturedSalons({ shops }: { shops: FeaturedShop[] }) {
     <section className="bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <Reveal>
-          <Heading aside={<MoreLink href="/barbershops">Tous les salons</MoreLink>}>Salons à découvrir</Heading>
+          <Heading aside={<MoreLink href="/barbershops">{t('allSalons')}</MoreLink>}>{t('featuredTitle')}</Heading>
         </Reveal>
 
         <div className={cn('grid gap-8', others.length > 0 && 'lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]')}>
@@ -179,28 +183,29 @@ export function FeaturedSalons({ shops }: { shops: FeaturedShop[] }) {
 }
 
 const STEPS = [
-  { icon: Search, title: 'Cherchez', text: 'Par prestation, par ville ou par salon. Chaque fiche affiche les prix, les durées et les horaires.' },
-  { icon: CalendarCheck, title: 'Réservez', text: 'Choisissez un coiffeur, ou le premier disponible. Seuls les créneaux libres sont proposés.' },
-  { icon: Star, title: 'Notez', text: 'Après votre rendez-vous, laissez un avis. Seuls les clients venus au salon peuvent noter.' },
-];
+  { icon: Search, key: 'search' },
+  { icon: CalendarCheck, key: 'book' },
+  { icon: Star, key: 'review' },
+] as const;
 
 /** Three steps on a line that draws itself as the section scrolls in. */
 export function HowItWorks() {
+  const t = useTranslations('site.home');
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
       <Reveal>
-        <Heading>Comment ça marche</Heading>
+        <Heading>{t('howTitle')}</Heading>
       </Reveal>
       <Reveal>
         <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
           <span aria-hidden="true" className="draw-line absolute left-6 right-[16%] top-6 hidden h-px bg-gray-300 md:block" />
           {STEPS.map((step, i) => (
-            <li key={step.title} className="stagger-child relative" style={{ ['--i' as string]: i }}>
+            <li key={step.key} className="stagger-child relative" style={{ ['--i' as string]: i }}>
               <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 bg-white text-primary-600">
                 <step.icon className="h-5 w-5" aria-hidden="true" />
               </span>
-              <h3 className="mt-5 font-display text-xl font-semibold text-gray-900">{step.title}</h3>
-              <p className="mt-2 max-w-[34ch] text-gray-600">{step.text}</p>
+              <h3 className="mt-5 font-display text-xl font-semibold text-gray-900">{t(`steps.${step.key}.title`)}</h3>
+              <p className="mt-2 max-w-[34ch] text-gray-600">{t(`steps.${step.key}.text`)}</p>
             </li>
           ))}
         </ol>
@@ -211,12 +216,13 @@ export function HowItWorks() {
 
 /** Big-type list of cities with salons, each linking to the filtered list. */
 export function Cities({ cities }: { cities: CityStat[] }) {
+  const t = useTranslations('site.home');
   if (cities.length < 2) return null;
   return (
     <section className="border-t border-gray-200">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <Reveal>
-          <Heading>Où nous trouver</Heading>
+          <Heading>{t('citiesTitle')}</Heading>
         </Reveal>
         <Reveal>
           <ul className="flex flex-wrap gap-x-10 gap-y-4">
@@ -228,7 +234,7 @@ export function Cities({ cities }: { cities: CityStat[] }) {
                 >
                   {c.city}
                   <span className="text-sm font-medium tabular-nums text-gray-500">
-                    {c.count} salon{c.count > 1 ? 's' : ''}
+                    {t('salonCount', { count: c.count })}
                   </span>
                 </Link>
               </li>
@@ -241,20 +247,21 @@ export function Cities({ cities }: { cities: CityStat[] }) {
 }
 
 export function ForSalons() {
+  const t = useTranslations('site.home');
   return (
     <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
       <Reveal>
         <div className="grid overflow-hidden rounded-2xl bg-primary-50 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div className="p-8 md:p-12">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">Vous tenez un salon ?</h2>
+            <h2 className="font-display text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">{t('forSalonsTitle')}</h2>
             <p className="mt-4 max-w-[48ch] text-gray-700">
-              Créez votre fiche, publiez vos prestations et vos horaires, et recevez vos réservations en ligne.
+              {t('forSalonsText')}
             </p>
             <Link
               href="/auth/signup"
               className="press mt-8 inline-flex items-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
-              Inscrire mon salon
+              {t('forSalonsCta')}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
