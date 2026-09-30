@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { barbers, users, barbershops } from '@/lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import { firstImage } from '@/lib/images';
 import { BarbersClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -34,13 +35,20 @@ export default async function BarbersPage({ params }: { params: Promise<{ locale
       barbershopCity: barbershops.city,
       barbershopAddress: barbershops.address,
       // Backdrops for barbers without a portrait: their first work photo, else the salon photo.
-      workImage: sql<string | null>`${barbers.galleryImages}->>0`,
-      barbershopImage: sql<string | null>`${barbershops.images}->>0`,
+      galleryImages: barbers.galleryImages,
+      barbershopImages: barbershops.images,
     })
     .from(barbers)
     .innerJoin(users, eq(barbers.userId, users.id))
     .innerJoin(barbershops, eq(barbers.barbershopId, barbershops.id))
     .where(and(eq(barbershops.isActive, true), eq(barbers.isActive, true))); // Only show active barbers from active shops
 
-  return <BarbersClient barbers={allBarbers as any} locale={locale} />;
+  // Only send the first photo of each list to the browser.
+  const list = allBarbers.map(({ galleryImages, barbershopImages, ...b }) => ({
+    ...b,
+    workImage: firstImage(galleryImages),
+    barbershopImage: firstImage(barbershopImages),
+  }));
+
+  return <BarbersClient barbers={list as any} locale={locale} />;
 }

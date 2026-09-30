@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { Star, MapPin, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { openStatus, type OpeningHours } from '@/lib/opening-hours';
+import { firstImage } from '@/lib/images';
 
 type IconType = ComponentType<{ className?: string }>;
 
@@ -93,7 +94,7 @@ export function PillSearch({ what, where }: { what: PillField; where: PillField 
  * the page has fewer than one image of its own.
  */
 export function PhotoCollage({ images, fallback }: { images: string[]; fallback: string[] }) {
-  const pics = Array.from(new Set(images.filter(Boolean)));
+  const pics = Array.from(new Set(images.map(firstImage).filter((x): x is string => !!x)));
   const list = (pics.length ? pics : fallback).slice(0, 3);
   const [main, second, third] = list;
   return (
