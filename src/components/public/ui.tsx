@@ -23,9 +23,9 @@ export function DirectoryHeader({ title, description, children }: { title: React
     <section className="border-b border-gray-200 bg-white">
       <PublicShell>
         <div className="py-10 sm:py-12">
-          <h1 className="max-w-3xl font-display text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">{title}</h1>
-          {description && <p className="mt-3 max-w-2xl text-gray-600">{description}</p>}
-          {children && <div className="mt-8">{children}</div>}
+          <h1 className="max-w-3xl animate-fade-in-up font-display text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">{title}</h1>
+          {description && <p className="anim-delay-100 mt-3 max-w-2xl animate-fade-in-up text-gray-600">{description}</p>}
+          {children && <div className="anim-delay-200 mt-8 animate-fade-in-up">{children}</div>}
         </div>
       </PublicShell>
     </section>
@@ -84,7 +84,7 @@ export function ChipGroup<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              'inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
+              'press inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium',
               active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
             )}
           >
@@ -103,7 +103,7 @@ export function ResultsBar({ count, noun, children }: { count: number; noun: [st
   return (
     <div className="flex flex-col gap-3 py-6 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-gray-600" aria-live="polite">
-        <span className="font-medium tabular-nums text-gray-900">{count}</span> {count > 1 ? noun[1] : noun[0]}
+        <span key={count} className="inline-block animate-fade-in font-medium tabular-nums text-gray-900">{count}</span> {count > 1 ? noun[1] : noun[0]}
       </p>
       {children}
     </div>

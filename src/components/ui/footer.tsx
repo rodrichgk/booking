@@ -1,94 +1,84 @@
-'use client';
-
 import { Link } from '@/routing';
-import { useTranslations } from 'next-intl';
-import { Facebook, Twitter, Instagram, Mail, MapPin } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import { Logo } from '@/components/brand/logo';
+
+const columns = [
+  {
+    title: 'Découvrir',
+    links: [
+      { href: '/barbershops', label: 'Salons' },
+      { href: '/barbers', label: 'Coiffeurs' },
+      { href: '/services', label: 'Prestations' },
+      { href: '/about', label: 'À propos' },
+    ],
+  },
+  {
+    title: 'Professionnels',
+    links: [
+      { href: '/auth/signup', label: 'Inscrire votre salon' },
+      { href: '/my-space', label: 'Espace pro' },
+    ],
+  },
+];
+
+const legal = [
+  { href: '/privacy', label: 'Confidentialité' },
+  { href: '/terms', label: 'Conditions d’utilisation' },
+  { href: '/cookies', label: 'Cookies' },
+];
 
 export function Footer() {
-  const t = useTranslations('footer');
-  
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center">
-              <span className="font-sans font-bold text-2xl text-white tracking-[0.3em] uppercase">
-                ORPHELIA
-              </span>
+    <footer className="bg-gray-950 text-gray-400">
+      <div className="mx-auto max-w-7xl px-4 pb-10 pt-16 sm:px-6 lg:px-8">
+        <div className="grid gap-12 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
+          <div className="max-w-xs">
+            <Link href="/" aria-label="Orphelia, accueil" className="inline-flex">
+              <Logo tone="light" />
             </Link>
-            <p className="text-gray-400 leading-relaxed">
-              Vous connecter avec les meilleurs salons spécialisés dans les soins capillaires afro et naturels. 
-              Réservez en toute confiance, coiffez-vous avec fierté.
+            <p className="mt-4 text-sm leading-relaxed">
+              Les salons et coiffeurs spécialisés dans les cheveux afro, bouclés et texturés, réservables en ligne.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Instagram className="w-5 h-5" />
-              </a>
-            </div>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Liens Rapides</h3>
-            <ul className="space-y-2">
-              <li><Link href="/barbershops" className="text-gray-400 hover:text-white transition-colors">Trouver des Salons</Link></li>
-              <li><Link href="/" className="text-gray-400 hover:text-white transition-colors">Accueil</Link></li>
-              <li><Link href="/auth/signup" className="text-gray-400 hover:text-white transition-colors">S'inscrire</Link></li>
-              <li><Link href="/auth/signin" className="text-gray-400 hover:text-white transition-colors">Se Connecter</Link></li>
-            </ul>
-          </div>
+          {columns.map((column) => (
+            <nav key={column.title} aria-label={column.title}>
+              <h2 className="text-sm font-semibold text-white">{column.title}</h2>
+              <ul className="mt-4 space-y-2.5 text-sm">
+                {column.links.map((link) => (
+                  <li key={link.href + link.label}>
+                    <Link href={link.href} className="transition-colors hover:text-white">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
 
-          {/* For Businesses */}
           <div>
-            <h3 className="font-semibold text-lg mb-4">Pour les Entreprises</h3>
-            <ul className="space-y-2">
-              <li><Link href="/auth/signup" className="text-gray-400 hover:text-white transition-colors">Inscrire Votre Salon</Link></li>
-              <li><Link href="/my-space" className="text-gray-400 hover:text-white transition-colors">Tableau de Bord</Link></li>
-              <li><Link href="/auth/signin" className="text-gray-400 hover:text-white transition-colors">Se Connecter</Link></li>
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Nous Contacter</h3>
-            <div className="space-y-3">
-              <a href="mailto:contact@orphelia.net" className="flex items-center space-x-3 hover:text-white transition-colors">
-                <Mail className="w-5 h-5 text-primary-400" />
-                <span className="text-gray-400 hover:text-white">contact@orphelia.net</span>
-              </a>
-              <div className="flex items-center space-x-3">
-                <MapPin className="w-5 h-5 text-primary-400" />
-                <span className="text-gray-400">Marseille, France</span>
-              </div>
-            </div>
+            <h2 className="text-sm font-semibold text-white">Contact</h2>
+            <a
+              href="mailto:contact@orphelia.net"
+              className="mt-4 inline-flex items-center gap-2 text-sm transition-colors hover:text-white"
+            >
+              <Mail className="h-4 w-4 text-primary-400" aria-hidden="true" />
+              contact@orphelia.net
+            </a>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-12 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm">
-              © 2025 ORPHELIA. Tous droits réservés.
-            </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
-                Politique de Confidentialité
-              </Link>
-              <Link href="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">
-                Conditions d'Utilisation
-              </Link>
-              <Link href="/cookies" className="text-gray-400 hover:text-white text-sm transition-colors">
-                Politique des Cookies
-              </Link>
-            </div>
-          </div>
+        <div className="mt-14 flex flex-col gap-4 border-t border-white/10 pt-6 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Orphelia</p>
+          <ul className="flex flex-wrap gap-x-6 gap-y-2">
+            {legal.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="transition-colors hover:text-white">
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>

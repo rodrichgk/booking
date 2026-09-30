@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { reviews, barbershops, barbers, users } from '@/lib/db/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
+import { findReviewableBooking } from '@/lib/reviews';
 
 // GET - Fetch reviews for a barbershop or barber
 export async function GET(request: NextRequest) {
@@ -59,10 +60,10 @@ export async function POST(request: NextRequest) {
 
     const userId = (session.user as any).id;
     const body = await request.json();
-    const { barbershopId, barberId, bookingId, rating, comment } = body;
+    const { barbershopId, barberId, rating, comment } = body;
 
     // Validate rating
-    if (!rating || rating < 1 || rating > 5) {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
       return NextResponse.json(
         { error: 'La note doit être entre 1 et 5' },
         { status: 400 }
@@ -77,6 +78,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Only customers with a past, not yet reviewed booking can post (one review per visit)
+    const booking = await findReviewableBooking(userId, { barbershopId, barberId });
+    if (!booking) {
+      return NextResponse.json(
+        { error: 'Vous pourrez laisser un avis après votre rendez-vous.' },
+        { status: 403 }
+      );
+    }
+
     // Create the review
     const [newReview] = await db
       .insert(reviews)
@@ -84,9 +94,9 @@ export async function POST(request: NextRequest) {
         customerId: userId,
         barbershopId: barbershopId || null,
         barberId: barberId || null,
-        bookingId: bookingId || null,
+        bookingId: booking.id,
         rating,
-        comment: comment || null,
+        comment: typeof comment === 'string' && comment.trim() ? comment.trim().slice(0, 2000) : null,
       })
       .returning();
 

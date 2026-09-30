@@ -120,9 +120,9 @@ export function BarbershopsClient({ barbershops }: BarbershopsClientProps) {
             </EmptyResults>
           </div>
         ) : (
-          <ul className="grid gap-x-6 gap-y-10 pb-16 sm:grid-cols-2 lg:grid-cols-3">
+          <ul key={`${city}|${sort}`} className="grid gap-x-6 gap-y-10 pb-16 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((shop, index) => (
-              <li key={shop.id} className="min-w-0">
+              <li key={shop.id} className="card-in min-w-0" style={{ ['--i' as string]: Math.min(index, 11) }}>
                 <Link href={`/barbershops/${shop.id}`} className="group block focus-visible:outline-none">
                   <Media
                     src={shop.images?.[0]}

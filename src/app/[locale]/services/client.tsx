@@ -32,7 +32,7 @@ const normalize = (s: string) => s.toLocaleLowerCase('fr').normalize('NFD').repl
 export function ServicesClient({ services }: { services: ServiceRow[]; locale: string }) {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('search') ?? '');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState(searchParams.get('location') ?? '');
   const [category, setCategory] = useState(searchParams.get('category') ?? 'all');
   const [sort, setSort] = useState<Sort>('price-asc');
 
@@ -110,12 +110,12 @@ export function ServicesClient({ services }: { services: ServiceRow[]; locale: s
             </EmptyResults>
           </div>
         ) : (
-          <ul className="grid grid-cols-1 gap-3 pb-16 md:grid-cols-2">
-            {results.map((service) => (
-              <li key={service.id} className="min-w-0">
+          <ul key={`${category}|${sort}`} className="grid grid-cols-1 gap-3 pb-16 md:grid-cols-2">
+            {results.map((service, index) => (
+              <li key={service.id} className="card-in min-w-0" style={{ ['--i' as string]: Math.min(index, 11) }}>
                 <Link
                   href={`/barbershops/${service.barbershopId}/booking?serviceId=${service.id}`}
-                  className="group flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 pr-4 transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                  className="group flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 pr-4 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_10px_28px_-18px_rgba(17,24,39,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                 >
                   <span className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
                     {service.image ? (

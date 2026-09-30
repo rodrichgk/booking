@@ -10,15 +10,16 @@ import { ArrowLeft, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { Link } from '@/routing';
 import { cn } from '@/lib/utils';
 import { btn, inputClass, Spinner } from '@/components/dashboard/ui';
+import { Logo } from '@/components/brand/logo';
 
 const HERO_IMAGE =
   'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80';
 
-/** Brand wordmark, same treatment as the site header. Swap for the logo here. */
+/** Brand logo, same lockup as the site header. */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <Link href="/" className={cn('font-display text-2xl font-bold uppercase tracking-[0.15em] text-gray-900', className)}>
-      Orphelia
+    <Link href="/" aria-label="Orphelia, accueil" className={cn('inline-flex', className)}>
+      <Logo />
     </Link>
   );
 }

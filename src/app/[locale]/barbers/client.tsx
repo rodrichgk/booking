@@ -118,11 +118,11 @@ export function BarbersClient({ barbers }: BarbersClientProps) {
             </EmptyResults>
           </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-10 pb-16 sm:gap-x-6 md:grid-cols-3 lg:grid-cols-4">
+          <ul key={`${type}|${sort}`} className="grid grid-cols-2 gap-x-4 gap-y-10 pb-16 sm:gap-x-6 md:grid-cols-3 lg:grid-cols-4">
             {results.map((barber, index) => {
               const name = barber.name || 'Coiffeur';
               return (
-                <li key={barber.id} className="min-w-0">
+                <li key={barber.id} className="card-in min-w-0" style={{ ['--i' as string]: Math.min(index, 11) }}>
                   <Link href={`/barbers/${barber.id}`} className="group block focus-visible:outline-none">
                     <Media
                       src={barber.profileImage}

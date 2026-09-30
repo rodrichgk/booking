@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { Menu, X, User, Calendar, Search, Heart } from 'lucide-react';
 import { LanguageSwitcher } from './language-switcher';
+import { Logo } from '@/components/brand/logo';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -68,10 +69,8 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <span className="font-display font-bold text-3xl text-gray-900 tracking-[0.15em] uppercase">
-              ORPHELIA
-            </span>
+          <Link href="/" aria-label="Orphelia, accueil" className="group flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+            <Logo className="[&_svg]:transition-transform [&_svg]:duration-500 [&_svg]:ease-out group-hover:[&_svg]:rotate-[-12deg]" />
           </Link>
 
           {/* Desktop Navigation */}

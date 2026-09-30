@@ -69,7 +69,7 @@ export function BarberProfileClient({ barber, services }: BarberProfileClientPro
           <span className="truncate text-gray-900">{barber.name}</span>
         </nav>
 
-        <header className="grid gap-8 pt-6 md:grid-cols-[16rem_minmax(0,1fr)] md:items-end">
+        <header className="grid animate-fade-in-up gap-8 pt-6 md:grid-cols-[16rem_minmax(0,1fr)] md:items-end">
           <Media src={barber.profileImage} name={barber.name} priority sizes="256px" className="aspect-[4/5] w-full max-w-[16rem]" />
           <div className="min-w-0">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">{barber.name}</h1>

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   keywords: 'barbershop, afro hair, black hair, booking, appointments, natural hair, braids, locs',
   icons: {
     icon: '/favicon.svg',
-    apple: '/logo.svg',
+    apple: '/apple-touch-icon.png',
   },
 };
 

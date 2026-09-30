@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { barbershops, barbers, users, services } from '@/lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import { findReviewableBooking } from '@/lib/reviews';
 import { BarbershopDetailClient } from './client';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -86,5 +87,9 @@ export default async function BarbershopDetailsPage({
     .from(services)
     .where(and(eq(services.barbershopId, id), sql`${services.isActive} IS NOT FALSE`));
 
-  return <BarbershopDetailClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} isAuthenticated={isAuthenticated} />;
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+
+  const canReview = userId ? !!(await findReviewableBooking(userId, { barbershopId: id }).catch(() => null)) : false;
+
+  return <BarbershopDetailClient shop={shop as any} barbers={shopBarbers as any} services={shopServices as any} locale={locale} isAuthenticated={isAuthenticated} canReview={canReview} />;
 }

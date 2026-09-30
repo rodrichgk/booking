@@ -61,9 +61,11 @@ interface BarbershopDetailClientProps {
   services: Service[];
   locale: string;
   isAuthenticated?: boolean;
+  /** Signed-in customer with a past, not yet reviewed visit here. */
+  canReview?: boolean;
 }
 
-export function BarbershopDetailClient({ shop, barbers, services, isAuthenticated = false }: BarbershopDetailClientProps) {
+export function BarbershopDetailClient({ shop, barbers, services, isAuthenticated = false, canReview = false }: BarbershopDetailClientProps) {
   const { toast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -71,6 +73,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
   const [today, setToday] = useState<string | null>(null);
 
   const images = shop.images ?? [];
@@ -132,6 +135,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
       setShowReviewForm(false);
       setReviewComment('');
       setReviewRating(5);
+      setReviewed(true);
       loadReviews();
     } catch (err) {
       toast({ variant: 'error', title: 'Erreur', description: err instanceof Error && err.message ? err.message : 'Une erreur est survenue' });
@@ -151,7 +155,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
           <span className="truncate text-gray-900">{shop.name}</span>
         </nav>
 
-        <header className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-end sm:justify-between">
+        <header className="flex animate-fade-in-up flex-col gap-4 pt-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">{shop.name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -176,7 +180,7 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
         </header>
 
         {/* Gallery: one wide photo, or a main photo with up to four smaller ones */}
-        <div className="mt-6">
+        <div className="hero-image-in anim-delay-100 mt-6">
           {images.length === 0 ? (
             <Media name={shop.name} className="aspect-[21/9] w-full" priority />
           ) : images.length < 3 ? (
@@ -263,11 +267,11 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
               <SectionTitle
                 id="reviews"
                 aside={
-                  isAuthenticated ? (
+                  canReview && !reviewed ? (
                     <button onClick={() => setShowReviewForm((v) => !v)} className={cn(btn.secondary, btn.sm)}>
                       {showReviewForm ? 'Annuler' : 'Laisser un avis'}
                     </button>
-                  ) : (
+                  ) : isAuthenticated ? null : (
                     <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/barbershops/${shop.id}`)}`} className={cn(btn.ghost, btn.sm)}>
                       Se connecter pour laisser un avis
                     </Link>
@@ -277,7 +281,11 @@ export function BarbershopDetailClient({ shop, barbers, services, isAuthenticate
                 Avis
               </SectionTitle>
 
-              {showReviewForm && (
+              {isAuthenticated && !canReview && !reviewed && (
+                <p className="mb-6 text-sm text-gray-500">Vous pourrez noter ce salon après votre rendez-vous.</p>
+              )}
+
+              {showReviewForm && !reviewed && (
                 <form onSubmit={handleSubmitReview} className="mb-8 space-y-4 rounded-xl border border-gray-200 p-5">
                   <fieldset>
                     <legend className="mb-2 text-sm font-medium text-gray-800">Votre note</legend>
